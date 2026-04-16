@@ -91,7 +91,12 @@ function showSetupWizard() {
     },
   });
 
-  setupWindow.loadFile(path.join(__dirname, '..', 'electron', 'setup-wizard.html'));
+  // In dev: __dirname = electron-dist/electron/, HTML at electron/setup-wizard.html
+  // In production: app.getAppPath() points to the asar, HTML is in electron/
+  const htmlPath = app.isPackaged
+    ? path.join(app.getAppPath(), 'electron', 'setup-wizard.html')
+    : path.join(__dirname, '..', '..', 'electron', 'setup-wizard.html');
+  setupWindow.loadFile(htmlPath);
 
   // Pass initial step to renderer once ready
   setupWindow.webContents.on('did-finish-load', () => {
@@ -179,39 +184,52 @@ async function startApp() {
   // Find available port
   const port = await findAvailablePort(19820);
 
-  // Dynamically import the BioClaw core (it's ESM)
-  // We need to initialize RuntimeContext BEFORE importing index.ts
+  // ── Set env vars BEFORE importing any src/ modules ──
+  // These must be set before config.ts is imported, because some
+  // values are frozen at import time.
+  process.env.ENABLE_LOCAL_WEB = 'true';
+  process.env.LOCAL_WEB_PORT = String(port);
+  process.env.LOCAL_WEB_HOST = '127.0.0.1';
+  process.env.BIOCLAW_DESKTOP = '1';
+
+  // ── Now import and initialize ──
   const { RuntimeContext, initRuntime } = await import('../src/runtime-context.js');
   const { _freezeLegacyPaths } = await import('../src/config.js');
 
   const resourcesDir = process.resourcesPath || path.join(__dirname, '..');
 
-  const ctx = RuntimeContext.forDesktop(userDataDir, resourcesDir);
-  // Override port and apiKey
-  (ctx as any).port = port;
-  (ctx as any).host = '127.0.0.1';
-  (ctx as any).apiKey = apiKey;
+  // Build RuntimeContext with ALL required fields
+  const ctx = new RuntimeContext({
+    mode: 'desktop',
+    groupsDir: path.join(userDataDir, 'workspaces'),
+    dataDir: path.join(userDataDir, 'data'),
+    stateDir: path.join(userDataDir, 'store'),
+    skillsDir: path.join(resourcesDir, 'skills'),
+    webAssetsDir: path.join(resourcesDir, 'web-assets'),
+    logoPath: path.join(resourcesDir, 'web-assets', 'bioclaw_logo.jpg'),
+    vendorScriptsDir: path.join(resourcesDir, 'web-assets', 'vendor'),
+    agentRunnerPath: path.join(resourcesDir, 'agent-runner', 'dist', 'index.js'),
+    pythonPath: pythonManager.getPythonPath(),  // ← Fix #3: use installed Python
+    apiKey,
+    port,
+    host: '127.0.0.1',
+  });
 
   try {
     initRuntime(ctx);
   } catch {
     // Already initialized (e.g. after wizard re-entry) — skip
   }
-  _freezeLegacyPaths();
+  _freezeLegacyPaths();  // This also sets ENABLE_LOCAL_WEB=true for desktop
 
   // Ensure directories exist
   for (const dir of [ctx.groupsDir, ctx.dataDir, ctx.stateDir]) {
     fs.mkdirSync(dir, { recursive: true });
   }
 
-  // Start the server (imports index.ts which uses getRuntime())
-  // The server module should detect that main() guard prevents auto-start,
-  // and we call the startup logic manually here.
-  // For now, we use a simplified approach: set env and import.
-  process.env.ENABLE_LOCAL_WEB = 'true';
-  process.env.LOCAL_WEB_PORT = String(port);
-  process.env.LOCAL_WEB_HOST = '127.0.0.1';
-  process.env.BIOCLAW_DESKTOP = '1';
+  // ── Start the BioClaw HTTP server ── Fix #1
+  const { startBioClawServer } = await import('../src/index.js');
+  await startBioClawServer();
 
   serverUrl = `http://127.0.0.1:${port}`;
 
@@ -232,7 +250,6 @@ async function startApp() {
     },
   });
 
-  // Wait for server to be ready, then load
   mainWindow.loadURL(serverUrl);
 
   mainWindow.on('closed', () => {

@@ -13,7 +13,7 @@ export const SCHEDULER_POLL_INTERVAL = 60000;
 export const ENABLE_WHATSAPP = process.env.ENABLE_WHATSAPP === 'true';
 export const ALLOW_WHATSAPP_SELF_MESSAGES =
   process.env.ALLOW_WHATSAPP_SELF_MESSAGES === 'true';
-export const ENABLE_LOCAL_WEB = process.env.ENABLE_LOCAL_WEB === 'true';
+export let ENABLE_LOCAL_WEB = process.env.ENABLE_LOCAL_WEB === 'true';
 export const LOCAL_WEB_GROUP_JID =
   process.env.LOCAL_WEB_GROUP_JID || 'local-web@local.web';
 export const LOCAL_WEB_GROUP_NAME =
@@ -76,6 +76,10 @@ export function _freezeLegacyPaths(): void {
   MOUNT_ALLOWLIST_PATH = ctx.mountAllowlistPath;
   LOCAL_WEB_HOST = ctx.host;
   LOCAL_WEB_PORT = ctx.port;
+  // Desktop mode: always enable local web (it's the only UI)
+  if (ctx.isDesktop) {
+    ENABLE_LOCAL_WEB = true;
+  }
 }
 
 // ─── Container configuration (server mode only) ─────────────────────────────

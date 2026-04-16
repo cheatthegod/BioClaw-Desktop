@@ -81,7 +81,7 @@ export async function runLocalAgent(
   const env: Record<string, string> = {
     // Inherit minimal env
     HOME: process.env.HOME || process.env.USERPROFILE || '',
-    PATH: `${pythonBinDir}:${currentPath}`,
+    PATH: `${pythonBinDir}${path.delimiter}${currentPath}`,
     TMPDIR: process.env.TMPDIR || process.env.TEMP || '/tmp',
     LANG: process.env.LANG || 'en_US.UTF-8',
 

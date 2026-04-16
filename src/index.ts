@@ -481,8 +481,11 @@ async function runAgent(
 // --- Startup ---
 
 function ensureRuntimeAvailable(): void {
-  checkRuntime();
-  cleanupOrphans();
+  // Desktop mode: no Docker/Apptainer — skip container runtime check
+  if (!getRuntime().isDesktop) {
+    checkRuntime();
+    cleanupOrphans();
+  }
 }
 
 let whatsapp: WhatsAppChannel | undefined;
@@ -546,12 +549,11 @@ async function handleInboundMessage(msg: NewMessage): Promise<void> {
   notifyLocalWebWorkspaceUpdate(msg.chat_jid);
 }
 
-async function main(): Promise<void> {
-  // ── Initialize RuntimeContext (must be first) ──
-  const ctx = RuntimeContext.forServer();
-  initRuntime(ctx);
-  _freezeLegacyPaths();
-
+/**
+ * Start the BioClaw server. Call this AFTER initRuntime() + _freezeLegacyPaths().
+ * Exported so Electron main process can call it directly.
+ */
+export async function startBioClawServer(): Promise<void> {
   ensureRuntimeAvailable();
   initDatabase();
   logger.info('Database initialized');
@@ -783,6 +785,14 @@ async function main(): Promise<void> {
   queue.setProcessMessagesFn(processAgentMessages);
   recoverPendingMessages(queue);
   startMessageLoop(queue);
+}
+
+/** CLI / npm run web entry — initializes RuntimeContext then starts server */
+async function main(): Promise<void> {
+  const ctx = RuntimeContext.forServer();
+  initRuntime(ctx);
+  _freezeLegacyPaths();
+  await startBioClawServer();
 }
 
 const isDirectRun = process.argv[1] && new URL(import.meta.url).pathname === new URL(`file://${process.argv[1]}`).pathname;

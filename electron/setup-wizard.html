@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BioClaw Setup</title>
+  <style>
+    :root {
+      --primary: #1a5276;
+      --accent: #148f77;
+      --accent-hover: #0b7d63;
+      --bg: #FAF9F3;
+      --surface: #ffffff;
+      --border: rgba(15, 23, 42, 0.08);
+      --ink: #1a1a1a;
+      --muted: #6b7280;
+      --danger: #dc3545;
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      -webkit-app-region: drag;
+      -webkit-font-smoothing: antialiased;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+      -webkit-app-region: no-drag;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .brand-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px rgba(20,143,119,0.3);
+    }
+    h1 { font-size: 24px; font-weight: 700; color: var(--primary); }
+    .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+    .steps-indicator {
+      display: flex; gap: 8px; justify-content: center; margin-bottom: 28px;
+    }
+    .step-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--border); transition: background 0.2s;
+    }
+    .step-dot.active { background: var(--accent); }
+    .step-dot.done { background: var(--primary); }
+    .step { display: none; }
+    .step.active { display: block; }
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+    input[type="password"], input[type="text"] {
+      width: 100%; padding: 10px 14px;
+      border: 1px solid var(--border); border-radius: 10px;
+      font-size: 13px; font-family: monospace; outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(20,143,119,0.08);
+    }
+    .btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 100%; padding: 12px; border: none; border-radius: 10px;
+      font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 18px;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: 0.5; cursor: wait; }
+    .error { color: var(--danger); font-size: 12px; margin-top: 8px; min-height: 18px; }
+    .info { color: var(--muted); font-size: 12px; line-height: 1.5; margin-bottom: 14px; }
+    .progress-bar {
+      width: 100%; height: 6px; background: var(--border);
+      border-radius: 999px; overflow: hidden; margin-top: 16px;
+    }
+    .progress-fill {
+      height: 100%; background: var(--accent); border-radius: 999px;
+      width: 0%; transition: width 0.3s;
+    }
+    .progress-text { font-size: 12px; color: var(--muted); margin-top: 8px; }
+    .check-icon {
+      text-align: center; font-size: 48px; color: var(--accent); margin: 20px 0 12px;
+    }
+    .done-title {
+      text-align: center; font-size: 16px; font-weight: 600; margin-bottom: 6px;
+    }
+    .done-sub {
+      text-align: center; font-size: 13px; color: var(--muted); margin-bottom: 18px;
+    }
+    .warning-box {
+      background: #fff3cd; border-left: 3px solid #ffc107;
+      padding: 10px 14px; border-radius: 0 8px 8px 0;
+      font-size: 12px; color: #856404; margin-top: 14px; line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <h1>BioClaw</h1>
+    </div>
+    <p class="subtitle">AI-Powered Bioinformatics Assistant</p>
+
+    <div class="steps-indicator">
+      <div class="step-dot active" id="dot1"></div>
+      <div class="step-dot" id="dot2"></div>
+      <div class="step-dot" id="dot3"></div>
+    </div>
+
+    <!-- Step 1: API Key -->
+    <div class="step active" id="step1">
+      <label for="apiKey">Anthropic API Key</label>
+      <input type="password" id="apiKey" placeholder="sk-ant-api03-..."
+             autocomplete="off" spellcheck="false">
+      <div class="error" id="apiError"></div>
+      <div class="warning-box" style="display:none" id="trustWarning">
+        BioClaw runs with your full user permissions — it can read and write
+        files, execute commands, and access the network. This is the same
+        security model as Claude Code CLI.
+      </div>
+      <button class="btn btn-primary" id="btnValidate">Validate &amp; Continue</button>
+    </div>
+
+    <!-- Step 2: Python Setup -->
+    <div class="step" id="step2">
+      <label>Python Environment</label>
+      <p class="info">
+        BioClaw needs Python with scientific packages (scipy, matplotlib,
+        biopython, typst, etc.). This will be installed locally (~500 MB)
+        in an isolated environment that won't affect your system.
+      </p>
+      <button class="btn btn-primary" id="btnInstall">Install Python Environment</button>
+      <div id="progressContainer" style="display:none">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText">Preparing...</div>
+      </div>
+      <div class="error" id="pythonError"></div>
+    </div>
+
+    <!-- Step 3: Done -->
+    <div class="step" id="step3">
+      <div class="check-icon">&#10003;</div>
+      <p class="done-title">Setup Complete!</p>
+      <p class="done-sub">
+        BioClaw is ready. Upload SEC data, ask biology questions, or run
+        bioinformatics analysis — all from your desktop.
+      </p>
+      <button class="btn btn-primary" id="btnStart">Start BioClaw</button>
+    </div>
+  </div>
+
+  <script>
+    const api = window.electronAPI;
+
+    // ── Step navigation ──
+    function goToStep(n) {
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+      document.getElementById('step' + n).classList.add('active');
+      for (let i = 1; i <= 3; i++) {
+        const dot = document.getElementById('dot' + i);
+        dot.classList.toggle('active', i === n);
+        dot.classList.toggle('done', i < n);
+      }
+    }
+
+    // Listen for init message from main process
+    api.on('setup:init', (data) => {
+      if (data && data.startStep) goToStep(data.startStep);
+    });
+
+    // ── Step 1: API Key ──
+    const btnValidate = document.getElementById('btnValidate');
+    const apiInput = document.getElementById('apiKey');
+    const apiError = document.getElementById('apiError');
+    const trustWarning = document.getElementById('trustWarning');
+
+    apiInput.addEventListener('input', () => {
+      trustWarning.style.display = apiInput.value.length > 10 ? 'block' : 'none';
+    });
+
+    btnValidate.addEventListener('click', async () => {
+      const key = apiInput.value.trim();
+      btnValidate.disabled = true;
+      btnValidate.textContent = 'Validating...';
+      apiError.textContent = '';
+
+      const result = await api.invoke('setup:validate-api-key', key);
+      if (result.valid) {
+        await api.invoke('setup:save-api-key', key);
+        // Check if Python is already installed
+        const pyCheck = await api.invoke('setup:check-python');
+        if (pyCheck.installed) {
+          goToStep(3);
+        } else {
+          goToStep(2);
+        }
+      } else {
+        apiError.textContent = result.error || 'Invalid API Key';
+      }
+      btnValidate.disabled = false;
+      btnValidate.textContent = 'Validate & Continue';
+    });
+
+    // Enter key submits
+    apiInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') btnValidate.click();
+    });
+
+    // ── Step 2: Python Install ──
+    const btnInstall = document.getElementById('btnInstall');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    const pythonError = document.getElementById('pythonError');
+
+    api.on('setup:progress', (data) => {
+      progressFill.style.width = data.percent + '%';
+      progressText.textContent = data.message;
+    });
+
+    btnInstall.addEventListener('click', async () => {
+      btnInstall.disabled = true;
+      btnInstall.textContent = 'Installing...';
+      progressContainer.style.display = 'block';
+      pythonError.textContent = '';
+
+      const result = await api.invoke('setup:install-python');
+      if (result.success) {
+        goToStep(3);
+      } else {
+        pythonError.textContent = 'Installation failed: ' + (result.error || 'Unknown error');
+        btnInstall.disabled = false;
+        btnInstall.textContent = 'Retry';
+      }
+    });
+
+    // ── Step 3: Done ──
+    document.getElementById('btnStart').addEventListener('click', async () => {
+      await api.invoke('setup:finish');
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+appId: com.bioclaw.desktop
+productName: BioClaw
+copyright: Copyright 2026
+
+directories:
+  buildResources: assets
+  output: release
+
+# ── What goes into the app ──
+files:
+  - electron-dist/**/*
+  - electron/setup-wizard.html
+  - node_modules/**/*
+  - "!node_modules/**/test/**"
+  - "!node_modules/**/*.md"
+  - "!node_modules/**/*.map"
+
+extraResources:
+  # Skills
+  - from: container/skills
+    to: skills
+    filter:
+      - "**/*"
+      - "!**/tests/**"
+      - "!**/__pycache__/**"
+      - "!**/*.pyc"
+  # Agent runner (compiled JS)
+  - from: container/agent-runner/dist
+    to: agent-runner/dist
+  - from: container/agent-runner/node_modules
+    to: agent-runner/node_modules
+  # Web UI assets
+  - from: src/channels/local-web/assets
+    to: web-assets
+  - from: bioclaw_logo.jpg
+    to: web-assets/bioclaw_logo.jpg
+
+# ── Windows ──
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: assets/icon.ico
+  artifactName: BioClaw-Setup-${version}.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: BioClaw
+
+# ── macOS ──
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  icon: assets/icon.icns
+  category: public.app-category.developer-tools
+  hardenedRuntime: true
+
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+# ── Linux ──
+linux:
+  target:
+    - target: AppImage
+    - target: deb
+  icon: assets/icon.png
+  category: Science
+  desktop:
+    Name: BioClaw
+    Comment: AI-Powered Bioinformatics Assistant
+    Categories: Science;Biology;
+
+appImage:
+  artifactName: BioClaw-${version}.${ext}

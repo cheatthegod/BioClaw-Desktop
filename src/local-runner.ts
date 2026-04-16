@@ -64,13 +64,15 @@ export async function runLocalAgent(
     fs.mkdirSync(dir, { recursive: true });
   }
 
-  // Sync skills if not present
+  // Sync skills if not present, rewriting container paths to local paths
   if (!fs.existsSync(skillsDir)) {
     fs.mkdirSync(skillsDir, { recursive: true });
     try {
       fs.cpSync(ctx.skillsDir, skillsDir, { recursive: true });
+      // Rewrite hardcoded container paths in SKILL.md files
+      rewriteSkillPaths(skillsDir, groupDir, skillsDir);
     } catch (e) {
-      logger.warn({ err: e }, 'Failed to copy skills to session dir');
+      logger.warn({ err: e }, 'Failed to copy/rewrite skills to session dir');
     }
   }
 
@@ -311,4 +313,31 @@ export async function runLocalAgent(
       });
     });
   });
+}
+
+/**
+ * Rewrite hardcoded container paths in SKILL.md files so they point to
+ * actual local directories. Only touches .md files.
+ */
+function rewriteSkillPaths(
+  skillsDir: string,
+  groupRoot: string,
+  localSkillsRoot: string,
+): void {
+  const replacements: [RegExp, string][] = [
+    [/\/home\/node\/\.claude\/skills/g, localSkillsRoot],
+    [/\/workspace\/group/g, groupRoot],
+  ];
+  for (const entry of fs.readdirSync(skillsDir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      const mdPath = path.join(skillsDir, entry.name, 'SKILL.md');
+      if (fs.existsSync(mdPath)) {
+        let content = fs.readFileSync(mdPath, 'utf-8');
+        for (const [pattern, replacement] of replacements) {
+          content = content.replace(pattern, replacement);
+        }
+        fs.writeFileSync(mdPath, content);
+      }
+    }
+  }
 }

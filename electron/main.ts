@@ -25,6 +25,7 @@ let mainWindow: BrowserWindow | null = null;
 let setupWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let serverUrl = '';
+let serverStarted = false;  // guard against double-start (macOS activate)
 let config: ConfigStore;
 let pythonManager: PythonManager;
 
@@ -61,8 +62,16 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-  if (!mainWindow && !setupWindow) {
-    if (config.isFullyConfigured()) {
+  if (mainWindow) {
+    // Window exists but may be hidden — just show it
+    mainWindow.show();
+    return;
+  }
+  if (!setupWindow) {
+    if (config.isFullyConfigured() && serverStarted) {
+      // Server already running — just recreate the window
+      createMainWindow();
+    } else if (config.isFullyConfigured()) {
       startApp();
     } else {
       showSetupWizard();
@@ -227,16 +236,24 @@ async function startApp() {
     fs.mkdirSync(dir, { recursive: true });
   }
 
-  // ── Start the BioClaw HTTP server ── Fix #1
-  const { startBioClawServer } = await import('../src/index.js');
-  await startBioClawServer();
+  // ── Start the BioClaw HTTP server (once) ──
+  if (!serverStarted) {
+    const { startBioClawServer } = await import('../src/index.js');
+    await startBioClawServer();
+    serverStarted = true;
+    serverUrl = `http://127.0.0.1:${port}`;
+    createTray();
+  }
 
-  serverUrl = `http://127.0.0.1:${port}`;
+  createMainWindow();
+}
 
-  // Create tray
-  createTray();
-
-  // Create main window
+function createMainWindow() {
+  if (mainWindow) {
+    mainWindow.show();
+    mainWindow.focus();
+    return;
+  }
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -290,14 +307,18 @@ function createTray() {
 function getIconPath(): string {
   const resourcesDir = process.resourcesPath || path.join(__dirname, '..');
   const candidates = [
+    // Packaged: extraResources puts web-assets/ in resources/
+    path.join(resourcesDir, 'web-assets', 'bioclaw_logo.jpg'),
+    // Packaged: buildResources icon
     path.join(resourcesDir, 'assets', 'icon.png'),
-    path.join(__dirname, '..', 'assets', 'icon.png'),
-    path.join(__dirname, '..', 'bioclaw_logo.jpg'),
+    // Dev mode
+    path.join(__dirname, '..', '..', 'assets', 'icon.png'),
+    path.join(__dirname, '..', '..', 'bioclaw_logo.jpg'),
   ];
   for (const p of candidates) {
     if (fs.existsSync(p)) return p;
   }
-  return candidates[0]; // fallback even if not exists
+  return candidates[0];
 }
 
 function findAvailablePort(startPort: number): Promise<number> {

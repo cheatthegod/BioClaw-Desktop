@@ -8,20 +8,13 @@
 import fs from 'fs';
 import path from 'path';
 
-// safeStorage is imported lazily so this module can be loaded outside Electron
-// (e.g. in tests) without crashing.
-let _safeStorage: typeof import('electron').safeStorage | null = null;
+// Import safeStorage at the top level (ESM-compatible).
+// This file is only ever loaded by Electron main process, so the import is safe.
+import { safeStorage } from 'electron';
 
 function getSafeStorage() {
-  if (!_safeStorage) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      _safeStorage = require('electron').safeStorage;
-    } catch {
-      _safeStorage = null;
-    }
-  }
-  return _safeStorage;
+  // safeStorage is available in the main process after app 'ready'
+  return safeStorage;
 }
 
 export interface SetupState {

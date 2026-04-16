@@ -1,7 +1,11 @@
 {
   "name": "bioclaw",
   "version": "0.1.0",
-  "description": "AI-powered biology research assistant. Run BLAST, sequence analysis, and molecular tools from WhatsApp. Built on Claude Agent SDK.",
+  "description": "BioClaw Desktop — AI-powered bioinformatics assistant for your desktop.",
+  "author": {
+    "name": "Qingran Cai",
+    "email": "cheatthegod@users.noreply.github.com"
+  },
   "type": "module",
   "main": "electron-dist/electron/main.js",
   "scripts": {

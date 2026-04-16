@@ -92,6 +92,10 @@ export async function runLocalAgent(
     // Electron: run as pure Node.js
     ELECTRON_RUN_AS_NODE: '1',
 
+    // Node.js binary for spawning subprocesses (MCP server, etc.)
+    // In desktop mode, 'node' is not in PATH — use Electron's own exe
+    BIOCLAW_NODE_BIN: process.execPath,
+
     // BioClaw path mapping (agent-runner reads these)
     BIOCLAW_GROUP_ROOT: groupDir,
     BIOCLAW_IPC_ROOT: ipcDir,

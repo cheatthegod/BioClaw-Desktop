@@ -908,13 +908,19 @@ async function runQuery(
       settingSources: ['project', 'user'],
       mcpServers: {
         bioclaw: {
-          command: 'node',
+          // Desktop mode: use BIOCLAW_NODE_BIN (set to Electron exe with ELECTRON_RUN_AS_NODE=1)
+          // Docker mode: fallback to 'node' (always available in container)
+          command: process.env.BIOCLAW_NODE_BIN || 'node',
           args: [mcpServerPath],
           env: {
             BIOCLAW_CHAT_JID: containerInput.chatJid,
             BIOCLAW_GROUP_FOLDER: containerInput.groupFolder,
             BIOCLAW_AGENT_ID: containerInput.agentId || containerInput.groupFolder,
             BIOCLAW_IS_MAIN: containerInput.isMain ? '1' : '0',
+            // Ensure MCP subprocess also runs as Node.js, not Electron GUI
+            ...(process.env.ELECTRON_RUN_AS_NODE ? { ELECTRON_RUN_AS_NODE: '1' } : {}),
+            // Propagate IPC root for MCP server
+            ...(process.env.BIOCLAW_IPC_ROOT ? { BIOCLAW_IPC_ROOT: process.env.BIOCLAW_IPC_ROOT } : {}),
           },
         },
       },

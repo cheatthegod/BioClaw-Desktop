@@ -77,9 +77,11 @@ linux:
   icon: assets/icon.png
   category: Science
   desktop:
-    Name: BioClaw
-    Comment: AI-Powered Bioinformatics Assistant
-    Categories: Science;Biology;
+    entry: |
+      [Desktop Entry]
+      Name=BioClaw
+      Comment=AI-Powered Bioinformatics Assistant
+      Categories=Science;Biology;
 
 appImage:
   artifactName: BioClaw-${version}.${ext}

@@ -67,21 +67,25 @@ interface SDKUserMessage {
   session_id: string;
 }
 
-const IPC_INPUT_DIR = '/workspace/ipc/input';
+// ── Path roots: env-driven for desktop, hardcoded defaults for Docker ──
+const IPC_ROOT = process.env.BIOCLAW_IPC_ROOT || '/workspace/ipc';
+const IPC_INPUT_DIR = path.join(IPC_ROOT, 'input');
 const IPC_INPUT_CLOSE_SENTINEL = path.join(IPC_INPUT_DIR, '_close');
 const IPC_POLL_MS = 500;
-const IPC_DIR = '/workspace/ipc';
+const IPC_DIR = IPC_ROOT;
 const IPC_MESSAGES_DIR = path.join(IPC_DIR, 'messages');
 const IPC_TASKS_DIR = path.join(IPC_DIR, 'tasks');
 const IPC_FILES_DIR = path.join(IPC_DIR, 'files');
 const BASH_TIMEOUT_MS = 5 * 60 * 1000;
 const BASH_MAX_OUTPUT_CHARS = 12000;
-const WORKSPACE_GROUP_ROOT = '/workspace/group';
+const WORKSPACE_GROUP_ROOT = process.env.BIOCLAW_GROUP_ROOT || '/workspace/group';
+const WORKSPACE_GLOBAL_ROOT = process.env.BIOCLAW_GLOBAL_ROOT || '/workspace/global';
+const WORKSPACE_EXTRA_ROOT = process.env.BIOCLAW_EXTRA_ROOT || '/workspace/extra';
 const OPENAI_TOOL_MAX_ITERATIONS = Math.max(
   1,
   parseInt(process.env.OPENAI_TOOL_MAX_ITERATIONS || '48', 10) || 48,
 );
-const SKILLS_ROOT = '/home/node/.claude/skills';
+const SKILLS_ROOT = process.env.BIOCLAW_SKILLS_ROOT || '/home/node/.claude/skills';
 const MAX_SKILL_SUMMARY_LINES = 18;
 const MAX_SKILL_DESCRIPTION_CHARS = 140;
 const execAsync = promisify(execChildProcess);
@@ -114,7 +118,8 @@ interface OpenAIChatResponse {
   error?: { message?: string };
 }
 
-const OPENAI_SESSION_DIR = '/home/node/.claude/openai-compatible-sessions';
+const CLAUDE_HOME = process.env.BIOCLAW_CLAUDE_HOME || '/home/node/.claude';
+const OPENAI_SESSION_DIR = path.join(CLAUDE_HOME, 'openai-compatible-sessions');
 
 function getOpenAICompatibleSessionPath(sessionId: string): string {
   return path.join(OPENAI_SESSION_DIR, `${encodeURIComponent(sessionId)}.json`);
@@ -467,7 +472,7 @@ function getBioSystemPrompt(): string {
     '',
     'When users ask biology questions, prefer running actual analysis over giving theoretical answers.',
     'Use tools to produce real results. Prefer the Bash tool for running shell commands, Python scripts, and bioinformatics workflows.',
-    'Save output files to /workspace/group/ so users can access them.',
+    `Save output files to ${WORKSPACE_GROUP_ROOT}/ so users can access them.`,
     'When you generate an image or document file (PNG, JPG, GIF, PDF, etc.), call the send_image tool so the user receives it in chat instead of only seeing a saved file path. The send_image tool works for ALL file types including PDF reports.',
     "If you generate plots with Chinese labels via matplotlib, configure a Chinese-capable font first (try: 'Noto Sans CJK SC' or 'WenQuanYi Zen Hei') and set axes.unicode_minus=False to avoid missing glyphs and minus-sign issues.",
     'Prioritize figures that look scientific, readable on a phone screen, and suitable for demos or slide decks.',
@@ -481,9 +486,9 @@ function getBioSystemPrompt(): string {
     '- QC summary plots: compact multi-panel layout, consistent colors, short labels, and clear sample ordering.',
     '- Protein structure renders: prefer clean cartoon/surface representations, high-resolution output, sensible orientation, and focused highlighting of the biologically relevant region.',
     'Reusable built-in scripts are available and should be preferred for consistent output when they fit the task:',
-    '- /home/node/.claude/skills/bio-tools/templates/volcano_plot_template.py',
-    '- /home/node/.claude/skills/bio-tools/templates/qc_summary_plot_template.py',
-    '- /home/node/.claude/skills/bio-tools/templates/pymol_render_template.py',
+    `- ${SKILLS_ROOT}/bio-tools/templates/volcano_plot_template.py`,
+    `- ${SKILLS_ROOT}/bio-tools/templates/qc_summary_plot_template.py`,
+    `- ${SKILLS_ROOT}/bio-tools/templates/pymol_render_template.py`,
     ...(skillLines.length > 0
       ? [
           '',
@@ -493,7 +498,7 @@ function getBioSystemPrompt(): string {
             ? [`- ... plus ${remainingSkillCount} more installed skill modules.`]
             : []),
           'Do not claim a skill is unavailable if it appears in the installed list above.',
-          'To use a skill, read its full instructions with: read_file({ file_path: "/home/node/.claude/skills/<skill-name>/SKILL.md" })',
+          `To use a skill, read its full instructions with: read_file({ file_path: "${SKILLS_ROOT}/<skill-name>/SKILL.md" })`,
           'Always read the relevant SKILL.md before executing a skill-related task — the summaries above are abbreviated.',
           'CRITICAL: When a skill provides executable scripts or pipelines (e.g. python sec_pipeline.py), you MUST run them as instructed. Do NOT manually reimplement the same analysis logic — the bundled scripts are tested, produce standardized outputs (PDF reports, figures, JSON), and are the expected deliverable. Manual reimplementation is an error.',
         ]
@@ -514,7 +519,7 @@ function buildGlobalSystemPrompt(
     .replace('send_image tool', 'mcp__bioclaw__send_image')
     .replace('Use tools to produce real results. Prefer the Bash tool for running shell commands, Python scripts, and bioinformatics workflows.', 'Write and execute Python scripts or bash commands to produce real results.');
 
-  const globalClaudeMdPath = '/workspace/global/CLAUDE.md';
+  const globalClaudeMdPath = path.join(WORKSPACE_GLOBAL_ROOT, 'CLAUDE.md');
   const globalContent = fs.existsSync(globalClaudeMdPath)
     ? fs.readFileSync(globalClaudeMdPath, 'utf-8')
     : '';
@@ -604,7 +609,7 @@ function createPreCompactHook(): HookCallback {
       const summary = getSessionSummary(sessionId, transcriptPath);
       const name = summary ? sanitizeFilename(summary) : generateFallbackName();
 
-      const conversationsDir = '/workspace/group/conversations';
+      const conversationsDir = path.join(WORKSPACE_GROUP_ROOT, 'conversations');
       fs.mkdirSync(conversationsDir, { recursive: true });
 
       const date = new Date().toISOString().split('T')[0];
@@ -618,7 +623,7 @@ function createPreCompactHook(): HookCallback {
 
       // Snapshot output paths for _latest.md — helps avoid analyzing old data after compaction
       const outputPaths = extractOutputPathsFromTranscript(content);
-      if (outputPaths.length > 0 && fs.existsSync('/workspace/group')) {
+      if (outputPaths.length > 0 && fs.existsSync(WORKSPACE_GROUP_ROOT)) {
         const now = new Date().toISOString();
         const latestContent = [
           '# Latest outputs (auto-updated before compaction)',
@@ -630,7 +635,7 @@ function createPreCompactHook(): HookCallback {
           ...outputPaths.map((p) => `- ${p}`),
           '',
         ].join('\n');
-        fs.writeFileSync('/workspace/group/_latest.md', latestContent);
+        fs.writeFileSync(path.join(WORKSPACE_GROUP_ROOT, '_latest.md'), latestContent);
         log(`Updated _latest.md with ${outputPaths.length} output paths`);
       }
     } catch (err) {
@@ -866,7 +871,7 @@ async function runQuery(
   // Discover additional directories mounted at /workspace/extra/*
   // These are passed to the SDK so their CLAUDE.md files are loaded automatically
   const extraDirs: string[] = [];
-  const extraBase = '/workspace/extra';
+  const extraBase = WORKSPACE_EXTRA_ROOT;
   if (fs.existsSync(extraBase)) {
     for (const entry of fs.readdirSync(extraBase)) {
       const fullPath = path.join(extraBase, entry);

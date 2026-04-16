@@ -11,7 +11,7 @@ import fs from 'fs';
 import path from 'path';
 import { CronExpressionParser } from 'cron-parser';
 
-const IPC_DIR = '/workspace/ipc';
+const IPC_DIR = process.env.BIOCLAW_IPC_ROOT || '/workspace/ipc';
 const MESSAGES_DIR = path.join(IPC_DIR, 'messages');
 const TASKS_DIR = path.join(IPC_DIR, 'tasks');
 const FILES_DIR = path.join(IPC_DIR, 'files');
@@ -68,7 +68,7 @@ server.tool(
   'send_image',
   'Send an image file to the user or group. Use this after generating images (e.g., PyMOL renders, matplotlib plots). The file must exist on disk at the given path.',
   {
-    file_path: z.string().describe('Absolute path to the image file inside the container (e.g., /workspace/group/output.png)'),
+    file_path: z.string().describe('Absolute path to the image file (e.g., output.png in the working directory)'),
     caption: z.string().optional().describe('Optional caption/description for the image'),
   },
   async (args) => {

@@ -1,6 +1,7 @@
 import path from 'path';
 
-const WORKSPACE_GROUP_ROOT = '/workspace/group';
+const WORKSPACE_GROUP_ROOT = process.env.BIOCLAW_GROUP_ROOT || '/workspace/group';
+const SKILLS_ROOT = process.env.BIOCLAW_SKILLS_ROOT || '/home/node/.claude/skills';
 const SEC_ROUTE_SKILL = 'sec-report';
 
 export interface TaskRoutingDecision {
@@ -138,10 +139,11 @@ export function detectTaskRouting(prompt: string): TaskRoutingDecision | null {
   const primaryInput = pickPrimarySecInput(inputPaths);
   const candidateLines = inputPaths.length > 0
     ? inputPaths.map((entry) => `- ${entry}`)
-    : ['- Search /workspace/group/uploads and /workspace/group for the uploaded SEC dataset.'];
+    : [`- Search ${WORKSPACE_GROUP_ROOT}/uploads and ${WORKSPACE_GROUP_ROOT} for the uploaded SEC dataset.`];
+  const outputDir = `${WORKSPACE_GROUP_ROOT}/sec_analysis/output`;
   const commandLine = primaryInput
-    ? `python3 sec_pipeline.py --input ${primaryInput} --output /workspace/group/sec_analysis/output`
-    : 'python3 sec_pipeline.py --input <uploaded-sec-dataset> --output /workspace/group/sec_analysis/output';
+    ? `python3 sec_pipeline.py --input ${primaryInput} --output ${outputDir}`
+    : `python3 sec_pipeline.py --input <uploaded-sec-dataset> --output ${outputDir}`;
 
   return {
     matchedRoute: 'sec-report',
@@ -157,19 +159,19 @@ export function detectTaskRouting(prompt: string): TaskRoutingDecision | null {
       ...candidateLines,
       '',
       'Required workflow:',
-      '1. Read /home/node/.claude/skills/sec-report/SKILL.md',
+      `1. Read ${SKILLS_ROOT}/sec-report/SKILL.md`,
       '2. Send the short "SEC Analysis Plan" message requested by the skill before execution.',
       '3. Run the bundled pipeline exactly as instructed:',
-      '   cd /home/node/.claude/skills/sec-report',
+      `   cd ${SKILLS_ROOT}/sec-report`,
       `   ${commandLine}`,
-      '4. Send /workspace/group/sec_analysis/output/SEC_Analysis_Report.pdf to the user.',
-      '5. Send /workspace/group/sec_analysis/output/figures/ranking_summary.png to the user.',
-      '6. Summarize findings using /workspace/group/sec_analysis/output/analysis_summary.json.',
+      `4. Send ${outputDir}/SEC_Analysis_Report.pdf to the user.`,
+      `5. Send ${outputDir}/figures/ranking_summary.png to the user.`,
+      `6. Summarize findings using ${outputDir}/analysis_summary.json.`,
       '',
       'Forbidden for this task:',
       '- Do NOT write ad-hoc SEC analysis scripts.',
       '- Do NOT assemble the report manually with matplotlib PdfPages or custom markdown-to-PDF code.',
-      '- Do NOT save manual report artifacts under /workspace/group/SEC_report.',
+      `- Do NOT save manual report artifacts under ${WORKSPACE_GROUP_ROOT}/SEC_report.`,
       '- Do NOT skip sec_pipeline.py if the goal is a new SEC analysis/report deliverable.',
       '',
       'If the pipeline fails, explain the failure and troubleshoot it. Only fall back to manual analysis if the pipeline is genuinely incompatible and you clearly say why.',

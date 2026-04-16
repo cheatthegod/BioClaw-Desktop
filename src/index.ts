@@ -5,7 +5,7 @@
 import 'dotenv/config';
 import { randomUUID } from 'crypto';
 
-import { RuntimeContext, initRuntime } from './runtime-context.js';
+import { RuntimeContext, initRuntime, getRuntime } from './runtime-context.js';
 import {
   ASSISTANT_NAME,
   ENABLE_LOCAL_WEB,
@@ -36,6 +36,7 @@ import {
 } from './config.js';
 import { recordAgentTraceEvent } from './agent-trace.js';
 import { ContainerOutput, runContainerAgent } from './container-runner.js';
+import { runLocalAgent } from './local-runner.js';
 import { exportNotebook } from './notebook-export.js';
 import { checkRuntime, cleanupOrphans } from './container-runtime.js';
 import { writeGroupsSnapshot, writeTasksSnapshot } from './group-folder.js';
@@ -431,7 +432,9 @@ async function runAgent(
     : undefined;
 
   try {
-    const out = await runContainerAgent(
+    // Choose runner based on mode
+    const runnerFn = getRuntime().isDesktop ? runLocalAgent : runContainerAgent;
+    const out = await runnerFn(
       group,
       {
         prompt,

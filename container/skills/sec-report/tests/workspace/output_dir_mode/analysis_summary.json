@@ -1,0 +1,237 @@
+{
+  "generated": "2026-04-16T04:05:28.982847",
+  "n_constructs": 6,
+  "void_volume_mL": 8.0,
+  "report_profile": "full",
+  "renderer": "typst",
+  "requested_renderer": "auto",
+  "fallback_used": false,
+  "fallback_reason": null,
+  "appendix_path": null,
+  "selected_constructs": [
+    "Ring_Design_01",
+    "Monomer_Only_09",
+    "Mixed_Assembly_07",
+    "Aggregator_05"
+  ],
+  "constructs": [
+    {
+      "name": "Monomer_Only_09",
+      "data_file": "/home/ubuntu/cqr_files/Bioclaw_paper/BioClaw/container/skills/sec-report/tests/workspace/test_dataset/Monomer_Only_09.csv",
+      "n_data_points": 500,
+      "quality_score": 10.0,
+      "homogeneity": "monodisperse",
+      "has_aggregation": false,
+      "aggregation_pct": 0,
+      "dominant_species": "monomer",
+      "cohort": "primary",
+      "cohort_year": null,
+      "notes": [],
+      "peaks": [
+        {
+          "peak_number": 1,
+          "elution_volume_mL": 15.5,
+          "height_mAU": 94.96,
+          "fwhm_mL": 1.651,
+          "relative_area_pct": 100.0,
+          "classification": "monomer",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "name": "Ring_Design_01",
+      "data_file": "/home/ubuntu/cqr_files/Bioclaw_paper/BioClaw/container/skills/sec-report/tests/workspace/test_dataset/Ring_Design_01.csv",
+      "n_data_points": 500,
+      "quality_score": 10.0,
+      "homogeneity": "monodisperse",
+      "has_aggregation": false,
+      "aggregation_pct": 0,
+      "dominant_species": "large_oligomer",
+      "cohort": "primary",
+      "cohort_year": null,
+      "notes": [
+        "Higher-order oligomer dominant \u2014 promising for ring assembly"
+      ],
+      "peaks": [
+        {
+          "peak_number": 1,
+          "elution_volume_mL": 10.0,
+          "height_mAU": 119.84,
+          "fwhm_mL": 1.417,
+          "relative_area_pct": 100.0,
+          "classification": "large_oligomer",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "name": "Ring_Design_11",
+      "data_file": "/home/ubuntu/cqr_files/Bioclaw_paper/BioClaw/container/skills/sec-report/tests/workspace/test_dataset/Ring_Design_11.csv",
+      "n_data_points": 500,
+      "quality_score": 10.0,
+      "homogeneity": "predominantly_monodisperse",
+      "has_aggregation": false,
+      "aggregation_pct": 0,
+      "dominant_species": "large_oligomer",
+      "cohort": "primary",
+      "cohort_year": null,
+      "notes": [
+        "Higher-order oligomer dominant \u2014 promising for ring assembly"
+      ],
+      "peaks": [
+        {
+          "peak_number": 1,
+          "elution_volume_mL": 9.8,
+          "height_mAU": 99.69,
+          "fwhm_mL": 1.302,
+          "relative_area_pct": 85.5,
+          "classification": "large_oligomer",
+          "confidence": "medium"
+        },
+        {
+          "peak_number": 2,
+          "elution_volume_mL": 15.0,
+          "height_mAU": 14.91,
+          "fwhm_mL": 1.419,
+          "relative_area_pct": 14.5,
+          "classification": "monomer",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "name": "Dimer_Variant_03",
+      "data_file": "/home/ubuntu/cqr_files/Bioclaw_paper/BioClaw/container/skills/sec-report/tests/workspace/test_dataset/Dimer_Variant_03.csv",
+      "n_data_points": 500,
+      "quality_score": 9.5,
+      "homogeneity": "predominantly_monodisperse",
+      "has_aggregation": false,
+      "aggregation_pct": 0,
+      "dominant_species": "dimer",
+      "cohort": "primary",
+      "cohort_year": null,
+      "notes": [],
+      "peaks": [
+        {
+          "peak_number": 1,
+          "elution_volume_mL": 10.5,
+          "height_mAU": 24.74,
+          "fwhm_mL": 1.06,
+          "relative_area_pct": 18.7,
+          "classification": "large_oligomer",
+          "confidence": "medium"
+        },
+        {
+          "peak_number": 2,
+          "elution_volume_mL": 13.5,
+          "height_mAU": 79.96,
+          "fwhm_mL": 1.654,
+          "relative_area_pct": 81.3,
+          "classification": "dimer",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "name": "Mixed_Assembly_07",
+      "data_file": "/home/ubuntu/cqr_files/Bioclaw_paper/BioClaw/container/skills/sec-report/tests/workspace/test_dataset/Mixed_Assembly_07.csv",
+      "n_data_points": 500,
+      "quality_score": 6.0,
+      "homogeneity": "polydisperse",
+      "has_aggregation": false,
+      "aggregation_pct": 0,
+      "dominant_species": "oligomer",
+      "cohort": "primary",
+      "cohort_year": null,
+      "notes": [
+        "Polydisperse \u2014 multiple species present",
+        "Broad peak(s) \u2014 possible conformational heterogeneity",
+        "Higher-order oligomer dominant \u2014 promising for ring assembly"
+      ],
+      "peaks": [
+        {
+          "peak_number": 1,
+          "elution_volume_mL": 9.55,
+          "height_mAU": 47.47,
+          "fwhm_mL": 0.565,
+          "relative_area_pct": 24.8,
+          "classification": "large_oligomer",
+          "confidence": "medium"
+        },
+        {
+          "peak_number": 2,
+          "elution_volume_mL": 11.0,
+          "height_mAU": 51.2,
+          "fwhm_mL": 4.703,
+          "relative_area_pct": 31.4,
+          "classification": "oligomer",
+          "confidence": "medium"
+        },
+        {
+          "peak_number": 3,
+          "elution_volume_mL": 13.0,
+          "height_mAU": 40.27,
+          "fwhm_mL": 0.916,
+          "relative_area_pct": 27.4,
+          "classification": "dimer",
+          "confidence": "medium"
+        },
+        {
+          "peak_number": 4,
+          "elution_volume_mL": 15.5,
+          "height_mAU": 29.99,
+          "fwhm_mL": 0.982,
+          "relative_area_pct": 16.3,
+          "classification": "monomer",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "name": "Aggregator_05",
+      "data_file": "/home/ubuntu/cqr_files/Bioclaw_paper/BioClaw/container/skills/sec-report/tests/workspace/test_dataset/Aggregator_05.csv",
+      "n_data_points": 500,
+      "quality_score": 0.0,
+      "homogeneity": "polydisperse",
+      "has_aggregation": true,
+      "aggregation_pct": 50.1,
+      "dominant_species": "aggregate",
+      "cohort": "primary",
+      "cohort_year": null,
+      "notes": [
+        "Aggregation detected (50% of total area)",
+        "Polydisperse \u2014 multiple species present"
+      ],
+      "peaks": [
+        {
+          "peak_number": 1,
+          "elution_volume_mL": 8.0,
+          "height_mAU": 89.2,
+          "fwhm_mL": 0.957,
+          "relative_area_pct": 50.1,
+          "classification": "aggregate",
+          "confidence": "high"
+        },
+        {
+          "peak_number": 2,
+          "elution_volume_mL": 11.45,
+          "height_mAU": 30.13,
+          "fwhm_mL": 1.833,
+          "relative_area_pct": 32.6,
+          "classification": "oligomer",
+          "confidence": "medium"
+        },
+        {
+          "peak_number": 3,
+          "elution_volume_mL": 15.0,
+          "height_mAU": 20.01,
+          "fwhm_mL": 1.312,
+          "relative_area_pct": 17.3,
+          "classification": "monomer",
+          "confidence": "medium"
+        }
+      ]
+    }
+  ]
+}

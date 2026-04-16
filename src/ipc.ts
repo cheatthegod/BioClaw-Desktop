@@ -1,0 +1,490 @@
+import fs from 'fs';
+import path from 'path';
+
+import { CronExpressionParser } from 'cron-parser';
+
+import {
+  ASSISTANT_NAME,
+  DATA_DIR,
+  IPC_POLL_INTERVAL,
+  MAIN_GROUP_FOLDER,
+  TIMEZONE,
+} from './config.js';
+import { recordAgentTraceEvent } from './agent-trace.js';
+import { AvailableGroup } from './group-folder.js';
+import { createTask, deleteTask, getTaskById, updateTask } from './db/index.js';
+import { logger } from './logger.js';
+import { RegisteredGroup } from './types.js';
+import { getWorkspaceFolder } from './workspace.js';
+
+export interface IpcDeps {
+  sendMessage: (jid: string, text: string) => Promise<void>;
+  sendImage: (jid: string, imagePath: string, caption?: string) => Promise<void>;
+  registeredGroups: () => Record<string, RegisteredGroup>;
+  registerGroup: (jid: string, group: RegisteredGroup) => void;
+  getAgentIdForChat: (chatJid: string) => string | undefined;
+  getAgentWorkspaceFolder: (agentId: string) => string | undefined;
+  syncGroupMetadata: (force: boolean) => Promise<void>;
+  getAvailableGroups: () => AvailableGroup[];
+  writeGroupsSnapshot: (
+    groupFolder: string,
+    isMain: boolean,
+    availableGroups: AvailableGroup[],
+    registeredJids: Set<string>,
+  ) => void;
+}
+
+let ipcWatcherRunning = false;
+
+export function startIpcWatcher(deps: IpcDeps): void {
+  if (ipcWatcherRunning) {
+    logger.debug('IPC watcher already running, skipping duplicate start');
+    return;
+  }
+  ipcWatcherRunning = true;
+
+  const ipcBaseDir = path.join(DATA_DIR, 'ipc');
+  fs.mkdirSync(ipcBaseDir, { recursive: true });
+
+  const processIpcFiles = async () => {
+    // Scan all group IPC directories (identity determined by directory)
+    let groupFolders: string[];
+    try {
+      groupFolders = fs.readdirSync(ipcBaseDir).filter((f) => {
+        const stat = fs.statSync(path.join(ipcBaseDir, f));
+        return stat.isDirectory() && f !== 'errors';
+      });
+    } catch (err) {
+      logger.error({ err }, 'Error reading IPC base directory');
+      setTimeout(processIpcFiles, IPC_POLL_INTERVAL);
+      return;
+    }
+
+    const registeredGroups = deps.registeredGroups();
+
+    for (const sourceAgentId of groupFolders) {
+      const sourceWorkspaceFolder =
+        deps.getAgentWorkspaceFolder(sourceAgentId) || sourceAgentId;
+      const isMain = sourceWorkspaceFolder === MAIN_GROUP_FOLDER;
+      const messagesDir = path.join(ipcBaseDir, sourceAgentId, 'messages');
+      const tasksDir = path.join(ipcBaseDir, sourceAgentId, 'tasks');
+
+      // Process messages from this group's IPC directory
+      try {
+        if (fs.existsSync(messagesDir)) {
+          const messageFiles = fs
+            .readdirSync(messagesDir)
+            .filter((f) => f.endsWith('.json'));
+          for (const file of messageFiles) {
+            const filePath = path.join(messagesDir, file);
+            try {
+              const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+              if (data.type === 'message' && data.chatJid && data.text) {
+                const targetAgentId = deps.getAgentIdForChat(data.chatJid);
+                if (
+                  isMain ||
+                  (targetAgentId && targetAgentId === sourceAgentId)
+                ) {
+                  await deps.sendMessage(
+                    data.chatJid,
+                    `${ASSISTANT_NAME}: ${data.text}`,
+                  );
+                  recordAgentTraceEvent({
+                    group_folder: sourceWorkspaceFolder,
+                    chat_jid: data.chatJid,
+                    session_id: null,
+                    type: 'ipc_send',
+                    payload: {
+                      kind: 'text',
+                      length: data.text.length,
+                      preview: String(data.text).slice(0, 200),
+                    },
+                  });
+                  logger.info(
+                    { chatJid: data.chatJid, sourceAgentId },
+                    'IPC message sent',
+                  );
+                } else {
+                  logger.warn(
+                    { chatJid: data.chatJid, sourceAgentId },
+                    'Unauthorized IPC message attempt blocked',
+                  );
+                }
+              } else if (data.type === 'image' && data.chatJid && data.filePath) {
+                const targetAgentId = deps.getAgentIdForChat(data.chatJid);
+                if (
+                  isMain ||
+                  (targetAgentId && targetAgentId === sourceAgentId)
+                ) {
+                  const hostImagePath = path.join(ipcBaseDir, sourceAgentId, data.filePath);
+                  if (fs.existsSync(hostImagePath)) {
+                    await deps.sendImage(data.chatJid, hostImagePath, data.caption);
+                    recordAgentTraceEvent({
+                      group_folder: sourceWorkspaceFolder,
+                      chat_jid: data.chatJid,
+                      session_id: null,
+                      type: 'ipc_send',
+                      payload: {
+                        kind: 'image',
+                        filePath: data.filePath,
+                        caption: data.caption ?? null,
+                      },
+                    });
+                    logger.info(
+                      { chatJid: data.chatJid, sourceAgentId, filePath: data.filePath },
+                      'IPC image sent',
+                    );
+                    try { fs.unlinkSync(hostImagePath); } catch {}
+                  } else {
+                    logger.warn(
+                      { hostImagePath, sourceAgentId },
+                      'IPC image file not found',
+                    );
+                  }
+                } else {
+                  logger.warn(
+                    { chatJid: data.chatJid, sourceAgentId },
+                    'Unauthorized IPC image attempt blocked',
+                  );
+                }
+              } else if (data.type === 'plan') {
+                // Plan mode: agent sends a structured plan for user review.
+                // For now, render it as a regular message with plan formatting.
+                // Future: dedicated UI component with approve/modify/reject.
+                const planChatJid = data.chatJid;
+                if (planChatJid) {
+                  const planText = data.text || data.plan || '[Plan received]';
+                  const targetAgentId = deps.getAgentIdForChat(planChatJid);
+                  if (targetAgentId) {
+                    await deps.sendToChannel(
+                      planChatJid,
+                      planText,
+                      sourceWorkspaceFolder,
+                    );
+                  }
+                }
+                // Also record as a trace event
+                recordAgentTraceEvent({
+                  group_folder: sourceWorkspaceFolder,
+                  chat_jid: data.chatJid ?? null,
+                  session_id: null,
+                  type: 'agent_plan',
+                  payload: { plan: data.plan ?? data.text ?? null },
+                });
+              } else if (data.type === 'agent_step') {
+                const tracePayload: Record<string, unknown> = {
+                  stepType: data.stepType,
+                  text: data.text ?? null,
+                  toolName: data.toolName ?? null,
+                  toolInput: data.toolInput ?? null,
+                };
+                // Preserve full tool input for notebook export when available
+                if (data.toolInputFull) {
+                  tracePayload.toolInputFull = data.toolInputFull;
+                }
+                recordAgentTraceEvent({
+                  group_folder: sourceWorkspaceFolder,
+                  chat_jid: data.chatJid ?? null,
+                  session_id: null,
+                  type: `agent_${data.stepType}`,
+                  payload: tracePayload,
+                });
+              }
+              fs.unlinkSync(filePath);
+            } catch (err) {
+              logger.error(
+                { file, sourceAgentId, err },
+                'Error processing IPC message',
+              );
+              const errorDir = path.join(ipcBaseDir, 'errors');
+              fs.mkdirSync(errorDir, { recursive: true });
+              fs.renameSync(
+                filePath,
+                path.join(errorDir, `${sourceAgentId}-${file}`),
+              );
+            }
+          }
+        }
+      } catch (err) {
+        logger.error(
+          { err, sourceAgentId },
+          'Error reading IPC messages directory',
+        );
+      }
+
+      // Process tasks from this group's IPC directory
+      try {
+        if (fs.existsSync(tasksDir)) {
+          const taskFiles = fs
+            .readdirSync(tasksDir)
+            .filter((f) => f.endsWith('.json'));
+          for (const file of taskFiles) {
+            const filePath = path.join(tasksDir, file);
+            try {
+              const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+              // Pass source group identity to processTaskIpc for authorization
+              await processTaskIpc(
+                data,
+                sourceAgentId,
+                sourceWorkspaceFolder,
+                isMain,
+                deps,
+              );
+              fs.unlinkSync(filePath);
+            } catch (err) {
+              logger.error(
+                { file, sourceAgentId, err },
+                'Error processing IPC task',
+              );
+              const errorDir = path.join(ipcBaseDir, 'errors');
+              fs.mkdirSync(errorDir, { recursive: true });
+              fs.renameSync(
+                filePath,
+                path.join(errorDir, `${sourceAgentId}-${file}`),
+              );
+            }
+          }
+        }
+      } catch (err) {
+        logger.error({ err, sourceAgentId }, 'Error reading IPC tasks directory');
+      }
+    }
+
+    setTimeout(processIpcFiles, IPC_POLL_INTERVAL);
+  };
+
+  processIpcFiles();
+  logger.info('IPC watcher started (per-group namespaces)');
+}
+
+export async function processTaskIpc(
+  data: {
+    type: string;
+    taskId?: string;
+    prompt?: string;
+    schedule_type?: string;
+    schedule_value?: string;
+    context_mode?: string;
+    agentId?: string;
+    groupFolder?: string;
+    chatJid?: string;
+    targetJid?: string;
+    // For register_group
+    jid?: string;
+    name?: string;
+    folder?: string;
+    trigger?: string;
+    requiresTrigger?: boolean;
+    containerConfig?: RegisteredGroup['containerConfig'];
+    workspaceFolder?: string;
+  },
+  sourceAgentId: string, // Verified identity from IPC directory
+  sourceWorkspaceFolder: string,
+  isMain: boolean, // Verified from directory path
+  deps: IpcDeps,
+): Promise<void> {
+  const registeredGroups = deps.registeredGroups();
+
+  switch (data.type) {
+    case 'schedule_task':
+      if (
+        data.prompt &&
+        data.schedule_type &&
+        data.schedule_value &&
+        data.targetJid
+      ) {
+        // Resolve the target group from JID
+        const targetJid = data.targetJid as string;
+        const targetGroupEntry = registeredGroups[targetJid];
+
+        if (!targetGroupEntry) {
+          logger.warn(
+            { targetJid },
+            'Cannot schedule task: target group not registered',
+          );
+          break;
+        }
+
+        const targetFolder = getWorkspaceFolder(targetGroupEntry);
+
+        // Authorization: non-main groups can only schedule for themselves
+        if (!isMain && targetFolder !== sourceWorkspaceFolder) {
+          logger.warn(
+            { sourceAgentId, sourceWorkspaceFolder, targetFolder },
+            'Unauthorized schedule_task attempt blocked',
+          );
+          break;
+        }
+
+        const scheduleType = data.schedule_type as 'cron' | 'interval' | 'once';
+
+        let nextRun: string | null = null;
+        if (scheduleType === 'cron') {
+          try {
+            const interval = CronExpressionParser.parse(data.schedule_value, {
+              tz: TIMEZONE,
+            });
+            nextRun = interval.next().toISOString();
+          } catch {
+            logger.warn(
+              { scheduleValue: data.schedule_value },
+              'Invalid cron expression',
+            );
+            break;
+          }
+        } else if (scheduleType === 'interval') {
+          const ms = parseInt(data.schedule_value, 10);
+          if (isNaN(ms) || ms <= 0) {
+            logger.warn(
+              { scheduleValue: data.schedule_value },
+              'Invalid interval',
+            );
+            break;
+          }
+          nextRun = new Date(Date.now() + ms).toISOString();
+        } else if (scheduleType === 'once') {
+          const scheduled = new Date(data.schedule_value);
+          if (isNaN(scheduled.getTime())) {
+            logger.warn(
+              { scheduleValue: data.schedule_value },
+              'Invalid timestamp',
+            );
+            break;
+          }
+          nextRun = scheduled.toISOString();
+        }
+
+        const taskId = `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const contextMode =
+          data.context_mode === 'group' || data.context_mode === 'isolated'
+            ? data.context_mode
+            : 'isolated';
+        createTask({
+          id: taskId,
+          group_folder: targetFolder,
+          chat_jid: targetJid,
+          agent_id: data.agentId || sourceAgentId,
+          prompt: data.prompt,
+          schedule_type: scheduleType,
+          schedule_value: data.schedule_value,
+          context_mode: contextMode,
+          next_run: nextRun,
+          status: 'active',
+          created_at: new Date().toISOString(),
+        });
+        logger.info(
+          { taskId, sourceAgentId, targetFolder, contextMode },
+          'Task created via IPC',
+        );
+      }
+      break;
+
+    case 'pause_task':
+      if (data.taskId) {
+        const task = getTaskById(data.taskId);
+        if (task && (isMain || task.agent_id === sourceAgentId)) {
+          updateTask(data.taskId, { status: 'paused' });
+          logger.info(
+            { taskId: data.taskId, sourceAgentId },
+            'Task paused via IPC',
+          );
+        } else {
+          logger.warn(
+            { taskId: data.taskId, sourceAgentId },
+            'Unauthorized task pause attempt',
+          );
+        }
+      }
+      break;
+
+    case 'resume_task':
+      if (data.taskId) {
+        const task = getTaskById(data.taskId);
+        if (task && (isMain || task.agent_id === sourceAgentId)) {
+          updateTask(data.taskId, { status: 'active' });
+          logger.info(
+            { taskId: data.taskId, sourceAgentId },
+            'Task resumed via IPC',
+          );
+        } else {
+          logger.warn(
+            { taskId: data.taskId, sourceAgentId },
+            'Unauthorized task resume attempt',
+          );
+        }
+      }
+      break;
+
+    case 'cancel_task':
+      if (data.taskId) {
+        const task = getTaskById(data.taskId);
+        if (task && (isMain || task.agent_id === sourceAgentId)) {
+          deleteTask(data.taskId);
+          logger.info(
+            { taskId: data.taskId, sourceAgentId },
+            'Task cancelled via IPC',
+          );
+        } else {
+          logger.warn(
+            { taskId: data.taskId, sourceAgentId },
+            'Unauthorized task cancel attempt',
+          );
+        }
+      }
+      break;
+
+    case 'refresh_groups':
+      // Only main group can request a refresh
+      if (isMain) {
+        logger.info(
+          { sourceAgentId, sourceWorkspaceFolder },
+          'Group metadata refresh requested via IPC',
+        );
+        await deps.syncGroupMetadata(true);
+        // Write updated snapshot immediately
+        const availableGroups = deps.getAvailableGroups();
+        deps.writeGroupsSnapshot(
+          sourceWorkspaceFolder,
+          true,
+          availableGroups,
+          new Set(Object.keys(registeredGroups)),
+        );
+      } else {
+        logger.warn(
+          { sourceAgentId, sourceWorkspaceFolder },
+          'Unauthorized refresh_groups attempt blocked',
+        );
+      }
+      break;
+
+    case 'register_group':
+      // Only main group can register new groups
+      if (!isMain) {
+        logger.warn(
+          { sourceAgentId, sourceWorkspaceFolder },
+          'Unauthorized register_group attempt blocked',
+        );
+        break;
+      }
+      if (data.jid && data.name && data.folder && data.trigger) {
+        deps.registerGroup(data.jid, {
+          name: data.name,
+          folder: data.folder,
+          workspaceFolder: data.workspaceFolder,
+          trigger: data.trigger,
+          added_at: new Date().toISOString(),
+          containerConfig: data.containerConfig,
+          requiresTrigger: data.requiresTrigger,
+        });
+      } else {
+        logger.warn(
+          { data },
+          'Invalid register_group request - missing required fields',
+        );
+      }
+      break;
+
+    default:
+      logger.warn({ type: data.type }, 'Unknown IPC task type');
+  }
+}

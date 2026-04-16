@@ -1,0 +1,110 @@
+Bootstrap: docker
+From: node:22-slim
+
+%labels
+    Author BioClaw
+    Description BioClaw agent container with biology tools (Apptainer)
+
+%post
+    # System dependencies for Chromium + bio tools
+    apt-get update && apt-get install -y \
+        chromium \
+        fonts-liberation \
+        fonts-noto-cjk \
+        fonts-wqy-zenhei \
+        fonts-noto-color-emoji \
+        libgbm1 \
+        libnss3 \
+        libatk-bridge2.0-0 \
+        libgtk-3-0 \
+        libx11-xcb1 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxrandr2 \
+        libasound2 \
+        libpangocairo-1.0-0 \
+        libcups2 \
+        libdrm2 \
+        libxshmfence1 \
+        curl \
+        git \
+        wget \
+        unzip \
+        ncbi-blast+ \
+        samtools \
+        bedtools \
+        fastqc \
+        bwa \
+        minimap2 \
+        seqtk \
+        fastp \
+        bcftools \
+        seqkit \
+        pigz \
+        tabix \
+        sra-toolkit \
+        salmon \
+        kallisto \
+        python3 \
+        python3-pip \
+        python3-venv \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Python biology libraries
+    pip3 install --no-cache-dir --break-system-packages \
+        biopython \
+        pandas \
+        numpy \
+        scipy \
+        matplotlib \
+        seaborn \
+        scikit-learn \
+        rdkit-pypi \
+        pydeseq2 \
+        scanpy \
+        anndata \
+        pysam \
+        requests \
+        multiqc \
+        cnsplots \
+        pyGenomeTracks
+
+    # PyMOL (headless)
+    apt-get update && apt-get install -y pymol && rm -rf /var/lib/apt/lists/*
+
+    # Chromium path for agent-browser
+    export AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
+    export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
+
+    # Global Node packages
+    npm install -g agent-browser @anthropic-ai/claude-code
+
+    # App directory setup
+    mkdir -p /app
+    cd /app
+
+    # Workspace directories
+    mkdir -p /workspace/group /workspace/global /workspace/extra \
+             /workspace/ipc/messages /workspace/ipc/tasks /workspace/ipc/input /workspace/ipc/files
+
+    # Create entrypoint script
+    printf '#!/bin/bash\nset -e\ncd /app && npx tsc --outDir /tmp/dist 2>&1 >&2\nln -s /app/node_modules /tmp/dist/node_modules\nchmod -R a-w /tmp/dist\ncat > /tmp/input.json\nnode /tmp/dist/index.js < /tmp/input.json\n' > /app/entrypoint.sh
+    chmod +x /app/entrypoint.sh
+
+%environment
+    export AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
+    export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
+
+%runscript
+    exec /app/entrypoint.sh "$@"
+
+%help
+    BioClaw Agent Container (Apptainer)
+    Runs Claude Agent SDK with biology research tools.
+
+    Usage:
+      echo '{"prompt":"...","groupFolder":"test","chatJid":"test@g.us","isMain":false}' | \
+        apptainer run bioclaw-agent.sif
+
+    Or with binds:
+      apptainer exec --bind /data:/workspace/group bioclaw-agent.sif /app/entrypoint.sh

@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BioClaw</title>
+  <link rel="icon" type="image/jpeg" href="/favicon.jpg">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <div class="unified-root" id="unifiedRoot">
+    <header class="unified-header">
+      <div class="header-left">
+        <span class="logo"><span class="logo-mark" aria-hidden="true"></span>BioClaw</span>
+        <nav class="tab-bar" role="tablist" aria-label="Main">
+          <button type="button" role="tab" id="tabTraceBtn" aria-selected="false"></button>
+          <button type="button" role="tab" id="tabChatBtn" aria-selected="true"></button>
+        </nav>
+      </div>
+      <div class="header-actions">
+        <div class="pill" id="connPill" title=""><span class="dot" id="connDot"></span><span id="connLabel"></span></div>
+        <div class="pill trace-pill" id="traceConnPill" title=""><span class="dot" id="traceConnDot"></span><span id="traceConnLabel"></span></div>
+        <button type="button" class="icon-btn" id="openSettings" aria-label=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg></button>
+      </div>
+    </header>
+    <div class="unified-body">
+      <div class="unified-layout" id="unifiedLayout">
+        <aside class="app-rail" aria-hidden="true">
+          <div class="app-rail-top">
+            <div class="rail-badge">B</div>
+            <div class="rail-slot is-active">
+              <span class="rail-dot"></span>
+              <span class="rail-text" id="railProject"></span>
+            </div>
+            <div class="rail-slot">
+              <span class="rail-dot"></span>
+              <span class="rail-text" id="railResults"></span>
+            </div>
+          </div>
+          <div class="app-rail-bottom">
+            <div class="rail-pill" id="railStatus"></div>
+          </div>
+        </aside>
+        <section id="panelChat" class="panel panel-chat" role="tabpanel" aria-labelledby="tabChatBtn">
+          <div class="chat-shell">
+            <aside class="thread-rail">
+              <div class="thread-rail-head">
+                <div>
+                  <div class="thread-rail-label" id="threadsTitle"></div>
+                  <div class="thread-rail-sub" id="threadsHint"></div>
+                </div>
+                <button type="button" class="primary subtle" id="newThreadBtn"></button>
+              </div>
+              <section class="rail-section rail-section-threads is-open" id="threadSection">
+                <button type="button" class="rail-section-toggle" id="threadSectionToggle" aria-expanded="true">
+                  <span class="rail-section-toggle-main">
+                    <span class="rail-section-chevron" aria-hidden="true"></span>
+                    <span class="thread-rail-label" id="threadsPanelTitle"></span>
+                  </span>
+                </button>
+                <div class="rail-section-body">
+                  <div id="threadList" class="thread-list" aria-live="polite"></div>
+                </div>
+              </section>
+              <section class="rail-section rail-section-files is-open project-file-tray" id="recentFilesSection">
+                <button type="button" class="rail-section-toggle" id="recentFilesSectionToggle" aria-expanded="true">
+                  <span class="rail-section-toggle-main">
+                    <span class="rail-section-chevron" aria-hidden="true"></span>
+                    <span class="thread-rail-label" id="recentFilesTitle"></span>
+                  </span>
+                  <span class="thread-rail-sub rail-section-sub" id="recentFilesHint"></span>
+                </button>
+                <div class="rail-section-body">
+                  <div id="recentFileList" class="project-file-list" aria-live="polite"></div>
+                </div>
+              </section>
+            </aside>
+            <div class="panel-resizer panel-resizer-chat" id="threadRailResizer" role="separator" aria-orientation="vertical" tabindex="0"></div>
+            <div class="chat-main">
+              <section class="welcome-shell" id="welcomeShell" aria-live="polite">
+                <div class="welcome-copy">
+                  <div class="welcome-markline">
+                    <span class="welcome-mark" aria-hidden="true"></span>
+                    <span class="welcome-kicker">BioClaw</span>
+                  </div>
+                  <h2 class="welcome-title" id="welcomeTitle"></h2>
+                  <p class="welcome-subtitle" id="welcomeSubtitle"></p>
+                </div>
+                <div class="welcome-suggestions" id="welcomeSuggestions"></div>
+              </section>
+              <div class="workspace-topbar">
+                <div class="workspace-title-group">
+                  <div class="workspace-eyebrow" id="workspaceEyebrow"></div>
+                  <h1 id="chatTitle"></h1>
+                </div>
+                <div class="workspace-view-toggle" role="tablist" aria-label="Workspace view">
+                  <button type="button" class="view-toggle-btn" id="viewConversationBtn" aria-selected="true"></button>
+                  <button type="button" class="view-toggle-btn" id="viewArtifactBtn" aria-selected="false"></button>
+                </div>
+              </div>
+              <p class="subtitle" id="chatHint"></p>
+              <div id="artifactStage" class="artifact-stage" aria-live="polite">
+                <div id="artifactEmpty" class="artifact-empty"></div>
+                <div id="artifactPreview" class="artifact-preview"></div>
+              </div>
+              <div class="artifact-stage-resizer" id="artifactStageResizer" role="separator" aria-orientation="horizontal" tabindex="0"></div>
+              <div id="messages" class="chat-scroll" aria-live="polite"></div>
+              <div class="composer-card">
+                <form id="composer">
+                  <div class="composer-input-shell">
+                    <textarea id="text" rows="4"></textarea>
+                    <div class="composer-resizer" id="composerResizer" role="separator" aria-orientation="horizontal" tabindex="0"></div>
+                    <div class="composer-inline-bar">
+                      <div class="toolbar composer-toolbar">
+                      <label class="upload"><span id="uploadLabel"></span><input id="file" type="file"></label>
+                      <span id="filename" class="filename"></span>
+                      </div>
+                      <button class="primary" id="send" type="submit"></button>
+                    </div>
+                  </div>
+                  <div id="status" class="status"></div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </section>
+        <div class="panel-resizer panel-resizer-main" id="mainPanelResizer" role="separator" aria-orientation="vertical" tabindex="0"></div>
+        <section id="panelTrace" class="panel panel-trace hidden-narrow" role="tabpanel" aria-labelledby="tabTraceBtn">
+          <div class="inspector-shell">
+            <details class="inspector-section inspector-collapsible" id="progressSection" open>
+              <summary class="inspector-summary">
+                <div>
+                  <div class="inspector-kicker" id="progressTitle"></div>
+                  <p class="trace-desc" id="traceSub"></p>
+                </div>
+              </summary>
+              <div class="inspector-section-body">
+                <div class="inspector-section-head">
+                  <div class="inspector-head-spacer"></div>
+                  <button type="button" class="btn-trace" id="reloadTrace"></button>
+                </div>
+                <div class="trace-actions">
+                  <label class="fld"><span id="i18n-group-label"></span> <select id="group"><option value="" id="opt-all"></option></select></label>
+                  <label class="trace-opt" for="traceShowStream"><input type="checkbox" id="traceShowStream" /><span id="traceStreamLabel"></span></label>
+                </div>
+                <div id="timeline" class="timeline"></div>
+              </div>
+            </details>
+            <details class="inspector-section inspector-collapsible" id="resultsSection" open>
+              <summary class="inspector-summary">
+                <div>
+                  <div class="inspector-kicker" id="resultsTitle"></div>
+                  <p class="inspector-hint" id="resultsHint"></p>
+                </div>
+              </summary>
+              <div class="inspector-section-body">
+                <div id="resultList" class="result-list" aria-live="polite"></div>
+              </div>
+            </details>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+  <div class="drawer-backdrop" id="settingsBackdrop" aria-hidden="true"></div>
+  <aside class="drawer" id="settingsDrawer" aria-hidden="true" aria-labelledby="settingsHeading">
+    <div class="drawer-head">
+      <h2 id="settingsHeading"></h2>
+      <button type="button" class="icon-btn" id="closeSettings" aria-label=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="drawer-body">
+      <div class="drawer-section">
+        <h3 id="secDisplay"></h3>
+        <div class="setting-row"><span class="setting-label" id="lblLang"></span><button type="button" class="btn-setting" id="langBtn"></button></div>
+        <div class="setting-row"><span class="setting-label" id="lblTheme"></span><button type="button" class="btn-setting" id="themeBtn"></button></div>
+      </div>
+      <div class="drawer-section">
+        <h3 id="secConnection"></h3>
+        <div class="setting-row"><span class="setting-label" id="lblConn"></span><span class="setting-value" id="settingsConnValue"></span></div>
+        <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px">
+          <span class="setting-label" id="lblTraceConn"></span>
+          <span class="setting-value" id="settingsTraceConnValue"></span>
+        </div>
+        <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px">
+          <span class="setting-label" id="lblSession"></span>
+          <code class="jid-box" id="sessionJid"></code>
+        </div>
+      </div>
+      <div class="drawer-section">
+        <div class="drawer-section-head">
+          <h3 id="secControl"></h3>
+          <button type="button" class="btn-setting btn-inline" id="manageRefreshBtn"></button>
+        </div>
+        <div class="setting-stack">
+          <label class="setting-label" for="manageCommandInput" id="lblControlCommand"></label>
+          <div class="setting-inline">
+            <input type="text" id="manageCommandInput" class="manage-input" autocomplete="off">
+            <button type="button" class="btn-setting btn-inline" id="manageCommandBtn"></button>
+          </div>
+          <pre class="manage-block" id="manageCommandOutput"></pre>
+        </div>
+        <div class="setting-stack">
+          <label class="setting-label" id="lblStatusPanel"></label>
+          <pre class="manage-block" id="manageStatusPanel"></pre>
+        </div>
+        <div class="setting-stack">
+          <label class="setting-label" id="lblDoctorPanel"></label>
+          <pre class="manage-block" id="manageDoctorPanel"></pre>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <script src="/vendor/marked.umd.js"></script>
+  <script src="/vendor/purify.min.js"></script>
+  <script src="/assets/app.js"></script>
+</body>
+</html>

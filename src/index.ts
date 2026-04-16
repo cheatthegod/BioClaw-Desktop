@@ -5,6 +5,7 @@
 import 'dotenv/config';
 import { randomUUID } from 'crypto';
 
+import { RuntimeContext, initRuntime } from './runtime-context.js';
 import {
   ASSISTANT_NAME,
   ENABLE_LOCAL_WEB,
@@ -31,6 +32,7 @@ import {
   TRIGGER_PATTERN,
   SUMMARY_PATTERN,
   SUMMARY_HISTORY_LIMIT,
+  _freezeLegacyPaths,
 } from './config.js';
 import { recordAgentTraceEvent } from './agent-trace.js';
 import { ContainerOutput, runContainerAgent } from './container-runner.js';
@@ -542,6 +544,11 @@ async function handleInboundMessage(msg: NewMessage): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  // ── Initialize RuntimeContext (must be first) ──
+  const ctx = RuntimeContext.forServer();
+  initRuntime(ctx);
+  _freezeLegacyPaths();
+
   ensureRuntimeAvailable();
   initDatabase();
   logger.info('Database initialized');
@@ -763,6 +770,7 @@ async function main(): Promise<void> {
     getAgentIdForChat,
     getAgentWorkspaceFolder,
     sendMessage: (jid, text) => sendToChannel(jid, text),
+    sendToChannel: (jid, text, _sf) => sendToChannel(jid, text),
     sendImage: (jid, path, caption) => sendImageToChannel(jid, path, caption),
     syncGroupMetadata: (force) => whatsapp?.syncGroupMetadata(force) ?? Promise.resolve(),
     getAvailableGroups,

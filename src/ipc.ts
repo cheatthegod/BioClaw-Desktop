@@ -20,6 +20,7 @@ import { getWorkspaceFolder } from './workspace.js';
 export interface IpcDeps {
   sendMessage: (jid: string, text: string) => Promise<void>;
   sendImage: (jid: string, imagePath: string, caption?: string) => Promise<void>;
+  sendToChannel: (jid: string, text: string, sourceFolder?: string) => Promise<void>;
   registeredGroups: () => Record<string, RegisteredGroup>;
   registerGroup: (jid: string, group: RegisteredGroup) => void;
   getAgentIdForChat: (chatJid: string) => string | undefined;

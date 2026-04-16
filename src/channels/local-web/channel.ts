@@ -13,6 +13,7 @@ import {
   LOCAL_WEB_PORT,
   LOCAL_WEB_SECRET,
 } from '../../config.js';
+import { getRuntime } from '../../runtime-context.js';
 import { handleDashboardRoutes, initDashboardTraceBroadcast, shutdownDashboardTraceBroadcast } from '../../dashboard/server.js';
 import { getWebVendorScripts } from './vendor-scripts.js';
 import { getRecentMessages, getRecentMessagesForChats, storeChatMetadata, storeMessageDirect } from '../../db/index.js';
@@ -268,7 +269,7 @@ export class LocalWebChannel implements Channel {
     }
 
     if (req.method === 'GET' && url.pathname === '/favicon.jpg') {
-      this.serveFile(path.resolve('bioclaw_logo.jpg'), 'image/jpeg', res, 604800);
+      this.serveFile(getRuntime().logoPath, 'image/jpeg', res, 604800);
       return;
     }
 
@@ -648,7 +649,10 @@ export class LocalWebChannel implements Channel {
     this.notifySse(LOCAL_WEB_GROUP_JID);
   }
 
-  private static readonly ASSETS_DIR = path.join('src', 'channels', 'local-web', 'assets');
+  /** Assets directory — reads from RuntimeContext (supports Electron packaging) */
+  private static get ASSETS_DIR(): string {
+    return getRuntime().webAssetsDir;
+  }
   private static readonly MIME_MAP: Record<string, string> = {
     '.html': 'text/html; charset=utf-8',
     '.css': 'text/css; charset=utf-8',

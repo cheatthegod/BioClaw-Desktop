@@ -22,23 +22,26 @@ interface MinicondaRelease {
 }
 
 // Miniconda3 py311_24.11.1-0 — pinned for reproducibility
-const MINICONDA: Record<string, MinicondaRelease> = {
-  'win32-x64': {
-    url: 'https://repo.anaconda.com/miniconda/Miniconda3-py311_24.11.1-0-Windows-x86_64.exe',
-    sha256: '43dcbcc315ff91edf959e002cd2f1ede38c64b999fefcc951bccf2ed69c9e8bb',
-  },
-  'darwin-x64': {
-    url: 'https://repo.anaconda.com/miniconda/Miniconda3-py311_24.11.1-0-MacOSX-x86_64.sh',
-    sha256: '388f669ab95d659b4c97353f756ce93ed2000ec0114edaec9688f8541fa4bcab',
-  },
-  'darwin-arm64': {
-    url: 'https://repo.anaconda.com/miniconda/Miniconda3-py311_24.11.1-0-MacOSX-arm64.sh',
-    sha256: '862af4d7cb257219c6b280848049e09e1aff27acd06d5422359f2249f938e282',
-  },
-  'linux-x64': {
-    url: 'https://repo.anaconda.com/miniconda/Miniconda3-py311_24.11.1-0-Linux-x86_64.sh',
-    sha256: '807774bae6cd87132094458217ebf713df436f64779faf9bb4c3d4b6615c1e3a',
-  },
+const MINICONDA_FILENAME: Record<string, string> = {
+  'win32-x64': 'Miniconda3-py311_24.11.1-0-Windows-x86_64.exe',
+  'darwin-x64': 'Miniconda3-py311_24.11.1-0-MacOSX-x86_64.sh',
+  'darwin-arm64': 'Miniconda3-py311_24.11.1-0-MacOSX-arm64.sh',
+  'linux-x64': 'Miniconda3-py311_24.11.1-0-Linux-x86_64.sh',
+};
+
+const MINICONDA_SHA256: Record<string, string> = {
+  'win32-x64': '43dcbcc315ff91edf959e002cd2f1ede38c64b999fefcc951bccf2ed69c9e8bb',
+  'darwin-x64': '388f669ab95d659b4c97353f756ce93ed2000ec0114edaec9688f8541fa4bcab',
+  'darwin-arm64': '862af4d7cb257219c6b280848049e09e1aff27acd06d5422359f2249f938e282',
+  'linux-x64': '807774bae6cd87132094458217ebf713df436f64779faf9bb4c3d4b6615c1e3a',
+};
+
+// Download sources — Chinese mirrors are MUCH faster in mainland China
+const MINICONDA_SOURCES: Record<string, string> = {
+  default: 'https://repo.anaconda.com/miniconda/',
+  tsinghua: 'https://mirrors.tuna.tsinghua.edu.cn/anaconda/miniconda/',
+  aliyun: 'https://mirrors.aliyun.com/anaconda/miniconda/',
+  ustc: 'https://mirrors.ustc.edu.cn/anaconda/miniconda/',
 };
 
 // ── Pinned pip packages ──
@@ -106,28 +109,36 @@ export class PythonManager {
     onProgress: (p: InstallProgress) => void,
   ): Promise<void> {
     const platformKey = `${process.platform}-${process.arch}`;
-    const release = MINICONDA[platformKey];
-    if (!release) {
+    const filename = MINICONDA_FILENAME[platformKey];
+    const sha256 = MINICONDA_SHA256[platformKey];
+    if (!filename) {
       throw new Error(`Unsupported platform: ${platformKey}`);
     }
 
+    // Pick download source — use same mirror selection as pip
+    const mirrorKey = Object.keys(PIP_MIRRORS).find(
+      k => PIP_MIRRORS[k] === this.pipMirror,
+    ) || 'default';
+    const condaSource = MINICONDA_SOURCES[mirrorKey] || MINICONDA_SOURCES.default;
+    const downloadUrl = `${condaSource}${filename}`;
+
     // ── Step 1: Download Miniconda ──
-    onProgress({ percent: 5, message: 'Downloading Python environment...' });
+    const sourceName = mirrorKey === 'default' ? 'anaconda.com' : mirrorKey;
+    onProgress({ percent: 5, message: `Downloading from ${sourceName}...` });
 
-    const ext = process.platform === 'win32' ? '.exe' : '.sh';
-    const installerPath = path.join(this.dataDir, `miniconda-installer${ext}`);
+    const installerPath = path.join(this.dataDir, `miniconda-installer${path.extname(filename)}`);
 
-    await this.downloadFile(release.url, installerPath, (frac) => {
+    await this.downloadFile(downloadUrl, installerPath, (frac) => {
       onProgress({
         percent: 5 + Math.round(frac * 35),
-        message: `Downloading... ${Math.round(frac * 100)}%`,
+        message: `Downloading from ${sourceName}... ${Math.round(frac * 100)}%`,
       });
     });
 
-    // ── Step 1b: Verify checksum (if hash is set) ──
-    if (release.sha256) {
+    // ── Step 1b: Verify checksum ──
+    if (sha256) {
       onProgress({ percent: 40, message: 'Verifying download integrity...' });
-      const valid = await this.verifyChecksum(installerPath, release.sha256);
+      const valid = await this.verifyChecksum(installerPath, sha256);
       if (!valid) {
         fs.unlinkSync(installerPath);
         throw new Error('Download integrity check failed — SHA256 mismatch');

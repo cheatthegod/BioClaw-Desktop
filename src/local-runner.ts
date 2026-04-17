@@ -80,12 +80,24 @@ export async function runLocalAgent(
   const pythonBinDir = path.dirname(ctx.pythonPath);
   const currentPath = process.env.PATH || '';
 
+  // Proxy env vars to pass through (critical for VPN/proxy users)
+  const proxyVars: Record<string, string> = {};
+  for (const key of [
+    'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'NO_PROXY',
+    'http_proxy', 'https_proxy', 'all_proxy', 'no_proxy',
+  ]) {
+    if (process.env[key]) proxyVars[key] = process.env[key]!;
+  }
+
   const env: Record<string, string> = {
     // Inherit minimal env
     HOME: process.env.HOME || process.env.USERPROFILE || '',
     PATH: `${pythonBinDir}${path.delimiter}${currentPath}`,
     TMPDIR: process.env.TMPDIR || process.env.TEMP || '/tmp',
     LANG: process.env.LANG || 'en_US.UTF-8',
+
+    // Pass through system proxy settings
+    ...proxyVars,
 
     // Node.js
     NODE_ENV: 'production',

@@ -15,6 +15,11 @@ import { app, BrowserWindow, ipcMain, Tray, Menu } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import net from 'net';
+import { fileURLToPath } from 'url';
+
+// ESM replacement for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 import { ConfigStore } from './config-store.js';
 import { PythonManager } from './python-manager.js';

@@ -33,6 +33,97 @@
   var jidEl = document.getElementById('sessionJid');
   if (jidEl) jidEl.textContent = chatJid;
 
+  // ── Custom prompt/confirm dialogs ────────────────────────────────────
+  // Electron disables window.prompt() and window.confirm() by default
+  // (security hardening), so any call to them throws
+  //   "Error: prompt() is not supported"
+  // and blocks the click handler.  These two helpers render a minimal
+  // modal that resolves to the same shape as the native APIs:
+  //   customPrompt(msg, default?) -> Promise<string | null>
+  //   customConfirm(msg)          -> Promise<boolean>
+  // Call sites that used to be `var x = window.prompt(...)` become
+  // `var x = await customPrompt(...)` — the surrounding function was
+  // already async in every case we needed.
+  function _dialogOverlay() {
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;display:flex;align-items:center;justify-content:center;';
+    var box = document.createElement('div');
+    box.style.cssText = 'background:var(--surface,#fff);color:var(--ink,#1a1a1a);border-radius:12px;padding:20px 22px;min-width:320px;max-width:440px;box-shadow:0 8px 32px rgba(0,0,0,0.2);font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;';
+    overlay.appendChild(box);
+    return { overlay: overlay, box: box };
+  }
+  function _dialogButton(label, primary) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = label;
+    btn.style.cssText = primary
+      ? 'padding:7px 14px;font-size:13px;border:1px solid var(--accent,#148f77);background:var(--accent,#148f77);color:#fff;border-radius:8px;cursor:pointer;font-weight:600;'
+      : 'padding:7px 14px;font-size:13px;border:1px solid rgba(15,23,42,0.18);background:transparent;color:inherit;border-radius:8px;cursor:pointer;';
+    return btn;
+  }
+  function customPrompt(message, defaultValue) {
+    return new Promise(function (resolve) {
+      var root = _dialogOverlay();
+      var msg = document.createElement('div');
+      msg.textContent = String(message == null ? '' : message);
+      msg.style.cssText = 'font-size:14px;margin-bottom:12px;white-space:pre-wrap;';
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.value = defaultValue == null ? '' : String(defaultValue);
+      input.style.cssText = 'width:100%;padding:8px 10px;font-size:13px;border:1px solid rgba(15,23,42,0.18);border-radius:8px;outline:none;margin-bottom:16px;box-sizing:border-box;';
+      var btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;';
+      var cancelBtn = _dialogButton('Cancel', false);
+      var okBtn = _dialogButton('OK', true);
+      btnRow.appendChild(cancelBtn); btnRow.appendChild(okBtn);
+      root.box.appendChild(msg); root.box.appendChild(input); root.box.appendChild(btnRow);
+      document.body.appendChild(root.overlay);
+      function close(value) {
+        document.removeEventListener('keydown', onKey);
+        if (root.overlay.parentNode) root.overlay.parentNode.removeChild(root.overlay);
+        resolve(value);
+      }
+      function onKey(e) {
+        if (e.key === 'Enter') { e.preventDefault(); close(input.value); }
+        else if (e.key === 'Escape') { e.preventDefault(); close(null); }
+      }
+      okBtn.addEventListener('click', function () { close(input.value); });
+      cancelBtn.addEventListener('click', function () { close(null); });
+      root.overlay.addEventListener('click', function (e) { if (e.target === root.overlay) close(null); });
+      document.addEventListener('keydown', onKey);
+      setTimeout(function () { input.focus(); input.select(); }, 0);
+    });
+  }
+  function customConfirm(message) {
+    return new Promise(function (resolve) {
+      var root = _dialogOverlay();
+      var msg = document.createElement('div');
+      msg.textContent = String(message == null ? '' : message);
+      msg.style.cssText = 'font-size:14px;margin-bottom:16px;white-space:pre-wrap;';
+      var btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;';
+      var cancelBtn = _dialogButton('Cancel', false);
+      var okBtn = _dialogButton('OK', true);
+      btnRow.appendChild(cancelBtn); btnRow.appendChild(okBtn);
+      root.box.appendChild(msg); root.box.appendChild(btnRow);
+      document.body.appendChild(root.overlay);
+      function close(value) {
+        document.removeEventListener('keydown', onKey);
+        if (root.overlay.parentNode) root.overlay.parentNode.removeChild(root.overlay);
+        resolve(value);
+      }
+      function onKey(e) {
+        if (e.key === 'Enter') { e.preventDefault(); close(true); }
+        else if (e.key === 'Escape') { e.preventDefault(); close(false); }
+      }
+      okBtn.addEventListener('click', function () { close(true); });
+      cancelBtn.addEventListener('click', function () { close(false); });
+      root.overlay.addEventListener('click', function (e) { if (e.target === root.overlay) close(false); });
+      document.addEventListener('keydown', onKey);
+      setTimeout(function () { okBtn.focus(); }, 0);
+    });
+  }
+
 const LANG_KEY = 'bioclaw-web-lang';
 
     const unifiedRoot = document.getElementById('unifiedRoot');
@@ -1780,7 +1871,7 @@ const LANG_KEY = 'bioclaw-web-lang';
 
     async function renameThread(threadChatJid) {
       var current = threads.find(function (thread) { return thread.chatJid === threadChatJid; });
-      var nextTitle = window.prompt(T().threadRenamePrompt, current && current.title ? current.title : '');
+      var nextTitle = await customPrompt(T().threadRenamePrompt, current && current.title ? current.title : '');
       if (nextTitle === null) return;
       nextTitle = nextTitle.trim();
       if (!nextTitle) return;
@@ -1798,7 +1889,7 @@ const LANG_KEY = 'bioclaw-web-lang';
     }
 
     async function archiveThread(threadChatJid) {
-      if (!window.confirm(T().threadArchiveConfirm)) return;
+      if (!(await customConfirm(T().threadArchiveConfirm))) return;
       try {
         var wasActive = chatJid === threadChatJid;
         var res = await fetch('/api/threads/' + encodeURIComponent(threadChatJid), {
@@ -2022,7 +2113,7 @@ const LANG_KEY = 'bioclaw-web-lang';
 
     if (newThreadBtn) {
       newThreadBtn.addEventListener('click', async function () {
-        var title = window.prompt(T().newThreadPrompt, '');
+        var title = await customPrompt(T().newThreadPrompt, '');
         if (title === null) return;
         newThreadBtn.disabled = true;
         try {

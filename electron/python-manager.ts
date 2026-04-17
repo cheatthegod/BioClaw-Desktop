@@ -9,10 +9,10 @@ import fs from 'fs';
 import path from 'path';
 import https from 'https';
 import crypto from 'crypto';
-import { exec as execCb } from 'child_process';
+import { execFile as execFileCb, spawn } from 'child_process';
 import { promisify } from 'util';
 
-const exec = promisify(execCb);
+const execFile = promisify(execFileCb);
 
 // ── Pinned Miniconda versions ──
 
@@ -149,12 +149,12 @@ export class PythonManager {
         message: `Installing ${name} (${i + 1}/${total})...`,
       });
       try {
-        const mirrorFlag = this.pipMirror !== PIP_MIRRORS.default
-          ? ` -i "${this.pipMirror}" --trusted-host "${new URL(this.pipMirror).hostname}"`
-          : '';
-        await exec(`"${pip}" install --quiet "${pkg}"${mirrorFlag}`, {
-          timeout: 180_000,
-        });
+        const pipArgs = ['install', '--quiet', pkg];
+        if (this.pipMirror !== PIP_MIRRORS.default) {
+          pipArgs.push('-i', this.pipMirror);
+          pipArgs.push('--trusted-host', new URL(this.pipMirror).hostname);
+        }
+        await execFile(pip, pipArgs, { timeout: 180_000 });
       } catch (e) {
         console.error(`Failed to install ${pkg}:`, e);
         // Non-critical packages: warn but continue
@@ -177,18 +177,67 @@ export class PythonManager {
   }
 
   private async runInstaller(installerPath: string): Promise<void> {
-    if (process.platform === 'win32') {
-      await exec(
-        `"${installerPath}" /InstallationType=JustMe /RegisterPython=0 ` +
-          `/AddToPath=0 /S /D=${this.pythonDir}`,
-        { timeout: 300_000 },
-      );
-    } else {
-      await exec(`chmod +x "${installerPath}"`, { timeout: 5_000 });
-      await exec(`bash "${installerPath}" -b -p "${this.pythonDir}"`, {
-        timeout: 300_000,
-      });
+    // Clean up target directory if partial install exists
+    if (fs.existsSync(this.pythonDir)) {
+      fs.rmSync(this.pythonDir, { recursive: true, force: true });
     }
+
+    if (process.platform === 'win32') {
+      // Windows: use spawn with explicit args (no shell) to avoid
+      // cmd.exe quoting issues with NSIS /D= parameter
+      await this.spawnAsync(installerPath, [
+        '/InstallationType=JustMe',
+        '/RegisterPython=0',
+        '/AddToPath=0',
+        '/S',
+        `/D=${this.pythonDir}`,
+      ], 600_000);
+    } else {
+      fs.chmodSync(installerPath, 0o755);
+      await this.spawnAsync('bash', [
+        installerPath, '-b', '-p', this.pythonDir,
+      ], 600_000);
+    }
+  }
+
+  /** Spawn a process and return a promise. No shell involved. */
+  private spawnAsync(
+    cmd: string,
+    args: string[],
+    timeoutMs: number,
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const child = spawn(cmd, args, {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        shell: false,  // critical: do NOT use shell
+        windowsHide: true,
+      });
+
+      let stderr = '';
+      child.stderr?.on('data', (d: Buffer) => { stderr += d.toString(); });
+
+      const timer = setTimeout(() => {
+        child.kill();
+        reject(new Error(`Installer timed out after ${timeoutMs / 1000}s`));
+      }, timeoutMs);
+
+      child.on('close', (code) => {
+        clearTimeout(timer);
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(
+            `Installer exited with code ${code}` +
+            (stderr ? `\n${stderr.slice(0, 500)}` : ''),
+          ));
+        }
+      });
+
+      child.on('error', (err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+    });
   }
 
   private async verifyChecksum(

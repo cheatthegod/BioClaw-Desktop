@@ -61,13 +61,27 @@ export interface InstallProgress {
   message: string;
 }
 
+// Pip mirror sources — Chinese mirrors are much faster in mainland China
+const PIP_MIRRORS: Record<string, string> = {
+  default: 'https://pypi.org/simple',
+  tsinghua: 'https://pypi.tuna.tsinghua.edu.cn/simple',
+  aliyun: 'https://mirrors.aliyun.com/pypi/simple',
+  ustc: 'https://pypi.mirrors.ustc.edu.cn/simple',
+};
+
 export class PythonManager {
   private dataDir: string;
   private pythonDir: string;
+  private pipMirror: string;
 
-  constructor(dataDir: string) {
+  constructor(dataDir: string, mirror: string = 'default') {
     this.dataDir = dataDir;
     this.pythonDir = path.join(dataDir, 'python');
+    this.pipMirror = PIP_MIRRORS[mirror] || PIP_MIRRORS.default;
+  }
+
+  setMirror(mirror: string): void {
+    this.pipMirror = PIP_MIRRORS[mirror] || mirror;  // support custom URLs too
   }
 
   isInstalled(): boolean {
@@ -135,8 +149,11 @@ export class PythonManager {
         message: `Installing ${name} (${i + 1}/${total})...`,
       });
       try {
-        await exec(`"${pip}" install --quiet "${pkg}"`, {
-          timeout: 120_000,
+        const mirrorFlag = this.pipMirror !== PIP_MIRRORS.default
+          ? ` -i "${this.pipMirror}" --trusted-host "${new URL(this.pipMirror).hostname}"`
+          : '';
+        await exec(`"${pip}" install --quiet "${pkg}"${mirrorFlag}`, {
+          timeout: 180_000,
         });
       } catch (e) {
         console.error(`Failed to install ${pkg}:`, e);

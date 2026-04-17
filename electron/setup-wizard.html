@@ -175,6 +175,13 @@
         biopython, typst, etc.). This will be installed locally (~500 MB)
         in an isolated environment that won't affect your system.
       </p>
+      <label style="font-size:12px; margin-bottom:4px;">Pip Mirror (China users select Tsinghua for faster download)</label>
+      <select id="pipMirror" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; font-size:12px; margin-bottom:12px;">
+        <option value="default">Default (pypi.org)</option>
+        <option value="tsinghua">Tsinghua / 清华 (China)</option>
+        <option value="aliyun">Aliyun / 阿里云 (China)</option>
+        <option value="ustc">USTC / 中科大 (China)</option>
+      </select>
       <button class="btn btn-primary" id="btnInstall">Install Python Environment</button>
       <div id="progressContainer" style="display:none">
         <div class="progress-bar">
@@ -306,7 +313,8 @@
       progressContainer.style.display = 'block';
       pythonError.textContent = '';
 
-      const result = await api.invoke('setup:install-python');
+      const mirror = document.getElementById('pipMirror').value;
+      const result = await api.invoke('setup:install-python', mirror);
       if (result.success) {
         goToStep(3);
       } else {

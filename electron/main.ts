@@ -198,8 +198,9 @@ ipcMain.handle('setup:check-python', async () => {
   return { installed: pythonManager.isInstalled() };
 });
 
-ipcMain.handle('setup:install-python', async () => {
+ipcMain.handle('setup:install-python', async (_event, mirror?: string) => {
   try {
+    if (mirror) pythonManager.setMirror(mirror);
     await pythonManager.install((progress) => {
       setupWindow?.webContents.send('setup:progress', progress);
     });

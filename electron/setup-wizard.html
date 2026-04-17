@@ -167,13 +167,14 @@
       <button class="btn btn-primary" id="btnValidate">Validate &amp; Continue</button>
     </div>
 
-    <!-- Step 2: Python Setup -->
+    <!-- Step 2: Environment Setup (Python + Bash on Windows) -->
     <div class="step" id="step2">
-      <label>Python Environment</label>
+      <label>Environment</label>
       <p class="info">
-        BioClaw needs Python with scientific packages (scipy, matplotlib,
-        biopython, typst, etc.). This will be installed locally (~500 MB)
-        in an isolated environment that won't affect your system.
+        BioClaw installs an isolated scientific Python (~500 MB: scipy,
+        pandas, biopython, matplotlib, typst, …)<span id="bashInfoText"></span>
+        Nothing is added to your system — everything lives under BioClaw's
+        own data folder.
       </p>
       <label style="font-size:12px; margin-bottom:4px;">Pip Mirror (China users select Tsinghua for faster download)</label>
       <select id="pipMirror" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; font-size:12px; margin-bottom:12px;">
@@ -221,6 +222,19 @@
     // Listen for init message from main process
     api.on('setup:init', (data) => {
       if (data && data.startStep) goToStep(data.startStep);
+    });
+
+    // Augment the environment blurb on Windows so users know bash is
+    // part of the same install step. On macOS/Linux the span stays empty.
+    api.invoke('setup:check-bash').then((bashCheck) => {
+      const span = document.getElementById('bashInfoText');
+      if (span && bashCheck && bashCheck.needed) {
+        span.textContent =
+          ' and a portable Git Bash (~50 MB) so the agent can run shell ' +
+          'commands on Windows.';
+      } else if (span) {
+        span.textContent = '.';
+      }
     });
 
     // ── Step 1: Provider + API Key ──
@@ -279,7 +293,9 @@
       if (result.valid) {
         await api.invoke('setup:save-config', key, selectedProvider, baseUrl, model);
         const pyCheck = await api.invoke('setup:check-python');
-        if (pyCheck.installed) {
+        const bashCheck = await api.invoke('setup:check-bash');
+        const envReady = pyCheck.installed && (!bashCheck.needed || bashCheck.installed);
+        if (envReady) {
           goToStep(3);
         } else {
           goToStep(2);

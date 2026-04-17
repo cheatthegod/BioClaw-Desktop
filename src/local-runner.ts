@@ -110,6 +110,28 @@ export async function runLocalAgent(
     // In desktop mode, 'node' is not in PATH — use Electron's own exe
     BIOCLAW_NODE_BIN: process.execPath,
 
+    // Bash executable for the agent-runner Bash tool. Two env vars for
+    // two code paths:
+    //
+    //   BIOCLAW_BASH_BIN         — read by our own runBashTool() in
+    //                              container/agent-runner/src/index.ts
+    //                              (the OpenAI-compatible tool loop).
+    //
+    //   CLAUDE_CODE_GIT_BASH_PATH — the official variable the Claude
+    //                              Agent SDK reads when its own Bash
+    //                              tool runs on Windows. Without it,
+    //                              the Anthropic provider code path
+    //                              still falls back to '/bin/bash' and
+    //                              fails with ENOENT on Windows.
+    //
+    // Set both to keep parity whichever provider the user picks.
+    ...(ctx.bashPath
+      ? {
+          BIOCLAW_BASH_BIN: ctx.bashPath,
+          CLAUDE_CODE_GIT_BASH_PATH: ctx.bashPath,
+        }
+      : {}),
+
     // BioClaw path mapping (agent-runner reads these)
     BIOCLAW_GROUP_ROOT: groupDir,
     BIOCLAW_IPC_ROOT: ipcDir,

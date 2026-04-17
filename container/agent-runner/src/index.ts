@@ -1127,6 +1127,11 @@ async function runBashTool(
   }
 
   try {
+    // In Docker mode bash is at /bin/bash. In Desktop (local) mode on
+    // Windows the Electron host provides a bundled portable Git Bash via
+    // BIOCLAW_BASH_BIN — without that override Node would try to spawn
+    // /bin/bash on Windows and fail with ENOENT.
+    const shellPath = process.env.BIOCLAW_BASH_BIN || '/bin/bash';
     const { stdout, stderr } = await execAsync(command, {
       cwd,
       env: Object.fromEntries(
@@ -1134,7 +1139,7 @@ async function runBashTool(
       ),
       timeout: BASH_TIMEOUT_MS,
       maxBuffer: 10 * 1024 * 1024,
-      shell: '/bin/bash',
+      shell: shellPath,
     });
 
     // Log bash output to stderr so it appears in host logs

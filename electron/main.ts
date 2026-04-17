@@ -23,6 +23,7 @@ const __dirname = path.dirname(__filename);
 
 import { ConfigStore } from './config-store.js';
 import { PythonManager } from './python-manager.js';
+import { BashManager } from './bash-manager.js';
 
 // ── Globals ──
 
@@ -33,6 +34,7 @@ let serverUrl = '';
 let serverStarted = false;  // guard against double-start (macOS activate)
 let config: ConfigStore;
 let pythonManager: PythonManager;
+let bashManager: BashManager;
 
 // In-memory API key for sessions where safeStorage is unavailable
 let sessionApiKey = '';
@@ -47,10 +49,25 @@ app.whenReady().then(async () => {
 
   config = new ConfigStore(userDataDir);
   pythonManager = new PythonManager(userDataDir);
+  bashManager = new BashManager(userDataDir);
 
-  // Reconcile state: if Python was installed but dir was deleted, reset
+  // Reconcile state in both directions:
+  // 1. Config says installed but files missing → reset flag
   if (config.getSetupState().pythonInstalled && !pythonManager.isInstalled()) {
     config.setPythonInstalled(false);
+  }
+  // 2. Config says not installed but Python exists on disk → set flag (e.g. after config.json was deleted)
+  if (!config.getSetupState().pythonInstalled && pythonManager.isInstalled()) {
+    config.setPythonInstalled(true);
+  }
+
+  // Same reconciliation for bash. On non-Windows isInstalled() always
+  // reports true, so this collapses to a no-op there.
+  if (config.getSetupState().bashInstalled && !bashManager.isInstalled()) {
+    config.setBashInstalled(false);
+  }
+  if (!config.getSetupState().bashInstalled && bashManager.isInstalled()) {
+    config.setBashInstalled(true);
   }
 
   if (config.isFullyConfigured() && config.hasApiKey()) {
@@ -88,7 +105,9 @@ app.on('activate', () => {
 
 function showSetupWizard() {
   const state = config.getSetupState();
-  const startStep = !state.apiKeySet ? 1 : !state.pythonInstalled ? 2 : 1;
+  // If bash or python is missing, jump to the environment step (2).
+  const envMissing = !state.pythonInstalled || !state.bashInstalled;
+  const startStep = !state.apiKeySet ? 1 : envMissing ? 2 : 1;
 
   setupWindow = new BrowserWindow({
     width: 620,
@@ -198,11 +217,40 @@ ipcMain.handle('setup:check-python', async () => {
   return { installed: pythonManager.isInstalled() };
 });
 
+ipcMain.handle('setup:check-bash', async () => {
+  return {
+    needed: BashManager.isNeeded(),
+    installed: bashManager.isInstalled(),
+  };
+});
+
 ipcMain.handle('setup:install-python', async (_event, mirror?: string) => {
   try {
     if (mirror) pythonManager.setMirror(mirror);
+
+    // On Windows we also need a bash for the agent-runner's Bash tool.
+    // Git Bash is small (~50 MB) so we bundle it into the same wizard
+    // step as Python and run it first — it fails fast if the network
+    // or disk is broken, before we spend 5+ minutes on Miniconda.
+    if (BashManager.isNeeded() && !bashManager.isInstalled()) {
+      await bashManager.install((progress) => {
+        // Reserve 0–20% of the progress bar for the bash phase so the
+        // Python phase can still show meaningful progress afterwards.
+        setupWindow?.webContents.send('setup:progress', {
+          percent: Math.round(progress.percent * 0.2),
+          message: `[1/2] ${progress.message}`,
+        });
+      });
+      config.setBashInstalled(true);
+    }
+
     await pythonManager.install((progress) => {
-      setupWindow?.webContents.send('setup:progress', progress);
+      const basePct = BashManager.isNeeded() ? 20 : 0;
+      const scale = BashManager.isNeeded() ? 0.8 : 1;
+      setupWindow?.webContents.send('setup:progress', {
+        percent: basePct + Math.round(progress.percent * scale),
+        message: BashManager.isNeeded() ? `[2/2] ${progress.message}` : progress.message,
+      });
     });
     config.setPythonInstalled(true);
     return { success: true };
@@ -260,6 +308,7 @@ async function startApp() {
     vendorScriptsDir: path.join(resourcesDir, 'web-assets', 'vendor'),
     agentRunnerPath: path.join(resourcesDir, 'agent-runner', 'dist', 'index.js'),
     pythonPath: pythonManager.getPythonPath(),
+    bashPath: bashManager.getBashPath(),
     apiKey,
     providerType: providerCfg.provider,
     providerBaseUrl: providerCfg.baseUrl,

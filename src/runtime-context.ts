@@ -42,6 +42,8 @@ export interface RuntimeOptions {
   // ── Executables (desktop only) ──
   /** Python executable path */
   pythonPath?: string;
+  /** Bash executable path (portable Git Bash on Windows, /bin/bash elsewhere) */
+  bashPath?: string;
   /** Compiled agent-runner entry point (index.js) */
   agentRunnerPath?: string;
 
@@ -82,6 +84,7 @@ export class RuntimeContext {
 
   // Executables
   readonly pythonPath: string;
+  readonly bashPath: string;
   readonly agentRunnerPath: string;
 
   // Credentials & Provider
@@ -112,6 +115,9 @@ export class RuntimeContext {
 
     // Executables
     this.pythonPath = opts.pythonPath || 'python3';
+    // Windows has no /bin/bash; caller (Electron main) must pass a real
+    // path from BashManager. Non-Windows defaults to /bin/bash.
+    this.bashPath = opts.bashPath || (process.platform === 'win32' ? '' : '/bin/bash');
     this.agentRunnerPath = opts.agentRunnerPath || '';
 
     // Credentials & Provider

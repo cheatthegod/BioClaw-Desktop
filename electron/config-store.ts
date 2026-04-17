@@ -28,6 +28,8 @@ export interface ProviderConfig {
 export interface SetupState {
   apiKeySet: boolean;
   pythonInstalled: boolean;
+  /** Windows-only; always true on macOS/Linux (system /bin/bash). */
+  bashInstalled: boolean;
 }
 
 interface ConfigData {
@@ -55,7 +57,9 @@ export class ConfigStore {
   }
 
   isFullyConfigured(): boolean {
-    return this.data.setupState.apiKeySet && this.data.setupState.pythonInstalled;
+    return this.data.setupState.apiKeySet
+      && this.data.setupState.pythonInstalled
+      && this.data.setupState.bashInstalled;
   }
 
   setApiKeySet(v: boolean): void {
@@ -65,6 +69,11 @@ export class ConfigStore {
 
   setPythonInstalled(v: boolean): void {
     this.data.setupState.pythonInstalled = v;
+    this.save();
+  }
+
+  setBashInstalled(v: boolean): void {
+    this.data.setupState.bashInstalled = v;
     this.save();
   }
 
@@ -129,13 +138,24 @@ export class ConfigStore {
   // ── Persistence ──
 
   private load(): ConfigData {
+    // Non-Windows systems always have /bin/bash, so treat it as
+    // pre-installed for default state and for migrating older configs
+    // written before the bashInstalled flag existed.
+    const bashDefault = process.platform !== 'win32';
+
     try {
       if (fs.existsSync(this.configPath)) {
         const raw = fs.readFileSync(this.configPath, 'utf-8');
         const parsed = JSON.parse(raw);
-        // Ensure setupState exists
         if (!parsed.setupState) {
-          parsed.setupState = { apiKeySet: false, pythonInstalled: false };
+          parsed.setupState = {
+            apiKeySet: false,
+            pythonInstalled: false,
+            bashInstalled: bashDefault,
+          };
+        } else if (parsed.setupState.bashInstalled === undefined) {
+          // Migration: older configs predate the bash flag.
+          parsed.setupState.bashInstalled = bashDefault;
         }
         return parsed;
       }
@@ -143,7 +163,11 @@ export class ConfigStore {
       console.warn('Failed to load config:', e);
     }
     return {
-      setupState: { apiKeySet: false, pythonInstalled: false },
+      setupState: {
+        apiKeySet: false,
+        pythonInstalled: false,
+        bashInstalled: bashDefault,
+      },
     };
   }
 

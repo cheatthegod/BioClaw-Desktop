@@ -1,0 +1,141 @@
+name: Build Desktop Installers
+
+# Triggers:
+#   - Push a tag starting with "v" (e.g. v0.1.1)  -> full build + create release
+#   - Manual "Run workflow" with a tag input        -> same, but for ad-hoc
+#
+# Output per run:
+#   - Windows: BioClaw-Setup-X.Y.Z.exe           (NSIS installer, x64)
+#   - macOS:   BioClaw-X.Y.Z.dmg                 (unsigned DMG, x64 + arm64)
+#   - Linux:   BioClaw-X.Y.Z.AppImage, .deb      (unsigned)
+#
+# Signing note: none of the installers are code-signed.  macOS users
+# will see a Gatekeeper warning on first launch; Windows users will
+# see SmartScreen "unknown publisher".  To ship signed builds, add
+# certs as repo secrets (see commented CSC_* env vars below).
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag name for the release (e.g. v0.1.1-preview)'
+        required: true
+        default: 'v0.0.0-dev'
+
+permissions:
+  contents: write   # needed to create the Release + upload assets
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    strategy:
+      # One OS failing shouldn't block the others — users want
+      # whatever platforms we can still produce.
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            build_cmd: electron:build:win
+            artifact_name: installers-windows
+            artifact_paths: |
+              release/*.exe
+              release/*.exe.blockmap
+              release/latest.yml
+          - os: macos-latest
+            build_cmd: electron:build:mac
+            artifact_name: installers-macos
+            artifact_paths: |
+              release/*.dmg
+              release/*.dmg.blockmap
+              release/*.zip
+              release/latest-mac.yml
+          - os: ubuntu-latest
+            build_cmd: electron:build:linux
+            artifact_name: installers-linux
+            artifact_paths: |
+              release/*.AppImage
+              release/*.deb
+              release/latest-linux.yml
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build installer (${{ matrix.os }})
+        run: npm run ${{ matrix.build_cmd }}
+        env:
+          # Don't try to auto-discover code-signing identities on CI.
+          # Without this, macOS builds fail because electron-builder
+          # spots the runner's own Apple-ID and then fails to sign.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          # Silence electron-builder's auto-publish attempt — we
+          # upload ourselves in the release job below.
+          GH_TOKEN: ''
+          # Uncomment & add repo secrets when you have real certs:
+          # CSC_LINK: ${{ secrets.MAC_CERT_P12 }}
+          # CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          # WIN_CSC_LINK: ${{ secrets.WIN_CERT_P12 }}
+          # WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
+
+      - name: List release artifacts (debug)
+        if: always()
+        shell: bash
+        run: ls -la release/ || true
+
+      - name: Upload as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_paths }}
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    # Only create a Release for tag pushes or explicit manual triggers.
+    # PRs, branch pushes etc. stop after `build` and keep artifacts for
+    # 14 days on the Actions run page.
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all workflow artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Resolve tag name
+        id: tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "name=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: List collected artifacts (debug)
+        run: ls -la artifacts/
+
+      - name: Create or update release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          files: artifacts/**/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          fail_on_unmatched_files: false

@@ -24,11 +24,13 @@ extraResources:
       - "!**/tests/**"
       - "!**/__pycache__/**"
       - "!**/*.pyc"
-  # Agent runner (compiled JS)
+  # Agent runner (compiled JS + deps + package.json for ESM "type": "module")
   - from: container/agent-runner/dist
     to: agent-runner/dist
   - from: container/agent-runner/node_modules
     to: agent-runner/node_modules
+  - from: container/agent-runner/package.json
+    to: agent-runner/package.json
   # Web UI assets
   - from: src/channels/local-web/assets
     to: web-assets

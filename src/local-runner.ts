@@ -319,6 +319,10 @@ export async function runLocalAgent(
  * Rewrite hardcoded container paths in SKILL.md files so they point to
  * actual local directories. Only touches .md files.
  */
+/**
+ * Rewrite hardcoded container paths in skill files so they point to
+ * actual local directories. Covers .md and .py files.
+ */
 function rewriteSkillPaths(
   skillsDir: string,
   groupRoot: string,
@@ -328,16 +332,32 @@ function rewriteSkillPaths(
     [/\/home\/node\/\.claude\/skills/g, localSkillsRoot],
     [/\/workspace\/group/g, groupRoot],
   ];
-  for (const entry of fs.readdirSync(skillsDir, { withFileTypes: true })) {
-    if (entry.isDirectory()) {
-      const mdPath = path.join(skillsDir, entry.name, 'SKILL.md');
-      if (fs.existsSync(mdPath)) {
-        let content = fs.readFileSync(mdPath, 'utf-8');
-        for (const [pattern, replacement] of replacements) {
-          content = content.replace(pattern, replacement);
-        }
-        fs.writeFileSync(mdPath, content);
+  const rewriteExtensions = new Set(['.md', '.py']);
+
+  function walk(dir: string): void {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        // Skip test/cache directories
+        if (entry.name === 'tests' || entry.name === '__pycache__') continue;
+        walk(fullPath);
+      } else if (rewriteExtensions.has(path.extname(entry.name))) {
+        try {
+          let content = fs.readFileSync(fullPath, 'utf-8');
+          let changed = false;
+          for (const [pattern, replacement] of replacements) {
+            const newContent = content.replace(pattern, replacement);
+            if (newContent !== content) {
+              content = newContent;
+              changed = true;
+            }
+          }
+          if (changed) {
+            fs.writeFileSync(fullPath, content);
+          }
+        } catch { /* skip unreadable files */ }
       }
     }
   }
+  walk(skillsDir);
 }

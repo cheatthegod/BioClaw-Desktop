@@ -25,15 +25,15 @@ interface MinicondaRelease {
 const MINICONDA: Record<string, MinicondaRelease> = {
   'win32-x64': {
     url: 'https://repo.anaconda.com/miniconda/Miniconda3-py311_24.11.1-0-Windows-x86_64.exe',
-    sha256: '', // TODO: fill before production release (run: certutil -hashfile <file> SHA256)
+    sha256: '43dcbcc315ff91edf959e002cd2f1ede38c64b999fefcc951bccf2ed69c9e8bb',
   },
   'darwin-x64': {
     url: 'https://repo.anaconda.com/miniconda/Miniconda3-py311_24.11.1-0-MacOSX-x86_64.sh',
-    sha256: '', // TODO: fill before production release (run: shasum -a 256 <file>)
+    sha256: '388f669ab95d659b4c97353f756ce93ed2000ec0114edaec9688f8541fa4bcab',
   },
   'darwin-arm64': {
     url: 'https://repo.anaconda.com/miniconda/Miniconda3-py311_24.11.1-0-MacOSX-arm64.sh',
-    sha256: '', // TODO: fill before production release
+    sha256: '862af4d7cb257219c6b280848049e09e1aff27acd06d5422359f2249f938e282',
   },
   'linux-x64': {
     url: 'https://repo.anaconda.com/miniconda/Miniconda3-py311_24.11.1-0-Linux-x86_64.sh',

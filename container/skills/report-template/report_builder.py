@@ -190,11 +190,16 @@ class ReportBuilder:
     def _find_template(self) -> Path:
         """Locate the Typst template library."""
         here = Path(__file__).resolve().parent
+        # Environment variable set by BioClaw desktop mode
+        skills_root = os.environ.get("BIOCLAW_SKILLS_ROOT", "")
         candidates = [
             here / "templates" / "scientific_report.typ",
-            Path("/home/node/.claude/skills/report-template/templates"
-                 "/scientific_report.typ"),
         ]
+        if skills_root:
+            candidates.append(
+                Path(skills_root) / "report-template" / "templates"
+                / "scientific_report.typ"
+            )
         for c in candidates:
             if c.exists():
                 return c

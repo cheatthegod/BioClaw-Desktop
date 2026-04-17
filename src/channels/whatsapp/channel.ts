@@ -265,9 +265,11 @@ export class WhatsAppChannel implements Channel {
       const uploadsDir = path.join(GROUPS_DIR, groupFolder, 'uploads');
       fs.mkdirSync(uploadsDir, { recursive: true });
       fs.writeFileSync(path.join(uploadsDir, filename), imageBuffer);
-      const containerPath = `/workspace/group/uploads/${filename}`;
-      logger.info({ chatJid, containerPath }, 'Saved inbound WhatsApp image');
-      return containerPath;
+      // Return the actual host path — agent-runner's BIOCLAW_GROUP_ROOT env var
+      // maps this correctly in both Docker and desktop modes.
+      const hostPath = path.join(GROUPS_DIR, groupFolder, 'uploads', filename);
+      logger.info({ chatJid, hostPath }, 'Saved inbound WhatsApp image');
+      return hostPath;
     } catch (err) {
       logger.error({ chatJid, err }, 'Failed to save inbound WhatsApp image');
       return null;

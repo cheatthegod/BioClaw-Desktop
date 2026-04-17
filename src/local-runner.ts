@@ -263,7 +263,10 @@ export async function runLocalAgent(
     });
 
     child.stderr!.on('data', (data: Buffer) => {
-      stderr += data.toString();
+      const chunk = data.toString();
+      stderr += chunk;
+      // Log stderr in real-time for debugging agent crashes
+      logger.error({ agentId, stderr: chunk.trim() }, 'Agent subprocess stderr');
     });
 
     // ── Timeout management ──

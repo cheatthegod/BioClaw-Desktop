@@ -80,9 +80,10 @@ jobs:
           # Without this, macOS builds fail because electron-builder
           # spots the runner's own Apple-ID and then fails to sign.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-          # Silence electron-builder's auto-publish attempt — we
-          # upload ourselves in the release job below.
-          GH_TOKEN: ''
+          # Auto-publishing is disabled in electron-builder.yml
+          # (`publish: null`); artifacts are gathered by the release
+          # job below via actions/download-artifact.
+          #
           # Uncomment & add repo secrets when you have real certs:
           # CSC_LINK: ${{ secrets.MAC_CERT_P12 }}
           # CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}

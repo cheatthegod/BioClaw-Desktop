@@ -2,6 +2,13 @@ appId: com.bioclaw.desktop
 productName: BioClaw
 copyright: Copyright 2026
 
+# Don't let electron-builder auto-publish to GitHub on CI.
+# (In v26 it implicitly enables publishing when it sees CI=true,
+#  fails on missing GH_TOKEN, and aborts the build.)  Our GitHub
+# Actions workflow uploads artifacts via softprops/action-gh-release
+# in a separate step, so we opt out here.
+publish: null
+
 directories:
   buildResources: assets
   output: release

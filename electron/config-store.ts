@@ -17,6 +17,14 @@ function getSafeStorage() {
   return safeStorage;
 }
 
+export type ProviderType = 'anthropic' | 'openrouter' | 'custom';
+
+export interface ProviderConfig {
+  provider: ProviderType;
+  baseUrl?: string;   // custom/openrouter base URL
+  model?: string;     // model name for openrouter/custom
+}
+
 export interface SetupState {
   apiKeySet: boolean;
   pythonInstalled: boolean;
@@ -25,6 +33,7 @@ export interface SetupState {
 interface ConfigData {
   setupState: SetupState;
   apiKeyEncrypted?: string;
+  providerConfig?: ProviderConfig;
   theme?: 'light' | 'dark';
   language?: 'zh' | 'en';
   lastPort?: number;
@@ -93,6 +102,17 @@ export class ConfigStore {
   /** Check if we have a stored (encrypted) API key */
   hasApiKey(): boolean {
     return Boolean(this.data.apiKeyEncrypted);
+  }
+
+  // ── Provider config ──
+
+  setProviderConfig(cfg: ProviderConfig): void {
+    this.data.providerConfig = cfg;
+    this.save();
+  }
+
+  getProviderConfig(): ProviderConfig {
+    return this.data.providerConfig || { provider: 'anthropic' };
   }
 
   // ── Generic get/set ──

@@ -45,9 +45,15 @@ export interface RuntimeOptions {
   /** Compiled agent-runner entry point (index.js) */
   agentRunnerPath?: string;
 
-  // ── Credentials ──
-  /** Anthropic API key (desktop: from config store; server: from env) */
+  // ── Credentials & Provider ──
+  /** API key (works for Anthropic, OpenRouter, or custom provider) */
   apiKey?: string;
+  /** Provider type: 'anthropic' | 'openrouter' | 'custom' */
+  providerType?: string;
+  /** Base URL for OpenRouter or custom provider */
+  providerBaseUrl?: string;
+  /** Model name for OpenRouter or custom provider */
+  providerModel?: string;
 
   // ── HTTP binding ──
   /** Port for the local web server (0 = auto-assign) */
@@ -78,8 +84,11 @@ export class RuntimeContext {
   readonly pythonPath: string;
   readonly agentRunnerPath: string;
 
-  // Credentials
+  // Credentials & Provider
   readonly apiKey: string;
+  readonly providerType: string;
+  readonly providerBaseUrl: string;
+  readonly providerModel: string;
 
   // HTTP
   readonly port: number;
@@ -105,8 +114,11 @@ export class RuntimeContext {
     this.pythonPath = opts.pythonPath || 'python3';
     this.agentRunnerPath = opts.agentRunnerPath || '';
 
-    // Credentials
+    // Credentials & Provider
     this.apiKey = opts.apiKey || process.env.ANTHROPIC_API_KEY || '';
+    this.providerType = opts.providerType || 'anthropic';
+    this.providerBaseUrl = opts.providerBaseUrl || '';
+    this.providerModel = opts.providerModel || '';
 
     // HTTP
     this.port = opts.port ?? parseInt(process.env.LOCAL_WEB_PORT || '3000', 10);

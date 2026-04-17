@@ -106,6 +106,15 @@
     .done-sub {
       text-align: center; font-size: 13px; color: var(--muted); margin-bottom: 18px;
     }
+    .provider-btn {
+      flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 8px;
+      background: var(--surface); color: var(--muted); font-size: 12px;
+      font-weight: 600; cursor: pointer; transition: all 0.15s;
+    }
+    .provider-btn:hover { border-color: var(--accent); color: var(--ink); }
+    .provider-btn.active {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+    }
     .warning-box {
       background: #fff3cd; border-left: 3px solid #ffc107;
       padding: 10px 14px; border-radius: 0 8px 8px 0;
@@ -127,11 +136,28 @@
       <div class="step-dot" id="dot3"></div>
     </div>
 
-    <!-- Step 1: API Key -->
+    <!-- Step 1: Provider + API Key -->
     <div class="step active" id="step1">
-      <label for="apiKey">Anthropic API Key</label>
+      <label>Provider</label>
+      <div style="display:flex; gap:6px; margin-bottom:14px;">
+        <button class="provider-btn active" data-provider="anthropic">Anthropic</button>
+        <button class="provider-btn" data-provider="openrouter">OpenRouter</button>
+        <button class="provider-btn" data-provider="custom">Custom</button>
+      </div>
+
+      <label for="apiKey">API Key</label>
       <input type="password" id="apiKey" placeholder="sk-ant-api03-..."
              autocomplete="off" spellcheck="false">
+
+      <div id="customFields" style="display:none; margin-top:10px;">
+        <label for="baseUrl">Base URL</label>
+        <input type="text" id="baseUrl" placeholder="https://api.example.com/v1"
+               autocomplete="off" style="margin-bottom:8px;">
+        <label for="modelName">Model</label>
+        <input type="text" id="modelName" placeholder="claude-sonnet-4-20250514"
+               autocomplete="off">
+      </div>
+
       <div class="error" id="apiError"></div>
       <div class="warning-box" style="display:none" id="trustWarning">
         BioClaw runs with your full user permissions — it can read and write
@@ -190,11 +216,41 @@
       if (data && data.startStep) goToStep(data.startStep);
     });
 
-    // ── Step 1: API Key ──
+    // ── Step 1: Provider + API Key ──
     const btnValidate = document.getElementById('btnValidate');
     const apiInput = document.getElementById('apiKey');
     const apiError = document.getElementById('apiError');
     const trustWarning = document.getElementById('trustWarning');
+    const customFields = document.getElementById('customFields');
+    const baseUrlInput = document.getElementById('baseUrl');
+    const modelInput = document.getElementById('modelName');
+    let selectedProvider = 'anthropic';
+
+    // Provider tab switching
+    document.querySelectorAll('.provider-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.provider-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedProvider = btn.dataset.provider;
+
+        // Update placeholder and show/hide custom fields
+        if (selectedProvider === 'anthropic') {
+          apiInput.placeholder = 'sk-ant-api03-...';
+          customFields.style.display = 'none';
+        } else if (selectedProvider === 'openrouter') {
+          apiInput.placeholder = 'sk-or-v1-...';
+          customFields.style.display = 'block';
+          baseUrlInput.value = 'https://openrouter.ai/api/v1';
+          modelInput.placeholder = 'anthropic/claude-sonnet-4';
+        } else {
+          apiInput.placeholder = 'your-api-key';
+          customFields.style.display = 'block';
+          baseUrlInput.value = '';
+          baseUrlInput.placeholder = 'https://api.example.com/v1';
+          modelInput.placeholder = 'claude-sonnet-4-20250514';
+        }
+      });
+    });
 
     apiInput.addEventListener('input', () => {
       trustWarning.style.display = apiInput.value.length > 10 ? 'block' : 'none';
@@ -202,14 +258,19 @@
 
     btnValidate.addEventListener('click', async () => {
       const key = apiInput.value.trim();
+      const baseUrl = baseUrlInput.value.trim();
+      const model = modelInput.value.trim();
+
+      if (!key) { apiError.textContent = 'API Key is required'; return; }
+      if (selectedProvider === 'custom' && !baseUrl) { apiError.textContent = 'Base URL is required for custom provider'; return; }
+
       btnValidate.disabled = true;
       btnValidate.textContent = 'Validating...';
       apiError.textContent = '';
 
-      const result = await api.invoke('setup:validate-api-key', key);
+      const result = await api.invoke('setup:validate-api-key', key, selectedProvider, baseUrl);
       if (result.valid) {
-        await api.invoke('setup:save-api-key', key);
-        // Check if Python is already installed
+        await api.invoke('setup:save-config', key, selectedProvider, baseUrl, model);
         const pyCheck = await api.invoke('setup:check-python');
         if (pyCheck.installed) {
           goToStep(3);
@@ -217,13 +278,12 @@
           goToStep(2);
         }
       } else {
-        apiError.textContent = result.error || 'Invalid API Key';
+        apiError.textContent = result.error || 'Validation failed';
       }
       btnValidate.disabled = false;
       btnValidate.textContent = 'Validate & Continue';
     });
 
-    // Enter key submits
     apiInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') btnValidate.click();
     });

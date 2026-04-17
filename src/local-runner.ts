@@ -106,11 +106,26 @@ export async function runLocalAgent(
     BIOCLAW_SKILLS_ROOT: skillsDir,
     BIOCLAW_CLAUDE_HOME: sessionDir,
 
-    // API credentials
-    ANTHROPIC_API_KEY: ctx.apiKey,
+    // API credentials — set based on provider type
+    ...(ctx.providerType === 'anthropic'
+      ? { ANTHROPIC_API_KEY: ctx.apiKey }
+      : ctx.providerType === 'openrouter'
+        ? {
+            MODEL_PROVIDER: 'openrouter',
+            OPENROUTER_API_KEY: ctx.apiKey,
+            OPENROUTER_BASE_URL: ctx.providerBaseUrl || 'https://openrouter.ai/api/v1',
+            ...(ctx.providerModel ? { OPENROUTER_MODEL: ctx.providerModel } : {}),
+          }
+        : {
+            // custom provider
+            MODEL_PROVIDER: 'openai-compatible',
+            OPENAI_COMPATIBLE_API_KEY: ctx.apiKey,
+            OPENAI_COMPATIBLE_BASE_URL: ctx.providerBaseUrl,
+            ...(ctx.providerModel ? { OPENAI_COMPATIBLE_MODEL: ctx.providerModel } : {}),
+          }),
   };
 
-  // Provider overrides from runtime config
+  // Per-agent runtime config overrides (from control-plane /provider command)
   if (input.runtimeConfig?.provider) {
     env.MODEL_PROVIDER = input.runtimeConfig.provider;
   }

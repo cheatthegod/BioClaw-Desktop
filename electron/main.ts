@@ -124,25 +124,45 @@ function showSetupWizard() {
 
 // ── IPC Handlers: Setup Wizard ──
 
-ipcMain.handle('setup:validate-api-key', async (_event, apiKey: string) => {
-  if (!apiKey || !apiKey.startsWith('sk-ant-')) {
-    return { valid: false, error: 'API Key should start with sk-ant-' };
+ipcMain.handle('setup:validate-api-key', async (
+  _event,
+  apiKey: string,
+  provider: string,
+  baseUrl?: string,
+) => {
+  if (!apiKey) {
+    return { valid: false, error: 'API Key is required' };
   }
+
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1,
-        messages: [{ role: 'user', content: 'hi' }],
-      }),
-    });
-    // 200 = valid, 400 = valid key but bad request (still proves key works)
+    let response: Response;
+
+    if (provider === 'anthropic') {
+      // Validate against Anthropic API
+      if (!apiKey.startsWith('sk-ant-')) {
+        return { valid: false, error: 'Anthropic API Key should start with sk-ant-' };
+      }
+      response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1,
+          messages: [{ role: 'user', content: 'hi' }],
+        }),
+      });
+    } else {
+      // Validate against OpenRouter or custom OpenAI-compatible endpoint
+      const url = baseUrl || 'https://openrouter.ai/api/v1';
+      response = await fetch(`${url.replace(/\/+$/, '')}/models`, {
+        headers: { 'Authorization': `Bearer ${apiKey}` },
+      });
+    }
+
     const valid = response.ok || response.status === 400;
     return { valid, error: valid ? null : `API returned ${response.status}` };
   } catch (e: any) {
@@ -150,13 +170,27 @@ ipcMain.handle('setup:validate-api-key', async (_event, apiKey: string) => {
   }
 });
 
-ipcMain.handle('setup:save-api-key', async (_event, apiKey: string) => {
+ipcMain.handle('setup:save-config', async (
+  _event,
+  apiKey: string,
+  provider: string,
+  baseUrl?: string,
+  model?: string,
+) => {
+  // Save API key
   const stored = config.setApiKey(apiKey);
   if (!stored) {
-    // safeStorage unavailable — keep in memory for this session only
     sessionApiKey = apiKey;
-    config.setApiKeySet(true); // Mark as set (even though not persisted)
+    config.setApiKeySet(true);
   }
+
+  // Save provider config
+  config.setProviderConfig({
+    provider: provider as any,
+    baseUrl: baseUrl || undefined,
+    model: model || undefined,
+  });
+
   return { stored };
 });
 
@@ -188,8 +222,9 @@ ipcMain.handle('setup:finish', async () => {
 async function startApp() {
   const userDataDir = app.getPath('userData');
 
-  // Resolve API key: prefer stored, fall back to session memory
+  // Resolve API key and provider config
   const apiKey = config.getApiKey() || sessionApiKey;
+  const providerCfg = config.getProviderConfig();
   if (!apiKey) {
     showSetupWizard();
     return;
@@ -223,8 +258,11 @@ async function startApp() {
     logoPath: path.join(resourcesDir, 'web-assets', 'bioclaw_logo.jpg'),
     vendorScriptsDir: path.join(resourcesDir, 'web-assets', 'vendor'),
     agentRunnerPath: path.join(resourcesDir, 'agent-runner', 'dist', 'index.js'),
-    pythonPath: pythonManager.getPythonPath(),  // ← Fix #3: use installed Python
+    pythonPath: pythonManager.getPythonPath(),
     apiKey,
+    providerType: providerCfg.provider,
+    providerBaseUrl: providerCfg.baseUrl,
+    providerModel: providerCfg.model,
     port,
     host: '127.0.0.1',
   });

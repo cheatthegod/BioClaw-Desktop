@@ -65,9 +65,12 @@ export type ChatMessageView = UserMessage | AssistantMessage | SystemMessage;
 
 interface SendParams {
   readonly port: number;
+  /** Session token (bioclaw-proxy) or API key (legacy BYO key). */
   readonly apiKey: string;
   readonly model: string;
   readonly baseUrl?: string;
+  /** Defaults to 'bioclaw-proxy' if omitted. */
+  readonly provider?: string;
 }
 
 interface ChatState {
@@ -128,6 +131,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         apiKey: params.apiKey,
         model: params.model,
         ...(params.baseUrl ? { baseUrl: params.baseUrl } : {}),
+        ...(params.provider ? { provider: params.provider } : {}),
         messages: wireMessages,
         signal: abortController.signal,
       });

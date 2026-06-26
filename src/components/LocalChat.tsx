@@ -14,7 +14,7 @@
  * any reuse. Once we add a sidebar/thread list (phase 3) the message list
  * and composer become their own files.
  */
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import {
@@ -34,9 +34,8 @@ import {
   type ChatToolCall,
 } from '../lib/chat-state';
 import { useSidecar } from '../hooks/useSidecar';
-import { credentials } from '../lib/credentials';
+import { useAuthStore } from '../lib/auth-state';
 import { ModelPicker } from './ModelPicker';
-import { ApiKeyMissingBanner } from './ApiKeyMissingBanner';
 import { cn } from '../lib/utils';
 
 const EXAMPLE_PROMPTS: ReadonlyArray<string> = [
@@ -51,31 +50,15 @@ marked.setOptions({ gfm: true, breaks: true });
 export function LocalChat() {
   const mode = useAppStore((s) => s.mode);
   const selectedModel = useAppStore((s) => s.selectedModel);
-  const isSettingsOpen = useAppStore((s) => s.isSettingsOpen);
 
   const sidecar = useSidecar(mode === 'local');
 
-  // The API key lives in the OS keychain — we hold a presence flag in React
-  // state but never the value itself. At send-time we pull it fresh from the
-  // keychain and hand it straight to the sidecar.
-  const [hasApiKey, setHasApiKey] = useState(false);
-  const refreshKeyPresence = useCallback(async () => {
-    try {
-      const list = await credentials.list();
-      setHasApiKey(list.includes('openrouter_api_key'));
-    } catch {
-      setHasApiKey(false);
-    }
-  }, []);
-  useEffect(() => {
-    void refreshKeyPresence();
-  }, [refreshKeyPresence]);
-  // Re-check after the settings drawer closes (user may have added/removed a key).
-  const prevSettingsOpen = useRef(isSettingsOpen);
-  useEffect(() => {
-    if (prevSettingsOpen.current && !isSettingsOpen) void refreshKeyPresence();
-    prevSettingsOpen.current = isSettingsOpen;
-  }, [isSettingsOpen, refreshKeyPresence]);
+  // Auth: chat traffic is gated by the user's email-OTP session token
+  // (default provider is `bioclaw-proxy`, which uses the token as a
+  // Cookie: bioclaw_session). The token came from the OS keychain on
+  // app boot via loadStoredSession.
+  const sessionToken = useAuthStore((s) => s.token);
+  const hasSession = sessionToken !== null && sessionToken.length > 0;
 
   const messages = useChatStore((s) => s.messages);
   const streaming = useChatStore((s) => s.streaming);
@@ -86,31 +69,21 @@ export function LocalChat() {
 
   const ready = sidecar.status === 'ready' && sidecar.port !== null;
   const isStreaming = status === 'streaming';
-  const canSend = ready && hasApiKey && !isStreaming;
+  const canSend = ready && hasSession && !isStreaming;
 
   const onSubmit = async (text: string) => {
-    if (!canSend || !sidecar.port) return;
-    let apiKey: string | null;
-    try {
-      apiKey = await credentials.get('openrouter_api_key');
-    } catch {
-      apiKey = null;
-    }
-    if (!apiKey) {
-      setHasApiKey(false);
-      return;
-    }
+    if (!canSend || !sidecar.port || !sessionToken) return;
     void send(text, {
       port: sidecar.port,
-      apiKey,
+      apiKey: sessionToken,
       model: selectedModel,
+      provider: 'bioclaw-proxy',
     });
   };
 
   return (
     <div className="flex h-full w-full flex-col bg-zinc-50">
       <ChatHeader sidecar={sidecar} onNewChat={clear} />
-      {!hasApiKey ? <ApiKeyMissingBanner /> : null}
       {sidecar.status === 'error' ? (
         <div className="flex items-center gap-2 border-b border-red-200 bg-red-50 px-4 py-2 text-[12px] text-red-800">
           <AlertTriangle className="h-3.5 w-3.5" />
@@ -124,7 +97,7 @@ export function LocalChat() {
         onSubmit={onSubmit}
         onCancel={cancel}
         ready={ready}
-        hasApiKey={hasApiKey}
+        hasApiKey={hasSession}
         sidecarStatus={sidecar.status}
         onExample={onSubmit}
         showExamples={messages.length === 0 && !streaming}

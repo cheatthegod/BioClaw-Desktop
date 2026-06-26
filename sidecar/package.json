@@ -13,7 +13,9 @@
     "test:permission": "esbuild --bundle --platform=node --format=esm --target=node22 --outfile=/tmp/permission.smoke.mjs tests/permission.smoke.ts && node /tmp/permission.smoke.mjs",
     "test:script": "BIOCLAW_SKILLS_DIR=$PWD/../skills esbuild --bundle --platform=node --format=esm --target=node22 --outfile=/tmp/scriptRunner.smoke.mjs tests/scriptRunner.smoke.ts && BIOCLAW_SKILLS_DIR=$PWD/../skills node /tmp/scriptRunner.smoke.mjs",
     "test:e2e": "esbuild --bundle --platform=node --format=esm --target=node22 --outfile=/tmp/e2e-uniprot.mjs tests/e2e-uniprot.ts && REPO_ROOT=$(cd .. && pwd) node /tmp/e2e-uniprot.mjs",
-    "test:proxy": "esbuild --bundle --platform=node --format=esm --target=node22 --outfile=/tmp/proxy-provider.smoke.mjs tests/proxy-provider.smoke.ts && node /tmp/proxy-provider.smoke.mjs"
+    "test:proxy": "esbuild --bundle --platform=node --format=esm --target=node22 --outfile=/tmp/proxy-provider.smoke.mjs tests/proxy-provider.smoke.ts && node /tmp/proxy-provider.smoke.mjs",
+    "test:auth": "esbuild --bundle --platform=node --format=esm --target=node22 --outfile=/tmp/auth.smoke.mjs tests/auth.smoke.ts && node /tmp/auth.smoke.mjs",
+    "test:all": "npm run test:permission && npm run test:script && npm run test:e2e && npm run test:proxy && npm run test:auth"
   },
   "dependencies": {
     "hono": "^4.6.14",

@@ -24,9 +24,16 @@ export interface ChatMessage {
 
 export interface StreamChatParams {
   readonly port: number;
+  /**
+   * For provider=bioclaw-proxy this is the session TOKEN (the value of
+   * the bioclaw_session cookie), not an OpenRouter API key. Either way
+   * we forward it verbatim as the `apiKey` body field; the sidecar
+   * picks the right auth scheme based on `provider`.
+   */
   readonly apiKey: string;
   readonly model: string;
   readonly baseUrl?: string;
+  readonly provider?: string;
   readonly messages: ReadonlyArray<ChatMessage>;
   readonly signal?: AbortSignal;
 }
@@ -45,6 +52,7 @@ export async function* streamChat(params: StreamChatParams): AsyncIterable<Agent
     apiKey: params.apiKey,
     model: params.model,
     ...(params.baseUrl ? { baseUrl: params.baseUrl } : {}),
+    ...(params.provider ? { provider: params.provider } : {}),
   });
 
   let res: Response;

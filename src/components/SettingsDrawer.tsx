@@ -6,9 +6,10 @@
  */
 import { useState } from 'react';
 import { useAppStore } from '../lib/store';
+import { useAuthStore } from '../lib/auth-state';
 import { persistPrefs } from '../lib/init';
 import { cn } from '../lib/utils';
-import { ApiKeysPanel } from './ApiKeysPanel';
+// import { ApiKeysPanel } from './ApiKeysPanel'; // kept for a future BYO-key advanced mode
 
 export function SettingsDrawer() {
   const mode = useAppStore((s) => s.mode);
@@ -42,6 +43,10 @@ export function SettingsDrawer() {
       </div>
 
       <div className="flex-1 space-y-5 overflow-y-auto px-4 py-4">
+        <Section title="账户">
+          <AccountRow />
+        </Section>
+
         <Section title="运行模式">
           <ModeOption
             active={mode === 'remote'}
@@ -55,10 +60,6 @@ export function SettingsDrawer() {
             desc="agent-runner 跑在本机；适合敏感数据 / 离线。"
             onClick={() => setMode('local')}
           />
-        </Section>
-
-        <Section title="API 密钥">
-          <ApiKeysPanel />
         </Section>
 
         <Section title="远程地址">
@@ -99,6 +100,31 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">{title}</div>
       {children}
     </section>
+  );
+}
+
+function AccountRow() {
+  const email = useAuthStore((s) => s.email);
+  const logout = useAuthStore((s) => s.logout);
+  const busy = useAuthStore((s) => s.busy);
+  if (!email) {
+    return <div className="text-[12px] text-zinc-500">未登录</div>;
+  }
+  return (
+    <div className="space-y-2">
+      <div className="rounded border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-[12px] text-zinc-800">
+        <div className="text-[10px] uppercase tracking-wider text-zinc-500">已登录</div>
+        <div className="mt-0.5 truncate font-mono">{email}</div>
+      </div>
+      <button
+        type="button"
+        onClick={() => void logout()}
+        disabled={busy}
+        className="w-full rounded border border-zinc-300 bg-white px-2.5 py-1.5 text-[12px] text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {busy ? '处理中…' : '登出'}
+      </button>
+    </div>
   );
 }
 

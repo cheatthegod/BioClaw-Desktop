@@ -10,6 +10,8 @@
 import { Store } from '@tauri-apps/plugin-store';
 import { useAppStore, type AppMode, DEFAULT_MODEL } from './store';
 import { loadPermissions } from './permission-state';
+import { useAuthStore } from './auth-state';
+import { loadStoredSession } from './auth';
 
 const STORE_FILE = 'bioclaw-prefs.json';
 
@@ -34,6 +36,18 @@ export async function initializeApp(): Promise<void> {
   // a failure here just means the user re-grants permissions in this
   // session, not a hard error.
   await loadPermissions();
+
+  // Hydrate the auth store from the OS keychain if a session token was
+  // saved on a previous run. Skipping this just means the user sees the
+  // LoginGate on every launch — recoverable but not the desired UX.
+  try {
+    const session = await loadStoredSession();
+    if (session) {
+      useAuthStore.getState().hydrate(session.email, session.token);
+    }
+  } catch (err) {
+    console.warn('failed to hydrate auth from keychain', err);
+  }
 }
 
 export async function persistPrefs(patch: PersistedPrefs): Promise<void> {

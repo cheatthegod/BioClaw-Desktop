@@ -17,13 +17,16 @@ import { SettingsDrawer } from './components/SettingsDrawer';
 import { ConnectionGuard } from './components/ConnectionGuard';
 import { LocalChat } from './components/LocalChat';
 import { PermissionPrompt } from './components/PermissionPrompt';
+import { LoginGate } from './components/LoginGate';
 import { useAppStore } from './lib/store';
+import { useAuthStore } from './lib/auth-state';
 import { initializeApp } from './lib/init';
 
 export function App() {
   const mode = useAppStore((s) => s.mode);
   const remoteUrl = useAppStore((s) => s.remoteUrl);
   const isSettingsOpen = useAppStore((s) => s.isSettingsOpen);
+  const loginStep = useAuthStore((s) => s.loginStep);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,6 +57,13 @@ export function App() {
         Initializing BioClaw…
       </div>
     );
+  }
+
+  // Email-login gate. Once the user signs in (or we've hydrated a token
+  // from the OS keychain), loginStep flips to 'done' and we render the
+  // normal shell.
+  if (loginStep !== 'done') {
+    return <LoginGate />;
   }
 
   return (

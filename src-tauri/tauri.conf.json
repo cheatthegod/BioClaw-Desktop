@@ -1,0 +1,95 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "BioClaw",
+  "version": "0.1.0",
+  "identifier": "tech.bioclaw.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "BioClaw",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 980,
+        "minHeight": 640,
+        "decorations": false,
+        "transparent": false,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "visible": false,
+        "shadow": true,
+        "acceptFirstMouse": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' tauri: ipc:; connect-src 'self' tauri: ipc: https://chat.bioclaw.tech wss://chat.bioclaw.tech; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; frame-src https://chat.bioclaw.tech https://*.bioclaw.tech"
+    },
+    "trayIcon": {
+      "id": "bioclaw-tray",
+      "iconAsTemplate": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Productivity",
+    "copyright": "Copyright (c) 2026 BioClaw",
+    "shortDescription": "AI-powered biomedical research agent",
+    "longDescription": "BioClaw Desktop brings the BioClaw biomedical research agent (chat.bioclaw.tech) into a native macOS / Windows / Linux app with system tray, native notifications, and an optional local agent runner.",
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "exceptionDomain": "bioclaw.tech",
+      "signingIdentity": null,
+      "providerShortName": null,
+      "entitlements": null
+    },
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com",
+      "wix": {
+        "language": "en-US"
+      },
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "installMode": "perMachine",
+        "displayLanguageSelector": true,
+        "languages": ["English", "SimpChinese"]
+      }
+    },
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": true
+      },
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"]
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://chat.bioclaw.tech/desktop/updates/{{target}}/{{arch}}/{{current_version}}"
+      ],
+      "dialog": true,
+      "pubkey": "PLACEHOLDER_REPLACE_BEFORE_RELEASE_WITH_REAL_BASE64_MINISIGN_PUBKEY"
+    }
+  }
+}

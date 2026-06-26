@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+.pnp.*
+.yarn/
+
+# Build outputs
+dist/
+dist-electron/
+build/
+.next/
+out/
+
+# Tauri / Rust
+src-tauri/target/
+src-tauri/gen/schemas/
+src-tauri/Cargo.lock.bak
+release/
+
+# Vite / build cache
+.vite/
+.cache/
+*.tsbuildinfo
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Env / secrets — NEVER commit
+.env
+.env.*
+!.env.example
+
+# Signing keys & artifacts (use GitHub Secrets in CI instead)
+*.p12
+*.pfx
+*.cer
+*.key
+*.pem
+keystore.*
+notarytool-*.json
+private-key.json
+
+# Logs
+*.log
+logs/
+
+# Test outputs
+coverage/
+.nyc_output/
+
+# OS junk
+.AppleDouble
+.LSOverride
+ehthumbs.db

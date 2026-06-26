@@ -1,0 +1,51 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capabilities granted to the main BioClaw window. Keep this list MINIMAL — every permission widens the attack surface for a compromised webview.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:default",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-close",
+    "core:window:allow-set-focus",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:event:default",
+    "core:webview:default",
+    "core:tray:default",
+    "log:default",
+    "dialog:default",
+    "notification:default",
+    "os:default",
+    "process:default",
+    "store:default",
+    "window-state:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://chat.bioclaw.tech/*" },
+        { "url": "https://*.bioclaw.tech/*" },
+        { "url": "http://127.0.0.1:*/*" },
+        { "url": "http://localhost:*/*" }
+      ]
+    },
+    {
+      "identifier": "shell:allow-open",
+      "allow": [
+        { "url": "https://*" }
+      ]
+    },
+    {
+      "identifier": "fs:default",
+      "allow": [
+        { "path": "$APPDATA/**" },
+        { "path": "$APPLOG/**" },
+        { "path": "$APPCONFIG/**" }
+      ]
+    }
+  ]
+}

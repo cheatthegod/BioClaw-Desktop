@@ -1,0 +1,84 @@
+version: 2
+updates:
+  # ---------------------------------------------------------------------------
+  # Frontend (npm)
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '07:00'
+      timezone: 'America/New_York'
+    open-pull-requests-limit: 5
+    labels:
+      - 'dependencies'
+      - 'frontend'
+    commit-message:
+      prefix: 'chore(deps)'
+      include: 'scope'
+    groups:
+      # One PR for all minor+patch bumps; majors stay individual so we
+      # can review breaking changes one at a time.
+      npm-minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - 'minor'
+          - 'patch'
+      tauri-plugins:
+        applies-to: version-updates
+        patterns:
+          - '@tauri-apps/*'
+
+  # ---------------------------------------------------------------------------
+  # Rust (cargo) — src-tauri crate
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: 'cargo'
+    directory: '/src-tauri'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '07:00'
+      timezone: 'America/New_York'
+    open-pull-requests-limit: 5
+    labels:
+      - 'dependencies'
+      - 'rust'
+    commit-message:
+      prefix: 'chore(deps)'
+      include: 'scope'
+    groups:
+      cargo-minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - 'minor'
+          - 'patch'
+      tauri-crates:
+        applies-to: version-updates
+        patterns:
+          - 'tauri'
+          - 'tauri-*'
+          - 'tauri-plugin-*'
+
+  # ---------------------------------------------------------------------------
+  # GitHub Actions
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '07:00'
+      timezone: 'America/New_York'
+    open-pull-requests-limit: 3
+    labels:
+      - 'dependencies'
+      - 'ci'
+    commit-message:
+      prefix: 'chore(ci)'
+      include: 'scope'
+    groups:
+      actions-all:
+        applies-to: version-updates
+        patterns:
+          - '*'

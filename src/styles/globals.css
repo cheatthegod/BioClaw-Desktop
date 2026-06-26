@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+  body {
+    font-family:
+      -apple-system,
+      BlinkMacSystemFont,
+      'Inter',
+      'Segoe UI',
+      'PingFang SC',
+      'Microsoft YaHei',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    color: rgb(24 24 27);
+  }
+  /* Hide native scrollbar tracks in our chrome — keep them visible inside
+     the iframe so user has scroll affordance for the chat content. */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(212 212 216);
+    border-radius: 4px;
+  }
+}

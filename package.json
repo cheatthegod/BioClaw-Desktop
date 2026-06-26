@@ -1,0 +1,82 @@
+{
+  "name": "bioclaw-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "BioClaw Desktop — AI-powered biomedical research agent. Tauri 2 + React 19 + Vite.",
+  "author": {
+    "name": "BioClaw",
+    "url": "https://chat.bioclaw.tech"
+  },
+  "license": "MIT",
+  "homepage": "https://chat.bioclaw.tech",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bioclaw/bioclaw-desktop.git"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "tauri:build:mac": "tauri build --target universal-apple-darwin",
+    "tauri:build:win": "tauri build --target x86_64-pc-windows-msvc",
+    "tauri:build:linux": "tauri build --target x86_64-unknown-linux-gnu",
+    "lint": "eslint src --ext .ts,.tsx --max-warnings 0",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"src-tauri/src/**/*.rs\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist src-tauri/target node_modules/.vite"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.4.0",
+    "@tauri-apps/plugin-dialog": "^2.2.0",
+    "@tauri-apps/plugin-fs": "^2.2.0",
+    "@tauri-apps/plugin-http": "^2.4.0",
+    "@tauri-apps/plugin-log": "^2.4.0",
+    "@tauri-apps/plugin-notification": "^2.2.0",
+    "@tauri-apps/plugin-os": "^2.2.0",
+    "@tauri-apps/plugin-process": "^2.2.0",
+    "@tauri-apps/plugin-shell": "^2.2.0",
+    "@tauri-apps/plugin-store": "^2.2.0",
+    "@tauri-apps/plugin-updater": "^2.4.0",
+    "@tauri-apps/plugin-window-state": "^2.2.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.475.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.0.0",
+    "zustand": "^5.0.3"
+  },
+  "peerDependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@modelcontextprotocol/sdk": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.4.0",
+    "@types/node": "^22.10.7",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "@typescript-eslint/eslint-plugin": "^8.20.0",
+    "@typescript-eslint/parser": "^8.20.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.18.0",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "postcss": "^8.5.1",
+    "prettier": "^3.4.2",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.7"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

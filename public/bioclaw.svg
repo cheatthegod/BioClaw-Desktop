@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  BioClaw mark — stylized "claw + helix".
+  Placeholder geometric mark drawn in pure SVG; matches the
+  bioclaw.accent color (#059669) from tailwind.config.js.
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 128 128"
+     width="128" height="128"
+     role="img" aria-label="BioClaw">
+  <title>BioClaw</title>
+
+  <!-- accent disc -->
+  <circle cx="64" cy="64" r="60" fill="#059669"/>
+
+  <!-- inner ring -->
+  <circle cx="64" cy="64" r="52" fill="none" stroke="#ffffff" stroke-opacity="0.18" stroke-width="2"/>
+
+  <!-- DNA double helix strands (suggestive, not anatomically accurate) -->
+  <g fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round">
+    <path d="M44 28 C 84 48, 84 80, 44 100"/>
+    <path d="M84 28 C 44 48, 44 80, 84 100"/>
+  </g>
+
+  <!-- helix rungs -->
+  <g stroke="#ffffff" stroke-width="2.25" stroke-linecap="round" stroke-opacity="0.85">
+    <line x1="48" y1="40" x2="80" y2="40"/>
+    <line x1="56" y1="56" x2="72" y2="56"/>
+    <line x1="56" y1="72" x2="72" y2="72"/>
+    <line x1="48" y1="88" x2="80" y2="88"/>
+  </g>
+
+  <!-- monogram fallback (hidden behind the helix at this size, but ensures
+       the mark still reads as "BC" if rendered tiny) -->
+  <text x="64" y="120"
+        font-family="system-ui, -apple-system, Inter, sans-serif"
+        font-size="10"
+        font-weight="700"
+        fill="#ffffff"
+        text-anchor="middle"
+        opacity="0.0">BC</text>
+</svg>

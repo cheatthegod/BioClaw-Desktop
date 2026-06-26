@@ -1,0 +1,191 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Avoid duplicate CI runs on PRs from the same repo (push + pull_request).
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Keep these in sync with package.json engines and rust-toolchain (if added).
+  NODE_VERSION: '22'
+  RUST_TOOLCHAIN: 'stable'
+
+jobs:
+  # -----------------------------------------------------------------------------
+  # Frontend lint / typecheck / formatting — fast feedback, runs on Ubuntu only.
+  # -----------------------------------------------------------------------------
+  lint:
+    name: Frontend lint & typecheck
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Prettier format check
+        run: npm run format:check
+
+  # -----------------------------------------------------------------------------
+  # Rust fmt + clippy on the src-tauri crate.
+  # -----------------------------------------------------------------------------
+  rust-check:
+    name: Rust fmt & clippy
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system deps for tauri (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file
+
+      - name: Install Rust toolchain (${{ env.RUST_TOOLCHAIN }})
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rustfmt, clippy
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+          # Bust the cache when CI files or Cargo.lock change in a meaningful way.
+          shared-key: 'ci-rust-check'
+
+      - name: cargo fmt --check
+        working-directory: ./src-tauri
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy
+        working-directory: ./src-tauri
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+  # -----------------------------------------------------------------------------
+  # Smoke-test bundle build on every supported OS. No release is created
+  # (tagName: '') — artifacts are uploaded only for manual inspection.
+  # -----------------------------------------------------------------------------
+  build-matrix:
+    name: Build smoke-test (${{ matrix.platform.name }})
+    needs: [lint, rust-check]
+    runs-on: ${{ matrix.platform.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: linux-x86_64
+            os: ubuntu-22.04
+            rust-target: x86_64-unknown-linux-gnu
+            tauri-args: ''
+          - name: macos-universal
+            os: macos-14
+            rust-target: universal-apple-darwin
+            tauri-args: '--target universal-apple-darwin'
+          - name: windows-x86_64
+            os: windows-latest
+            rust-target: x86_64-pc-windows-msvc
+            tauri-args: '--target x86_64-pc-windows-msvc'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Rust toolchain (${{ env.RUST_TOOLCHAIN }})
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          # Universal macOS build needs both archs registered with rustup.
+          targets: ${{ matrix.platform.os == 'macos-14' && 'aarch64-apple-darwin,x86_64-apple-darwin' || matrix.platform.rust-target }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+          shared-key: 'ci-build-${{ matrix.platform.name }}'
+
+      - name: Install system deps for tauri (Linux)
+        if: matrix.platform.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Tauri build (no release)
+        uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: '.'
+          # Empty tagName => tauri-action skips the release-creation path
+          # and just runs `tauri build` and surfaces the bundle paths.
+          tagName: ''
+          args: ${{ matrix.platform.tauri-args }}
+
+      - name: Upload bundle artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bioclaw-${{ matrix.platform.name }}-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 7
+          path: |
+            src-tauri/target/release/bundle/**/*
+            src-tauri/target/${{ matrix.platform.rust-target }}/release/bundle/**/*
+            src-tauri/target/universal-apple-darwin/release/bundle/**/*

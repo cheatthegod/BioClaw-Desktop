@@ -1,0 +1,152 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+# Each tag gets a single release run; cancel duplicates if the tag is re-pushed.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  # tauri-action creates / updates the GitHub Release for us.
+  contents: write
+
+env:
+  NODE_VERSION: '22'
+  RUST_TOOLCHAIN: 'stable'
+
+jobs:
+  # -----------------------------------------------------------------------------
+  # Single matrix job per platform. tauri-action takes care of:
+  #   1. building the bundles
+  #   2. signing them (mac/win/updater) via the env block below
+  #   3. creating / appending to a single GitHub Release draft
+  # so we do NOT need a separate "publish" job.
+  # -----------------------------------------------------------------------------
+  release:
+    name: Build & sign (${{ matrix.platform.name }})
+    runs-on: ${{ matrix.platform.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: linux-x86_64
+            os: ubuntu-22.04
+            rust-target: x86_64-unknown-linux-gnu
+            tauri-args: ''
+          - name: macos-universal
+            os: macos-14
+            rust-target: universal-apple-darwin
+            tauri-args: '--target universal-apple-darwin'
+          - name: windows-x86_64
+            os: windows-latest
+            rust-target: x86_64-pc-windows-msvc
+            tauri-args: '--target x86_64-pc-windows-msvc'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Rust toolchain (${{ env.RUST_TOOLCHAIN }})
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: ${{ matrix.platform.os == 'macos-14' && 'aarch64-apple-darwin,x86_64-apple-darwin' || matrix.platform.rust-target }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+          shared-key: 'release-${{ matrix.platform.name }}'
+
+      - name: Install system deps for tauri (Linux)
+        if: matrix.platform.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      # --------------------------------------------------------------------
+      # tauri-action: build + sign + upload to a draft GitHub Release.
+      # tauri-action reads the APPLE_*, WINDOWS_CERTIFICATE_* and
+      # TAURI_SIGNING_* env vars below and wires them into the bundler.
+      # --------------------------------------------------------------------
+      - name: Tauri build, sign & upload to draft release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          # ---- macOS code-signing + notarization ----------------------------
+          # tauri-action imports the p12, signs with the identity, then sends
+          # the .app to notarytool with the APPLE_ID / APPLE_PASSWORD pair.
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+          # ---- Windows code-signing (NSIS installer) ------------------------
+          # tauri-action's bundler reads these when present; Linux ignores them.
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+
+          # ---- Updater (minisign) signing -----------------------------------
+          # Signs the .sig files the updater plugin downloads alongside each
+          # bundle. The pubkey baked into tauri.conf.json must match this key.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+          # GITHUB_TOKEN is consumed by tauri-action to create the Release.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: '.'
+          tagName: ${{ github.ref_name }}
+          releaseName: 'BioClaw v__VERSION__'
+          releaseBody: |
+            See the assets below to download and install BioClaw for your
+            platform. Automatic updates are signed with the BioClaw updater
+            key — clients with mismatched pubkeys will refuse to update.
+
+            **Checksums** (SHA-256) are attached as `*.sha256` next to each
+            installer.
+          releaseDraft: true
+          prerelease: false
+          includeUpdaterJson: true
+          args: ${{ matrix.platform.tauri-args }}
+
+      # Also stash the raw bundles as workflow artifacts so we can debug a
+      # bad release without re-running the matrix.
+      - name: Upload bundle artifacts (debug copy)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bioclaw-${{ matrix.platform.name }}-${{ github.ref_name }}
+          if-no-files-found: warn
+          retention-days: 30
+          path: |
+            src-tauri/target/release/bundle/**/*
+            src-tauri/target/${{ matrix.platform.rust-target }}/release/bundle/**/*
+            src-tauri/target/universal-apple-darwin/release/bundle/**/*

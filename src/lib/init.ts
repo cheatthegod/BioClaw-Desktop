@@ -9,6 +9,7 @@
  */
 import { Store } from '@tauri-apps/plugin-store';
 import { useAppStore, type AppMode, DEFAULT_MODEL } from './store';
+import { loadPermissions } from './permission-state';
 
 const STORE_FILE = 'bioclaw-prefs.json';
 
@@ -28,6 +29,11 @@ export async function initializeApp(): Promise<void> {
   const selectedModel = (await store.get<string>('selectedModel')) ?? DEFAULT_MODEL;
 
   useAppStore.setState({ mode, remoteUrl, localUrl, selectedModel });
+
+  // Load the persisted script-execution permission list. Best-effort —
+  // a failure here just means the user re-grants permissions in this
+  // session, not a hard error.
+  await loadPermissions();
 }
 
 export async function persistPrefs(patch: PersistedPrefs): Promise<void> {

@@ -19,6 +19,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { preloadPermissionsToSidecar } from '../lib/permission-state';
 
 export type SidecarStatus = 'starting' | 'ready' | 'down' | 'error';
 
@@ -38,6 +39,7 @@ const POLL_INTERVAL_MS = 2000;
 export function useSidecar(enabled: boolean): SidecarState {
   const [state, setState] = useState<SidecarState>({ status: 'down', port: null });
   const startedRef = useRef(false);
+  const preloadedPortRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!enabled) {
@@ -55,6 +57,13 @@ export function useSidecar(enabled: boolean): SidecarState {
         if (cancelled) return;
         if (reply.running && reply.port) {
           setState({ status: 'ready', port: reply.port });
+          // First time we see a port (or it changed because the sidecar
+          // restarted), push the persisted always-allow permission list
+          // so the sidecar can skip the prompt on subsequent calls.
+          if (preloadedPortRef.current !== reply.port) {
+            preloadedPortRef.current = reply.port;
+            void preloadPermissionsToSidecar(reply.port).catch(() => {});
+          }
         } else {
           // Either we just asked it to start and it isn't up yet, or it
           // hasn't been asked at all this session.

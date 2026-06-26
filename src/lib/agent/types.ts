@@ -84,10 +84,12 @@ export type ToolHandlerResult = {
 export type AgentEvent =
   | { readonly type: 'text-delta'; readonly text: string }
   | { readonly type: 'tool-call-start'; readonly toolCallId: string; readonly name: string; readonly args: Readonly<Record<string, unknown>> }
-  | { readonly type: 'tool-call-result'; readonly toolCallId: string; readonly name: string; readonly result: ToolHandlerResult; readonly isError: boolean }
+  | { readonly type: 'tool-call-result'; readonly toolCallId: string; readonly name: string; readonly result: ToolHandlerResult; readonly isError: boolean; readonly output?: string }
   | { readonly type: 'usage'; readonly inputTokens: number; readonly outputTokens: number }
   | { readonly type: 'step-complete'; readonly step: number }
   | { readonly type: 'done'; readonly reason: 'stop' | 'tool-loop-limit' | 'cancelled' }
+  | { readonly type: 'finish'; readonly reason: 'stop' | 'tool-use' | 'length' | 'error' | 'tool-loop-limit' | 'cancelled'; readonly error?: string }
+  | { readonly type: 'permission-needed'; readonly requestId: string; readonly skillId: string; readonly script: string; readonly interpreter: string; readonly args: readonly string[] }
   | { readonly type: 'error'; readonly error: string };
 
 /** Final value returned from `run()` / `resume()`. */

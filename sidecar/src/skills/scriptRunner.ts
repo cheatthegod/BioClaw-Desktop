@@ -43,10 +43,145 @@ export type PermissionResolver = (req: {
   args: readonly string[];
 }) => PermissionDecision | Promise<PermissionDecision>;
 
-/** Default resolver: env-flag gate. Replaced by Tauri webview in step 4. */
+/** Env-flag gate — used as the fallback when no SSE writer is available. */
 export const envFlagPermissionResolver: PermissionResolver = () => {
   return process.env['BIOCLAW_ALLOW_SCRIPT_EXEC'] === '1' ? 'allow' : 'deny';
 };
+
+// ---- Webview-prompt resolver --------------------------------------------
+//
+// The webview resolver is what main.ts hands the script-runner during a
+// real /chat request. Flow:
+//
+//   1. Resolver checks the module-level `allowAlwaysCache` for an
+//      "always-allow" decision keyed on (skillId, scriptPath). Hit ->
+//      return "allow" immediately, no prompt.
+//   2. Otherwise we mint a requestId, register a pending Promise in
+//      `pendingPermissions`, and emit a `permission-needed` SSE event so
+//      the frontend can pop a modal.
+//   3. The frontend POSTs to /permissions/decide which calls
+//      `resolvePendingPermission(requestId, decision)`. That resolves
+//      the Promise so the resolver returns and the script runs (or not).
+//   4. If the request gets aborted (user cancels chat) we reject the
+//      Promise so the resolver returns "deny" without a hung tool call.
+
+interface PendingPermission {
+  readonly resolve: (decision: PermissionDecision) => void;
+  readonly cacheKey: string;
+}
+const pendingPermissions = new Map<string, PendingPermission>();
+const allowAlwaysCache = new Set<string>();
+
+function permissionCacheKey(skillId: string, scriptPath: string): string {
+  return `${skillId}::${scriptPath}`;
+}
+
+/**
+ * Called by the POST /permissions/decide endpoint with the user's choice.
+ * `allow` runs the script once; `allow_always` also caches the decision
+ * for the remaining lifetime of this sidecar process. Persistence across
+ * desktop restarts lives on the Tauri side — the frontend re-pushes
+ * cached decisions via /permissions/preload at chat start.
+ */
+export function resolvePendingPermission(
+  requestId: string,
+  decision: PermissionDecision,
+): boolean {
+  const entry = pendingPermissions.get(requestId);
+  if (!entry) return false;
+  pendingPermissions.delete(requestId);
+  if (decision === 'allow' || decision === 'allow_once') {
+    // "allow" sticks; "allow_once" doesn't.
+    if (decision === 'allow') allowAlwaysCache.add(entry.cacheKey);
+  }
+  entry.resolve(decision);
+  return true;
+}
+
+/**
+ * Seed the always-allow cache from the frontend's persisted store at
+ * chat start. Idempotent.
+ */
+export function preloadAllowAlwaysPermissions(
+  entries: ReadonlyArray<{ skillId: string; script: string }>,
+): void {
+  for (const e of entries) {
+    allowAlwaysCache.add(permissionCacheKey(e.skillId, e.script));
+  }
+}
+
+/** Test helper — reset all in-memory permission state. */
+export function _resetPermissionState(): void {
+  pendingPermissions.clear();
+  allowAlwaysCache.clear();
+}
+
+export interface PermissionEvent {
+  readonly type: 'permission-needed';
+  readonly requestId: string;
+  readonly skillId: string;
+  readonly script: string;
+  readonly interpreter: string;
+  readonly args: readonly string[];
+}
+
+/**
+ * Build a resolver that pumps `permission-needed` events through the
+ * caller-supplied `emit` callback (typically the SSE writer for the
+ * active /chat request) and waits for the matching /permissions/decide
+ * post. `signal` is the chat request's AbortSignal — if the user
+ * cancels the chat, we hang up the prompt and deny.
+ */
+export function buildWebviewPermissionResolver(opts: {
+  emit: (ev: PermissionEvent) => Promise<void> | void;
+  signal: AbortSignal;
+  newRequestId: () => string;
+}): PermissionResolver {
+  return async (req) => {
+    const key = permissionCacheKey(req.skillId, req.scriptPath);
+    if (allowAlwaysCache.has(key)) return 'allow';
+
+    const requestId = opts.newRequestId();
+    let resolved = false;
+    const decisionPromise = new Promise<PermissionDecision>((resolve) => {
+      pendingPermissions.set(requestId, {
+        cacheKey: key,
+        resolve: (d) => {
+          if (resolved) return;
+          resolved = true;
+          resolve(d);
+        },
+      });
+      const onAbort = () => {
+        const entry = pendingPermissions.get(requestId);
+        if (!entry) return;
+        pendingPermissions.delete(requestId);
+        if (!resolved) {
+          resolved = true;
+          resolve('deny');
+        }
+      };
+      opts.signal.addEventListener('abort', onAbort, { once: true });
+    });
+
+    try {
+      await opts.emit({
+        type: 'permission-needed',
+        requestId,
+        skillId: req.skillId,
+        script: req.scriptPath,
+        interpreter: req.interpreter,
+        args: req.args,
+      });
+    } catch (err) {
+      // Emit failed (stream closed?) — clean up and deny.
+      pendingPermissions.delete(requestId);
+      return 'deny';
+    }
+
+    return decisionPromise;
+  };
+}
 
 const STDOUT_LIMIT = 64 * 1024;
 const STDERR_LIMIT = 64 * 1024;

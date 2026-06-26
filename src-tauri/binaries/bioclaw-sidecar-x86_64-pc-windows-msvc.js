@@ -3633,6 +3633,68 @@ import process2 from "node:process";
 var envFlagPermissionResolver = () => {
   return process2.env["BIOCLAW_ALLOW_SCRIPT_EXEC"] === "1" ? "allow" : "deny";
 };
+var pendingPermissions = /* @__PURE__ */ new Map();
+var allowAlwaysCache = /* @__PURE__ */ new Set();
+function permissionCacheKey(skillId, scriptPath) {
+  return `${skillId}::${scriptPath}`;
+}
+function resolvePendingPermission(requestId, decision) {
+  const entry = pendingPermissions.get(requestId);
+  if (!entry) return false;
+  pendingPermissions.delete(requestId);
+  if (decision === "allow" || decision === "allow_once") {
+    if (decision === "allow") allowAlwaysCache.add(entry.cacheKey);
+  }
+  entry.resolve(decision);
+  return true;
+}
+function preloadAllowAlwaysPermissions(entries) {
+  for (const e of entries) {
+    allowAlwaysCache.add(permissionCacheKey(e.skillId, e.script));
+  }
+}
+function buildWebviewPermissionResolver(opts) {
+  return async (req) => {
+    const key = permissionCacheKey(req.skillId, req.scriptPath);
+    if (allowAlwaysCache.has(key)) return "allow";
+    const requestId = opts.newRequestId();
+    let resolved = false;
+    const decisionPromise = new Promise((resolve) => {
+      pendingPermissions.set(requestId, {
+        cacheKey: key,
+        resolve: (d) => {
+          if (resolved) return;
+          resolved = true;
+          resolve(d);
+        }
+      });
+      const onAbort = () => {
+        const entry = pendingPermissions.get(requestId);
+        if (!entry) return;
+        pendingPermissions.delete(requestId);
+        if (!resolved) {
+          resolved = true;
+          resolve("deny");
+        }
+      };
+      opts.signal.addEventListener("abort", onAbort, { once: true });
+    });
+    try {
+      await opts.emit({
+        type: "permission-needed",
+        requestId,
+        skillId: req.skillId,
+        script: req.scriptPath,
+        interpreter: req.interpreter,
+        args: req.args
+      });
+    } catch (err) {
+      pendingPermissions.delete(requestId);
+      return "deny";
+    }
+    return decisionPromise;
+  };
+}
 var STDOUT_LIMIT = 64 * 1024;
 var STDERR_LIMIT = 64 * 1024;
 var DEFAULT_TIMEOUT_MS = 3e4;
@@ -3874,6 +3936,7 @@ function formatResultForLlm(args) {
 }
 
 // src/main.ts
+import { randomUUID } from "node:crypto";
 var SIDECAR_VERSION = "0.2.0";
 var CHAT_STEP_LIMIT = 8;
 function jsonError(status, message) {
@@ -3948,9 +4011,26 @@ app.post("/chat", async (c) => {
   }
   const skillsEnabled = body.skillsEnabled !== false;
   const tools = [];
+  let sseWriter = null;
   if (skillsEnabled && listSkills().length > 0) {
     tools.push(buildSkillToolDefinition());
-    tools.push(buildScriptRunnerToolDefinition(envFlagPermissionResolver));
+    const resolver = buildWebviewPermissionResolver({
+      emit: async (ev) => {
+        if (sseWriter) await sseWriter(ev);
+        else throw new Error("SSE writer not attached");
+      },
+      signal: c.req.raw.signal,
+      newRequestId: () => randomUUID()
+    });
+    tools.push(
+      buildScriptRunnerToolDefinition(async (req) => {
+        try {
+          return await resolver(req);
+        } catch {
+          return envFlagPermissionResolver(req);
+        }
+      })
+    );
   }
   const lastUserText = (() => {
     for (let i = turnMessages.length - 1; i >= 0; i--) {
@@ -3967,6 +4047,7 @@ app.post("/chat", async (c) => {
     c,
     async (sse) => {
       sse.onAbort(() => abortCtrl.abort());
+      sseWriter = (ev) => writeSseEvent(sse, ev);
       try {
         await runChatLoop({
           provider,
@@ -3991,6 +4072,45 @@ app.post("/chat", async (c) => {
     }
   );
 });
+app.post("/permissions/decide", async (c) => {
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return jsonError(400, "invalid JSON body");
+  }
+  if (typeof body !== "object" || body === null) return jsonError(400, "body must be an object");
+  const v = body;
+  const requestId = typeof v["requestId"] === "string" ? v["requestId"] : "";
+  const decisionRaw = v["decision"];
+  if (!requestId) return jsonError(400, "requestId is required");
+  if (decisionRaw !== "allow" && decisionRaw !== "allow_once" && decisionRaw !== "deny") {
+    return jsonError(400, "decision must be allow | allow_once | deny");
+  }
+  const ok = resolvePendingPermission(requestId, decisionRaw);
+  if (!ok) return c.json({ ok: false, reason: "unknown_or_already_resolved" }, 404);
+  return c.json({ ok: true });
+});
+app.post("/permissions/preload", async (c) => {
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return jsonError(400, "invalid JSON body");
+  }
+  if (typeof body !== "object" || body === null) return jsonError(400, "body must be an object");
+  const list = body["permissions"];
+  if (!Array.isArray(list)) return jsonError(400, "permissions must be an array");
+  const valid = [];
+  for (const p of list) {
+    if (typeof p !== "object" || p === null) continue;
+    const pp = p;
+    if (typeof pp["skillId"] !== "string" || typeof pp["script"] !== "string") continue;
+    valid.push({ skillId: pp["skillId"], script: pp["script"] });
+  }
+  preloadAllowAlwaysPermissions(valid);
+  return c.json({ ok: true, loaded: valid.length });
+});
 app.post("/shutdown", (c) => {
   setTimeout(() => process3.exit(0), 50);
   return c.json({ ok: true });
@@ -4001,9 +4121,8 @@ app.onError((err, c) => {
   return c.json({ error: msg }, 500);
 });
 async function writeSseEvent(sse, ev) {
-  const { type, ...rest } = ev;
-  const line = `event: ${type}
-data: ${JSON.stringify(rest)}
+  const line = `event: ${ev.type}
+data: ${JSON.stringify(ev)}
 
 `;
   await sse.write(line);

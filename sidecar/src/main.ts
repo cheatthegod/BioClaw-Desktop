@@ -44,8 +44,13 @@ import {
 import { loadSkills } from './skills/loader.js';
 import {
   buildScriptRunnerToolDefinition,
+  buildWebviewPermissionResolver,
   envFlagPermissionResolver,
+  preloadAllowAlwaysPermissions,
+  resolvePendingPermission,
+  type PermissionEvent,
 } from './skills/scriptRunner.js';
+import { randomUUID } from 'node:crypto';
 
 const SIDECAR_VERSION = '0.2.0';
 
@@ -172,12 +177,33 @@ app.post('/chat', async (c) => {
   // wants no tool definitions in the request).
   const skillsEnabled = body.skillsEnabled !== false;
   const tools: ToolDefinition[] = [];
+  // Capture a place for the SSE writer so the resolver below can pump
+  // permission events out as soon as the stream is up. The writer is
+  // assigned inside `stream()` below.
+  let sseWriter: ((ev: SseEvent) => Promise<void>) | null = null;
   if (skillsEnabled && listSkills().length > 0) {
     tools.push(buildSkillToolDefinition());
-    // Script runner uses the env-flag resolver in this revision. Step 4 of
-    // phase 4 will replace this with a resolver that round-trips through
-    // the Tauri webview for a real permission prompt.
-    tools.push(buildScriptRunnerToolDefinition(envFlagPermissionResolver));
+    // Script runner uses the webview resolver when the SSE writer is
+    // attached; if not (shouldn't happen in /chat) we fall back to the
+    // env-flag resolver so a runaway tool call still has a deterministic
+    // answer rather than hanging.
+    const resolver = buildWebviewPermissionResolver({
+      emit: async (ev: PermissionEvent) => {
+        if (sseWriter) await sseWriter(ev);
+        else throw new Error('SSE writer not attached');
+      },
+      signal: c.req.raw.signal,
+      newRequestId: () => randomUUID(),
+    });
+    tools.push(
+      buildScriptRunnerToolDefinition(async (req) => {
+        try {
+          return await resolver(req);
+        } catch {
+          return envFlagPermissionResolver(req);
+        }
+      }),
+    );
   }
 
   // Find the most recent user message — we use that text to rank skills
@@ -211,6 +237,9 @@ app.post('/chat', async (c) => {
     c,
     async (sse) => {
       sse.onAbort(() => abortCtrl.abort());
+      // The tool resolver closure above captured `sseWriter` by reference
+      // — now that the stream is open, point it at the writer.
+      sseWriter = (ev) => writeSseEvent(sse, ev);
       try {
         await runChatLoop({
           provider,
@@ -236,6 +265,56 @@ app.post('/chat', async (c) => {
       }
     },
   );
+});
+
+// --- permissions endpoints ------------------------------------------------
+//
+// The script-runner tool calls `permissionResolver`, which (in /chat mode)
+// emits a `permission-needed` SSE event and awaits the user's decision.
+// The decision is delivered via POST /permissions/decide from the
+// frontend modal. /permissions/preload re-seeds the always-allow cache
+// from the frontend's persisted store at desktop startup or on
+// permission-list edits.
+
+app.post('/permissions/decide', async (c) => {
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return jsonError(400, 'invalid JSON body');
+  }
+  if (typeof body !== 'object' || body === null) return jsonError(400, 'body must be an object');
+  const v = body as Record<string, unknown>;
+  const requestId = typeof v['requestId'] === 'string' ? v['requestId'] : '';
+  const decisionRaw = v['decision'];
+  if (!requestId) return jsonError(400, 'requestId is required');
+  if (decisionRaw !== 'allow' && decisionRaw !== 'allow_once' && decisionRaw !== 'deny') {
+    return jsonError(400, 'decision must be allow | allow_once | deny');
+  }
+  const ok = resolvePendingPermission(requestId, decisionRaw);
+  if (!ok) return c.json({ ok: false, reason: 'unknown_or_already_resolved' }, 404);
+  return c.json({ ok: true });
+});
+
+app.post('/permissions/preload', async (c) => {
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return jsonError(400, 'invalid JSON body');
+  }
+  if (typeof body !== 'object' || body === null) return jsonError(400, 'body must be an object');
+  const list = (body as Record<string, unknown>)['permissions'];
+  if (!Array.isArray(list)) return jsonError(400, 'permissions must be an array');
+  const valid: Array<{ skillId: string; script: string }> = [];
+  for (const p of list) {
+    if (typeof p !== 'object' || p === null) continue;
+    const pp = p as Record<string, unknown>;
+    if (typeof pp['skillId'] !== 'string' || typeof pp['script'] !== 'string') continue;
+    valid.push({ skillId: pp['skillId'], script: pp['script'] });
+  }
+  preloadAllowAlwaysPermissions(valid);
+  return c.json({ ok: true, loaded: valid.length });
 });
 
 app.post('/shutdown', (c) => {
@@ -275,11 +354,16 @@ type SseEvent =
       readonly output: string;
       readonly isError: boolean;
     }
-  | { readonly type: 'step-complete'; readonly step: number };
+  | { readonly type: 'step-complete'; readonly step: number }
+  | PermissionEvent;
 
 async function writeSseEvent(sse: SseWritable, ev: SseEvent): Promise<void> {
-  const { type, ...rest } = ev;
-  const line = `event: ${type}\ndata: ${JSON.stringify(rest)}\n\n`;
+  // Include `type` in BOTH the SSE `event:` line (so EventSource-style
+  // listeners can switch on it) AND the JSON data payload (so callers like
+  // ours, which only parse `data:` lines, can still discriminate). The
+  // duplication keeps the wire format usable from either consumer style
+  // at a couple-bytes cost per event.
+  const line = `event: ${ev.type}\ndata: ${JSON.stringify(ev)}\n\n`;
   await sse.write(line);
 }
 

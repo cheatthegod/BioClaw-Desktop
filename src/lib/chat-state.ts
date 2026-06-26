@@ -19,8 +19,18 @@
  */
 import { create } from 'zustand';
 import { streamChat, type ChatMessage } from './chat-stream';
+import { usePermissionStore } from './permission-state';
 
 export type ChatStatus = 'idle' | 'streaming' | 'error';
+
+export interface PendingPermission {
+  readonly requestId: string;
+  readonly skillId: string;
+  readonly script: string;
+  readonly interpreter: string;
+  readonly args: readonly string[];
+  readonly port: number;
+}
 
 export interface ChatToolCall {
   readonly id: string;
@@ -65,9 +75,11 @@ interface ChatState {
   streaming: AssistantMessage | null;
   status: ChatStatus;
   errorText: string | null;
+  pendingPermission: PendingPermission | null;
   send: (text: string, params: SendParams) => Promise<void>;
   cancel: () => void;
   clear: () => void;
+  resolvePermission: (decision: 'allow' | 'allow_once' | 'deny') => Promise<void>;
 }
 
 let abortController: AbortController | null = null;
@@ -77,6 +89,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   streaming: null,
   status: 'idle',
   errorText: null,
+  pendingPermission: null,
 
   send: async (text, params) => {
     const trimmed = text.trim();
@@ -142,14 +155,50 @@ export const useChatStore = create<ChatState>((set, get) => ({
           case 'tool-call-result':
             set((s) => {
               if (!s.streaming) return {};
+              // Sidecar emits `output: string` flat (not nested under `result`).
+              // The AgentEvent type uses a richer ToolHandlerResult shape; we
+              // accept either by reading both spellings.
+              const result =
+                'output' in ev
+                  ? (ev as unknown as { output: string }).output
+                  : (ev as { result: { output: string } }).result.output;
               const toolCalls = (s.streaming.toolCalls ?? []).map((tc) =>
                 tc.id === ev.toolCallId
-                  ? { ...tc, result: ev.result.output, isError: ev.isError }
+                  ? { ...tc, result, isError: ev.isError }
                   : tc,
               );
               return { streaming: { ...s.streaming, toolCalls } };
             });
             break;
+          case 'permission-needed': {
+            const e = ev as unknown as {
+              requestId: string;
+              skillId: string;
+              script: string;
+              interpreter: string;
+              args: readonly string[];
+            };
+            // If we have a persisted always-allow for this skill+script,
+            // resolve immediately without bothering the user.
+            const alreadyAllowed = usePermissionStore
+              .getState()
+              .isAlwaysAllowed(e.skillId, e.script);
+            if (alreadyAllowed) {
+              void postPermissionDecision(params.port, e.requestId, 'allow').catch(() => {});
+              break;
+            }
+            set({
+              pendingPermission: {
+                requestId: e.requestId,
+                skillId: e.skillId,
+                script: e.script,
+                interpreter: e.interpreter,
+                args: [...e.args],
+                port: params.port,
+              },
+            });
+            break;
+          }
           case 'error':
             set((s) =>
               s.streaming
@@ -159,6 +208,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
             break;
           case 'done':
             // Loop exits naturally; commit happens below.
+            break;
+          case 'finish':
+            // Sidecar event mirror of the provider's finish event. Streaming
+            // commit happens below regardless of how we exit.
+            if ('reason' in ev && ev.reason === 'error' && 'error' in ev) {
+              set((s) =>
+                s.streaming
+                  ? {
+                      streaming: {
+                        ...s.streaming,
+                        isError: true,
+                        content: s.streaming.content || `Error: ${ev.error}`,
+                      },
+                    }
+                  : {},
+              );
+            }
             break;
           case 'usage':
           case 'step-complete':
@@ -212,9 +278,35 @@ export const useChatStore = create<ChatState>((set, get) => ({
   clear: () => {
     abortController?.abort();
     abortController = null;
-    set({ messages: [], streaming: null, status: 'idle', errorText: null });
+    set({ messages: [], streaming: null, status: 'idle', errorText: null, pendingPermission: null });
+  },
+
+  resolvePermission: async (decision) => {
+    const pp = get().pendingPermission;
+    if (!pp) return;
+    if (decision === 'allow') {
+      usePermissionStore.getState().setAlwaysAllowed(pp.skillId, pp.script, pp.port);
+    }
+    try {
+      await postPermissionDecision(pp.port, pp.requestId, decision);
+    } catch {
+      /* swallow — sidecar may have already aborted */
+    }
+    set({ pendingPermission: null });
   },
 }));
+
+async function postPermissionDecision(
+  port: number,
+  requestId: string,
+  decision: 'allow' | 'allow_once' | 'deny',
+): Promise<void> {
+  await fetch(`http://127.0.0.1:${port}/permissions/decide`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ requestId, decision }),
+  });
+}
 
 function newId(): string {
   const r = Array.from(crypto.getRandomValues(new Uint8Array(6)))

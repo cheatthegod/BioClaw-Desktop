@@ -16,6 +16,7 @@ import { TitleBar } from './components/TitleBar';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { ConnectionGuard } from './components/ConnectionGuard';
 import { LocalChat } from './components/LocalChat';
+import { PermissionPrompt } from './components/PermissionPrompt';
 import { useAppStore } from './lib/store';
 import { initializeApp } from './lib/init';
 
@@ -80,6 +81,7 @@ export function App() {
         )}
       </main>
       {isSettingsOpen ? <SettingsDrawer /> : null}
+      <PermissionPrompt />
     </div>
   );
 }

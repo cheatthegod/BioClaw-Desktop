@@ -9,7 +9,10 @@
     "build": "node esbuild.config.mjs",
     "build:current": "esbuild src/main.ts --bundle --platform=node --target=node20 --format=esm --outfile=../src-tauri/binaries/bioclaw-sidecar.js --sourcemap=linked --banner:js=\"import { createRequire as _crq } from 'module'; const require = _crq(import.meta.url);\"",
     "typecheck": "tsc --noEmit",
-    "dev": "node --experimental-strip-types src/main.ts"
+    "dev": "node --experimental-strip-types src/main.ts",
+    "test:permission": "esbuild --bundle --platform=node --format=esm --target=node22 --outfile=/tmp/permission.smoke.mjs tests/permission.smoke.ts && node /tmp/permission.smoke.mjs",
+    "test:script": "BIOCLAW_SKILLS_DIR=$PWD/../skills esbuild --bundle --platform=node --format=esm --target=node22 --outfile=/tmp/scriptRunner.smoke.mjs tests/scriptRunner.smoke.ts && BIOCLAW_SKILLS_DIR=$PWD/../skills node /tmp/scriptRunner.smoke.mjs",
+    "test:e2e": "esbuild --bundle --platform=node --format=esm --target=node22 --outfile=/tmp/e2e-uniprot.mjs tests/e2e-uniprot.ts && REPO_ROOT=$(cd .. && pwd) node /tmp/e2e-uniprot.mjs"
   },
   "dependencies": {
     "hono": "^4.6.14",

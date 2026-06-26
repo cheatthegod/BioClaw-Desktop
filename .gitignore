@@ -58,3 +58,4 @@ coverage/
 .AppleDouble
 .LSOverride
 ehthumbs.db
+.signing-keys/

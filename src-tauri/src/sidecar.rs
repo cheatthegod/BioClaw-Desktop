@@ -28,7 +28,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use serde::Serialize;
-use tauri::{AppHandle, Runtime};
+use tauri::{AppHandle, Manager, Runtime};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 use tokio::sync::Mutex;
@@ -104,9 +104,28 @@ impl SidecarState {
         let shell = app.shell();
         // tauri-plugin-shell::sidecar() looks up the binary by its externalBin
         // base name, then appends the host's target triple at runtime.
-        let cmd = shell
+        let mut cmd = shell
             .sidecar(SIDECAR_NAME)
             .map_err(|e| format!("sidecar resolve failed (is {SIDECAR_NAME} in externalBin?): {e}"))?;
+
+        // Phase 3: hand the sidecar an absolute path to the vendored skills
+        // tree shipped with the app. Tauri places `bundle.resources` entries
+        // under `resource_dir()` at install time; for `tauri dev` the
+        // resolver returns the project-relative path so the dev script
+        // doesn't have to copy anything. If resolution fails we still spawn
+        // — the sidecar will run with an empty skills catalog and surface
+        // that via `GET /health`.
+        match app.path().resource_dir() {
+            Ok(res_dir) => {
+                let skills_dir = res_dir.join("skills");
+                let skills_dir_str = skills_dir.to_string_lossy().into_owned();
+                log::info!("sidecar: BIOCLAW_SKILLS_DIR={}", skills_dir_str);
+                cmd = cmd.env("BIOCLAW_SKILLS_DIR", skills_dir_str);
+            }
+            Err(e) => {
+                log::warn!("sidecar: could not resolve resource_dir for skills: {e}");
+            }
+        }
 
         let (mut rx, child) = cmd
             .spawn()

@@ -42,6 +42,7 @@ export type {
   ModelSpec,
   ProviderId,
   ToolDefinition,
+  ToolHandlerContext,
   ToolHandlerResult,
 } from '../../src/lib/agent/types';
 

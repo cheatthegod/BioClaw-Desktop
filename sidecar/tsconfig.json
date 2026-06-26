@@ -23,6 +23,6 @@
       "@vendor/*": ["../src/lib/*"]
     }
   },
-  "include": ["src/**/*.ts", "../src/lib/agent/**/*.ts", "../src/lib/providers/**/*.ts", "../src/lib/mcp/types.ts", "esbuild.config.mjs"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "../src/lib/agent/**/*.ts", "../src/lib/providers/**/*.ts", "../src/lib/mcp/types.ts", "esbuild.config.mjs"],
   "exclude": ["node_modules", "../node_modules"]
 }

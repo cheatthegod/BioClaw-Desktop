@@ -121,26 +121,26 @@ var handleParsingNestedValues = (form, key, value) => {
 };
 
 // node_modules/hono/dist/utils/url.js
-var splitPath = (path) => {
-  const paths = path.split("/");
+var splitPath = (path2) => {
+  const paths = path2.split("/");
   if (paths[0] === "") {
     paths.shift();
   }
   return paths;
 };
 var splitRoutingPath = (routePath) => {
-  const { groups, path } = extractGroupsFromPath(routePath);
-  const paths = splitPath(path);
+  const { groups, path: path2 } = extractGroupsFromPath(routePath);
+  const paths = splitPath(path2);
   return replaceGroupMarks(paths, groups);
 };
-var extractGroupsFromPath = (path) => {
+var extractGroupsFromPath = (path2) => {
   const groups = [];
-  path = path.replace(/\{[^}]+\}/g, (match2, index) => {
+  path2 = path2.replace(/\{[^}]+\}/g, (match2, index) => {
     const mark = `@${index}`;
     groups.push([mark, match2]);
     return mark;
   });
-  return { groups, path };
+  return { groups, path: path2 };
 };
 var replaceGroupMarks = (paths, groups) => {
   for (let i = groups.length - 1; i >= 0; i--) {
@@ -197,8 +197,8 @@ var getPath = (request) => {
       const queryIndex = url.indexOf("?", i);
       const hashIndex = url.indexOf("#", i);
       const end = queryIndex === -1 ? hashIndex === -1 ? void 0 : hashIndex : hashIndex === -1 ? queryIndex : Math.min(queryIndex, hashIndex);
-      const path = url.slice(start, end);
-      return tryDecodeURI(path.includes("%25") ? path.replace(/%25/g, "%2525") : path);
+      const path2 = url.slice(start, end);
+      return tryDecodeURI(path2.includes("%25") ? path2.replace(/%25/g, "%2525") : path2);
     } else if (charCode === 63 || charCode === 35) {
       break;
     }
@@ -215,11 +215,11 @@ var mergePath = (base, sub, ...rest) => {
   }
   return `${base?.[0] === "/" ? "" : "/"}${base}${sub === "/" ? "" : `${base?.at(-1) === "/" ? "" : "/"}${sub?.[0] === "/" ? sub.slice(1) : sub}`}`;
 };
-var checkOptionalParameter = (path) => {
-  if (path.charCodeAt(path.length - 1) !== 63 || !path.includes(":")) {
+var checkOptionalParameter = (path2) => {
+  if (path2.charCodeAt(path2.length - 1) !== 63 || !path2.includes(":")) {
     return null;
   }
-  const segments = path.split("/");
+  const segments = path2.split("/");
   const results = [];
   let basePath = "";
   segments.forEach((segment) => {
@@ -360,9 +360,9 @@ var HonoRequest = class {
    */
   path;
   bodyCache = {};
-  constructor(request, path = "/", matchResult = [[]]) {
+  constructor(request, path2 = "/", matchResult = [[]]) {
     this.raw = request;
-    this.path = path;
+    this.path = path2;
     this.#matchResult = matchResult;
     this.#validatedData = {};
   }
@@ -1114,8 +1114,8 @@ var Hono = class _Hono {
         return this;
       };
     });
-    this.on = (method, path, ...handlers) => {
-      for (const p of [path].flat()) {
+    this.on = (method, path2, ...handlers) => {
+      for (const p of [path2].flat()) {
         this.#path = p;
         for (const m of [method].flat()) {
           handlers.map((handler) => {
@@ -1172,8 +1172,8 @@ var Hono = class _Hono {
    * app.route("/api", app2) // GET /api/user
    * ```
    */
-  route(path, app2) {
-    const subApp = this.basePath(path);
+  route(path2, app2) {
+    const subApp = this.basePath(path2);
     app2.routes.map((r) => {
       let handler;
       if (app2.errorHandler === errorHandler) {
@@ -1199,9 +1199,9 @@ var Hono = class _Hono {
    * const api = new Hono().basePath('/api')
    * ```
    */
-  basePath(path) {
+  basePath(path2) {
     const subApp = this.#clone();
-    subApp._basePath = mergePath(this._basePath, path);
+    subApp._basePath = mergePath(this._basePath, path2);
     return subApp;
   }
   /**
@@ -1275,7 +1275,7 @@ var Hono = class _Hono {
    * })
    * ```
    */
-  mount(path, applicationHandler, options) {
+  mount(path2, applicationHandler, options) {
     let replaceRequest;
     let optionHandler;
     if (options) {
@@ -1302,7 +1302,7 @@ var Hono = class _Hono {
       return [c.env, executionContext];
     };
     replaceRequest ||= (() => {
-      const mergedPath = mergePath(this._basePath, path);
+      const mergedPath = mergePath(this._basePath, path2);
       const pathPrefixLength = mergedPath === "/" ? 0 : mergedPath.length;
       return (request) => {
         const url = new URL(request.url);
@@ -1317,19 +1317,19 @@ var Hono = class _Hono {
       }
       await next();
     };
-    this.#addRoute(METHOD_NAME_ALL, mergePath(path, "*"), handler);
+    this.#addRoute(METHOD_NAME_ALL, mergePath(path2, "*"), handler);
     return this;
   }
-  #addRoute(method, path, handler, baseRoutePath) {
+  #addRoute(method, path2, handler, baseRoutePath) {
     method = method.toUpperCase();
-    path = mergePath(this._basePath, path);
+    path2 = mergePath(this._basePath, path2);
     const r = {
       basePath: baseRoutePath !== void 0 ? mergePath(this._basePath, baseRoutePath) : this._basePath,
-      path,
+      path: path2,
       method,
       handler
     };
-    this.router.add(method, path, [handler, r]);
+    this.router.add(method, path2, [handler, r]);
     this.routes.push(r);
   }
   #handleError(err, c) {
@@ -1342,10 +1342,10 @@ var Hono = class _Hono {
     if (method === "HEAD") {
       return (async () => new Response(null, await this.#dispatch(request, executionCtx, env, "GET")))();
     }
-    const path = this.getPath(request, { env });
-    const matchResult = this.router.match(method, path);
+    const path2 = this.getPath(request, { env });
+    const matchResult = this.router.match(method, path2);
     const c = new Context(request, {
-      path,
+      path: path2,
       matchResult,
       env,
       executionCtx,
@@ -1445,15 +1445,15 @@ var Hono = class _Hono {
 
 // node_modules/hono/dist/router/reg-exp-router/matcher.js
 var emptyParam = [];
-function match(method, path) {
+function match(method, path2) {
   const matchers = this.buildAllMatchers();
-  const match2 = (method2, path2) => {
+  const match2 = (method2, path22) => {
     const matcher = matchers[method2] || matchers[METHOD_NAME_ALL];
-    const staticMatch = matcher[2][path2];
+    const staticMatch = matcher[2][path22];
     if (staticMatch) {
       return staticMatch;
     }
-    const match3 = path2.match(matcher[0]);
+    const match3 = path22.match(matcher[0]);
     if (!match3) {
       return [[], emptyParam];
     }
@@ -1461,7 +1461,7 @@ function match(method, path) {
     return [matcher[1][index], match3];
   };
   this.match = match2;
-  return match2(method, path);
+  return match2(method, path2);
 }
 
 // node_modules/hono/dist/router/reg-exp-router/node.js
@@ -1576,12 +1576,12 @@ var Node = class _Node {
 var Trie = class {
   #context = { varIndex: 0 };
   #root = new Node();
-  insert(path, index, pathErrorCheckOnly) {
+  insert(path2, index, pathErrorCheckOnly) {
     const paramAssoc = [];
     const groups = [];
     for (let i = 0; ; ) {
       let replaced = false;
-      path = path.replace(/\{[^}]+\}/g, (m) => {
+      path2 = path2.replace(/\{[^}]+\}/g, (m) => {
         const mark = `@\\${i}`;
         groups[i] = [mark, m];
         i++;
@@ -1592,7 +1592,7 @@ var Trie = class {
         break;
       }
     }
-    const tokens = path.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
+    const tokens = path2.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
     for (let i = groups.length - 1; i >= 0; i--) {
       const [mark] = groups[i];
       for (let j = tokens.length - 1; j >= 0; j--) {
@@ -1631,9 +1631,9 @@ var Trie = class {
 // node_modules/hono/dist/router/reg-exp-router/router.js
 var nullMatcher = [/^$/, [], /* @__PURE__ */ Object.create(null)];
 var wildcardRegExpCache = /* @__PURE__ */ Object.create(null);
-function buildWildcardRegExp(path) {
-  return wildcardRegExpCache[path] ??= new RegExp(
-    path === "*" ? "" : `^${path.replace(
+function buildWildcardRegExp(path2) {
+  return wildcardRegExpCache[path2] ??= new RegExp(
+    path2 === "*" ? "" : `^${path2.replace(
       /\/\*$|([.\\+*[^\]$()])/g,
       (_, metaChar) => metaChar ? `\\${metaChar}` : "(?:|/.*)"
     )}$`
@@ -1655,17 +1655,17 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   );
   const staticMap = /* @__PURE__ */ Object.create(null);
   for (let i = 0, j = -1, len = routesWithStaticPathFlag.length; i < len; i++) {
-    const [pathErrorCheckOnly, path, handlers] = routesWithStaticPathFlag[i];
+    const [pathErrorCheckOnly, path2, handlers] = routesWithStaticPathFlag[i];
     if (pathErrorCheckOnly) {
-      staticMap[path] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
+      staticMap[path2] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
     } else {
       j++;
     }
     let paramAssoc;
     try {
-      paramAssoc = trie.insert(path, j, pathErrorCheckOnly);
+      paramAssoc = trie.insert(path2, j, pathErrorCheckOnly);
     } catch (e) {
-      throw e === PATH_ERROR ? new UnsupportedPathError(path) : e;
+      throw e === PATH_ERROR ? new UnsupportedPathError(path2) : e;
     }
     if (pathErrorCheckOnly) {
       continue;
@@ -1699,12 +1699,12 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   }
   return [regexp, handlerMap, staticMap];
 }
-function findMiddleware(middleware, path) {
+function findMiddleware(middleware, path2) {
   if (!middleware) {
     return void 0;
   }
   for (const k of Object.keys(middleware).sort((a, b) => b.length - a.length)) {
-    if (buildWildcardRegExp(k).test(path)) {
+    if (buildWildcardRegExp(k).test(path2)) {
       return [...middleware[k]];
     }
   }
@@ -1718,7 +1718,7 @@ var RegExpRouter = class {
     this.#middleware = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
     this.#routes = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
   }
-  add(method, path, handler) {
+  add(method, path2, handler) {
     const middleware = this.#middleware;
     const routes = this.#routes;
     if (!middleware || !routes) {
@@ -1733,18 +1733,18 @@ var RegExpRouter = class {
         });
       });
     }
-    if (path === "/*") {
-      path = "*";
+    if (path2 === "/*") {
+      path2 = "*";
     }
-    const paramCount = (path.match(/\/:/g) || []).length;
-    if (/\*$/.test(path)) {
-      const re = buildWildcardRegExp(path);
+    const paramCount = (path2.match(/\/:/g) || []).length;
+    if (/\*$/.test(path2)) {
+      const re = buildWildcardRegExp(path2);
       if (method === METHOD_NAME_ALL) {
         Object.keys(middleware).forEach((m) => {
-          middleware[m][path] ||= findMiddleware(middleware[m], path) || findMiddleware(middleware[METHOD_NAME_ALL], path) || [];
+          middleware[m][path2] ||= findMiddleware(middleware[m], path2) || findMiddleware(middleware[METHOD_NAME_ALL], path2) || [];
         });
       } else {
-        middleware[method][path] ||= findMiddleware(middleware[method], path) || findMiddleware(middleware[METHOD_NAME_ALL], path) || [];
+        middleware[method][path2] ||= findMiddleware(middleware[method], path2) || findMiddleware(middleware[METHOD_NAME_ALL], path2) || [];
       }
       Object.keys(middleware).forEach((m) => {
         if (method === METHOD_NAME_ALL || method === m) {
@@ -1762,15 +1762,15 @@ var RegExpRouter = class {
       });
       return;
     }
-    const paths = checkOptionalParameter(path) || [path];
+    const paths = checkOptionalParameter(path2) || [path2];
     for (let i = 0, len = paths.length; i < len; i++) {
-      const path2 = paths[i];
+      const path22 = paths[i];
       Object.keys(routes).forEach((m) => {
         if (method === METHOD_NAME_ALL || method === m) {
-          routes[m][path2] ||= [
-            ...findMiddleware(middleware[m], path2) || findMiddleware(middleware[METHOD_NAME_ALL], path2) || []
+          routes[m][path22] ||= [
+            ...findMiddleware(middleware[m], path22) || findMiddleware(middleware[METHOD_NAME_ALL], path22) || []
           ];
-          routes[m][path2].push([handler, paramCount - len + i + 1]);
+          routes[m][path22].push([handler, paramCount - len + i + 1]);
         }
       });
     }
@@ -1789,13 +1789,13 @@ var RegExpRouter = class {
     const routes = [];
     let hasOwnRoute = method === METHOD_NAME_ALL;
     [this.#middleware, this.#routes].forEach((r) => {
-      const ownRoute = r[method] ? Object.keys(r[method]).map((path) => [path, r[method][path]]) : [];
+      const ownRoute = r[method] ? Object.keys(r[method]).map((path2) => [path2, r[method][path2]]) : [];
       if (ownRoute.length !== 0) {
         hasOwnRoute ||= true;
         routes.push(...ownRoute);
       } else if (method !== METHOD_NAME_ALL) {
         routes.push(
-          ...Object.keys(r[METHOD_NAME_ALL]).map((path) => [path, r[METHOD_NAME_ALL][path]])
+          ...Object.keys(r[METHOD_NAME_ALL]).map((path2) => [path2, r[METHOD_NAME_ALL][path2]])
         );
       }
     });
@@ -1815,13 +1815,13 @@ var SmartRouter = class {
   constructor(init) {
     this.#routers = init.routers;
   }
-  add(method, path, handler) {
+  add(method, path2, handler) {
     if (!this.#routes) {
       throw new Error(MESSAGE_MATCHER_IS_ALREADY_BUILT);
     }
-    this.#routes.push([method, path, handler]);
+    this.#routes.push([method, path2, handler]);
   }
-  match(method, path) {
+  match(method, path2) {
     if (!this.#routes) {
       throw new Error("Fatal error");
     }
@@ -1836,7 +1836,7 @@ var SmartRouter = class {
         for (let i2 = 0, len2 = routes.length; i2 < len2; i2++) {
           router.add(...routes[i2]);
         }
-        res = router.match(method, path);
+        res = router.match(method, path2);
       } catch (e) {
         if (e instanceof UnsupportedPathError) {
           continue;
@@ -1886,10 +1886,10 @@ var Node2 = class _Node2 {
     }
     this.#patterns = [];
   }
-  insert(method, path, handler) {
+  insert(method, path2, handler) {
     this.#order = ++this.#order;
     let curNode = this;
-    const parts = splitRoutingPath(path);
+    const parts = splitRoutingPath(path2);
     const possibleKeys = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const p = parts[i];
@@ -1938,12 +1938,12 @@ var Node2 = class _Node2 {
       }
     }
   }
-  search(method, path) {
+  search(method, path2) {
     const handlerSets = [];
     this.#params = emptyParams;
     const curNode = this;
     let curNodes = [curNode];
-    const parts = splitPath(path);
+    const parts = splitPath(path2);
     const curNodesQueue = [];
     const len = parts.length;
     let partOffsets = null;
@@ -1985,13 +1985,13 @@ var Node2 = class _Node2 {
           if (matcher instanceof RegExp) {
             if (partOffsets === null) {
               partOffsets = new Array(len);
-              let offset = path[0] === "/" ? 1 : 0;
+              let offset = path2[0] === "/" ? 1 : 0;
               for (let p = 0; p < len; p++) {
                 partOffsets[p] = offset;
                 offset += parts[p].length + 1;
               }
             }
-            const restPathString = path.substring(partOffsets[i]);
+            const restPathString = path2.substring(partOffsets[i]);
             const m = matcher.exec(restPathString);
             if (m) {
               params[name] = m[0];
@@ -2044,18 +2044,18 @@ var TrieRouter = class {
   constructor() {
     this.#node = new Node2();
   }
-  add(method, path, handler) {
-    const results = checkOptionalParameter(path);
+  add(method, path2, handler) {
+    const results = checkOptionalParameter(path2);
     if (results) {
       for (let i = 0, len = results.length; i < len; i++) {
         this.#node.insert(method, results[i], handler);
       }
       return;
     }
-    this.#node.insert(method, path, handler);
+    this.#node.insert(method, path2, handler);
   }
-  match(method, path) {
-    return this.#node.search(method, path);
+  match(method, path2) {
+    return this.#node.search(method, path2);
   }
 };
 
@@ -2836,7 +2836,7 @@ var serve = (options, listeningListener) => {
 };
 
 // src/main.ts
-import process from "node:process";
+import process2 from "node:process";
 
 // ../src/lib/providers/index.ts
 var OpenAICompatibleProvider = class {
@@ -3249,8 +3249,334 @@ var OpenRouterProvider = class {
 };
 registerProvider(new OpenRouterProvider());
 
+// src/skills/runner.ts
+var HINT = [
+  "",
+  "---",
+  "_(Phase-3 desktop sidecar: the skill above is loaded but NOT executed. ",
+  "To follow it, either reproduce the relevant code/commands yourself in your response, ",
+  "or ask the user to run the shell steps for you. Real shell-execution is gated behind a permission prompt that ships in phase 4.)_"
+].join("\n");
+var MAX_BODY_CHARS = 24e3;
+function clampBody(body) {
+  if (body.length <= MAX_BODY_CHARS) return { text: body, truncated: false };
+  const slice = body.slice(0, MAX_BODY_CHARS);
+  const lastBreak = slice.lastIndexOf("\n\n");
+  const cut = lastBreak > MAX_BODY_CHARS * 0.7 ? lastBreak : MAX_BODY_CHARS;
+  return { text: slice.slice(0, cut), truncated: true };
+}
+async function runSkillTool(args, _ctx) {
+  const skillId = typeof args["skill_id"] === "string" ? args["skill_id"] : "";
+  if (!skillId) {
+    return {
+      output: "invoke_skill: missing required argument `skill_id` (string).",
+      metadata: { ok: false, reason: "missing_skill_id" }
+    };
+  }
+  const skill = getSkill(skillId);
+  if (!skill) {
+    return {
+      output: `invoke_skill: no skill with id ${JSON.stringify(skillId)} is installed in this BioClaw Desktop build. Pick one from the system-prompt list.`,
+      metadata: { ok: false, reason: "unknown_skill", skill_id: skillId }
+    };
+  }
+  const { text, truncated } = clampBody(skill.body);
+  const header = [
+    `# Skill: ${skill.name} (${skill.id})`,
+    `Category: ${skill.category}`,
+    skill.requiresApiKey ? "Requires NVIDIA NGC / NVAIE API key." : null,
+    skill.requiresGpu ? "Requires a local NVIDIA GPU." : null,
+    skill.allowedTools.length > 0 ? `Skill-side allowed-tools: ${skill.allowedTools.join(", ")}` : null,
+    "",
+    "Full SKILL.md content follows. Read it carefully and surface relevant steps to the user.",
+    ""
+  ].filter((line) => line !== null).join("\n");
+  const body = `${header}
+${text}${truncated ? "\n\n_(SKILL.md truncated to fit context window. Ask the user if they want to see the rest.)_" : ""}${HINT}`;
+  return {
+    output: body,
+    metadata: {
+      ok: true,
+      skill_id: skill.id,
+      requiresApiKey: skill.requiresApiKey,
+      requiresGpu: skill.requiresGpu,
+      truncated
+    }
+  };
+}
+
+// src/skills/loader.ts
+import fs from "node:fs";
+import path from "node:path";
+function parseFrontmatter(raw2) {
+  const fmMatch = /^---\s*\n([\s\S]*?)\n---\s*\n?/.exec(raw2);
+  const fm = {};
+  if (!fmMatch) return { raw: fm, allowedTools: [] };
+  const lines = fmMatch[1]?.split("\n") ?? [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? "";
+    const inline = /^(\w[\w-]*):\s*(.*?)\s*$/.exec(line);
+    if (!inline) continue;
+    let val = inline[2] ?? "";
+    if (val === ">" || val === "|" || val === ">-" || val === "|-") {
+      const parts = [];
+      let j = i + 1;
+      while (j < lines.length) {
+        const next = lines[j] ?? "";
+        if (next.length === 0) {
+          j++;
+          continue;
+        }
+        if (/^\w[\w-]*:/.test(next)) break;
+        parts.push(next.replace(/^\s+/, "").trimEnd());
+        j++;
+      }
+      val = parts.join(val.startsWith("|") ? "\n" : " ").trim();
+      i = j - 1;
+    } else if (val.startsWith('"') && val.endsWith('"') || val.startsWith("'") && val.endsWith("'")) {
+      val = val.slice(1, -1);
+    }
+    const key = inline[1];
+    if (key) fm[key] = val;
+  }
+  const toolsRaw = (fm["allowed-tools"] ?? "").trim();
+  const allowedTools = toolsRaw.replace(/^\[|\]$/g, "").split(",").map((s) => s.trim()).filter((s) => s.length > 0);
+  return { raw: fm, allowedTools };
+}
+function inferCategory(name, description) {
+  const haystack = `${name} ${description}`.toLowerCase();
+  if (/scrna|single.?cell|seurat|cell.?type|annotation|cellchat/.test(haystack))
+    return "transcriptomics";
+  if (/rna.?seq|bulk.?expression|deseq|edger|salmon|kallisto/.test(haystack)) return "transcriptomics";
+  if (/chip.?seq|atac.?seq|methylation|histone|chromatin|enhancer/.test(haystack)) return "epigenomics";
+  if (/proteomic|mass.?spec|metabolom|lipidom/.test(haystack)) return "proteomics_metabolomics";
+  if (/pubmed|literature|paper|abstract|citation/.test(haystack)) return "literature";
+  if (/alphafold|protein.?struct|pdb|docking|rfdiffusion|esm/.test(haystack)) return "molecular_design";
+  if (/clinicaltrial|drug.?repurpos|cmap|lincs|target.?disease/.test(haystack)) return "drug_discovery";
+  if (/variant|gwas|mutation|cnv|vcf|maf/.test(haystack)) return "genomics_genetics";
+  if (/pathway|enrich|gsea|go.?term|kegg|reactome/.test(haystack)) return "pathway_analysis";
+  if (/manuscript|report|figure|slide|ppt|pptx|pdf/.test(haystack)) return "reporting";
+  if (/integrat/.test(haystack)) return "integration";
+  if (/multi.?omics/.test(haystack)) return "multi_omics";
+  return "general";
+}
+function detectRequiresApiKey(dirName, body) {
+  if (/-nim$/.test(dirName)) return true;
+  if (/NVIDIA_API_KEY|NGC_API_KEY/.test(body)) return true;
+  return false;
+}
+function detectRequiresGpu(dirName, body) {
+  if (/proteina-complexa|kermt/.test(dirName)) return true;
+  if (/\bnvidia-smi\b/i.test(body)) return true;
+  if (/\bcuda\b/i.test(body)) return true;
+  return false;
+}
+function parseSkill(absDir, dirName) {
+  const mdPath = path.join(absDir, "SKILL.md");
+  if (!fs.existsSync(mdPath)) return null;
+  let body;
+  try {
+    body = fs.readFileSync(mdPath, "utf-8");
+  } catch {
+    return null;
+  }
+  const fm = parseFrontmatter(body);
+  const name = fm.raw["name"] || dirName;
+  const fullDescription = fm.raw["description"] || "";
+  const description = fullDescription.replace(/\s+/g, " ").slice(0, 160).trim();
+  const rawCategory = (fm.raw["category"] || "").trim().toLowerCase().replace(/[-\s]/g, "_");
+  const category = rawCategory || inferCategory(name, fullDescription);
+  const source = dirName.startsWith("bio-") ? "biomni" : "community";
+  return {
+    id: dirName,
+    name,
+    description,
+    fullDescription,
+    category,
+    source,
+    body,
+    allowedTools: fm.allowedTools,
+    requiresApiKey: detectRequiresApiKey(dirName, body),
+    requiresGpu: detectRequiresGpu(dirName, body)
+  };
+}
+var cached = null;
+function resolveSkillsDir() {
+  const fromEnv = process.env["BIOCLAW_SKILLS_DIR"];
+  if (fromEnv && fromEnv.length > 0) return fromEnv;
+  const candidate = path.resolve(process.cwd(), "skills");
+  if (fs.existsSync(candidate)) return candidate;
+  return null;
+}
+function loadSkills() {
+  if (cached) return cached;
+  const dir = resolveSkillsDir();
+  if (!dir) {
+    process.stderr.write(
+      "sidecar: BIOCLAW_SKILLS_DIR unset and no fallback ./skills/; skills registry will be empty\n"
+    );
+    cached = [];
+    return cached;
+  }
+  if (!fs.existsSync(dir)) {
+    process.stderr.write(`sidecar: skills dir not found at ${dir}
+`);
+    cached = [];
+    return cached;
+  }
+  const out = [];
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`sidecar: failed to read skills dir ${dir}: ${msg}
+`);
+    cached = [];
+    return cached;
+  }
+  for (const entry of entries) {
+    if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
+    const abs = path.join(dir, entry.name);
+    if (entry.isSymbolicLink()) {
+      try {
+        if (!fs.statSync(abs).isDirectory()) continue;
+      } catch {
+        continue;
+      }
+    }
+    const parsed = parseSkill(abs, entry.name);
+    if (parsed) out.push(parsed);
+  }
+  out.sort((a, b) => a.id.localeCompare(b.id));
+  cached = out;
+  return cached;
+}
+
+// src/skills/registry.ts
+function toSummary(s) {
+  return {
+    id: s.id,
+    name: s.name,
+    description: s.description,
+    fullDescription: s.fullDescription,
+    category: s.category,
+    source: s.source,
+    requiresApiKey: s.requiresApiKey,
+    requiresGpu: s.requiresGpu,
+    allowedTools: s.allowedTools
+  };
+}
+function listSkills() {
+  return loadSkills().map(toSummary);
+}
+function getSkill(id) {
+  return loadSkills().find((s) => s.id === id);
+}
+function searchByKeywords(text, limit = 6) {
+  const tokens = tokenize(text);
+  if (tokens.length === 0) return [];
+  const tokenSet = new Set(tokens);
+  const scored = [];
+  for (const s of loadSkills()) {
+    const hay = tokenize(`${s.name} ${s.id} ${s.fullDescription}`);
+    let score = 0;
+    for (const t of hay) {
+      if (tokenSet.has(t)) score++;
+    }
+    if (score > 0) scored.push({ skill: s, score });
+  }
+  scored.sort((a, b) => b.score - a.score || a.skill.id.localeCompare(b.skill.id));
+  const top = limit > 0 ? scored.slice(0, limit) : scored;
+  return top.map((x) => toSummary(x.skill));
+}
+var STOP_TOKENS = /* @__PURE__ */ new Set([
+  "a",
+  "an",
+  "and",
+  "are",
+  "as",
+  "at",
+  "be",
+  "by",
+  "do",
+  "for",
+  "from",
+  "how",
+  "i",
+  "if",
+  "in",
+  "is",
+  "it",
+  "me",
+  "my",
+  "of",
+  "on",
+  "or",
+  "so",
+  "the",
+  "to",
+  "use",
+  "using",
+  "with",
+  "you",
+  "your",
+  "this",
+  "that"
+]);
+function tokenize(text) {
+  return text.toLowerCase().split(/[^a-z0-9-]+/).filter((t) => t.length >= 3 && !STOP_TOKENS.has(t));
+}
+function buildSkillToolDefinition() {
+  const schema = {
+    type: "object",
+    properties: {
+      skill_id: {
+        type: "string",
+        description: 'The id of the skill to invoke (e.g. "bionemo-nvmolkit"). Pick from the list of available skills in the system prompt.'
+      },
+      args: {
+        type: "object",
+        description: "Optional structured arguments. Phase-3 ignores this \u2014 the SKILL.md body is returned regardless \u2014 but the field exists so the LLM can pass intent without errors.",
+        additionalProperties: true
+      }
+    },
+    required: ["skill_id"],
+    additionalProperties: false
+  };
+  return {
+    name: "invoke_skill",
+    description: "Load and consult a BioClaw skill (BioNeMo workflow / database query / scientific pipeline). Returns the full SKILL.md content so you can follow its instructions. NOTE: phase-3 does NOT execute shell commands inside the skill \u2014 surface the instructions to the user and ask before running anything that touches their system.",
+    schema,
+    kind: "local",
+    handler: runSkillTool
+  };
+}
+function composeSkillsSystemPrompt(lastUserText, topK = 6) {
+  const all = listSkills();
+  if (all.length === 0) return "";
+  let chosen = searchByKeywords(lastUserText, topK);
+  if (chosen.length === 0) chosen = all.slice(0, topK);
+  const lines = [];
+  lines.push("## Available BioClaw skills");
+  lines.push(
+    "You have access to a tool called `invoke_skill` that loads a BioClaw skill. Each skill is a markdown playbook for a biomedical workflow. Call it with the `skill_id` of one of the skills below when the user's request matches. The tool returns the skill's full SKILL.md \u2014 read it, then either follow it yourself or summarise the steps for the user. In this phase the tool does NOT execute shell commands; ask the user before running anything destructive."
+  );
+  lines.push("");
+  lines.push("Skills (top match first):");
+  for (const s of chosen) {
+    const flags = [];
+    if (s.requiresApiKey) flags.push("needs NVIDIA API key");
+    if (s.requiresGpu) flags.push("needs GPU");
+    const flagsStr = flags.length > 0 ? ` _(${flags.join(", ")})_` : "";
+    lines.push(`- \`${s.id}\`: ${s.description}${flagsStr}`);
+  }
+  return lines.join("\n");
+}
+
 // src/main.ts
-var SIDECAR_VERSION = "0.1.0";
+var SIDECAR_VERSION = "0.2.0";
+var CHAT_STEP_LIMIT = 8;
 function jsonError(status, message) {
   return new Response(JSON.stringify({ error: message }), {
     status,
@@ -3285,10 +3611,19 @@ function validateChatBody(value) {
   if (typeof v["model"] !== "string" || v["model"].length === 0) return "model is required";
   if (v["baseUrl"] !== void 0 && typeof v["baseUrl"] !== "string") return "baseUrl must be a string";
   if (v["provider"] !== void 0 && typeof v["provider"] !== "string") return "provider must be a string";
+  if (v["skillsEnabled"] !== void 0 && typeof v["skillsEnabled"] !== "boolean")
+    return "skillsEnabled must be a boolean";
   return value;
 }
 var app = new Hono2();
-app.get("/health", (c) => c.json({ ok: true, version: SIDECAR_VERSION }));
+app.get(
+  "/health",
+  (c) => c.json({ ok: true, version: SIDECAR_VERSION, skills: loadSkills().length })
+);
+app.get("/skills", (c) => {
+  const skills = listSkills();
+  return c.json({ skills, count: skills.length });
+});
 app.post("/chat", async (c) => {
   let raw2;
   try {
@@ -3301,7 +3636,7 @@ app.post("/chat", async (c) => {
   const body = parsed;
   const modelSpec = buildModelSpec(body);
   const systemMessages = body.messages.filter((m) => m.role === "system");
-  const systemPrompt = systemMessages.map((m) => m.content).join("\n\n");
+  const userSystemPrompt = systemMessages.map((m) => m.content).join("\n\n");
   const turnMessages = body.messages.filter((m) => m.role !== "system").map((m) => {
     if (m.role === "user") return { role: "user", content: m.content };
     return { role: "assistant", content: m.content };
@@ -3312,6 +3647,20 @@ app.post("/chat", async (c) => {
   } catch (err) {
     return jsonError(400, err instanceof Error ? err.message : String(err));
   }
+  const skillsEnabled = body.skillsEnabled !== false;
+  const tools = [];
+  if (skillsEnabled && listSkills().length > 0) {
+    tools.push(buildSkillToolDefinition());
+  }
+  const lastUserText = (() => {
+    for (let i = turnMessages.length - 1; i >= 0; i--) {
+      const m = turnMessages[i];
+      if (m && m.role === "user") return m.content;
+    }
+    return "";
+  })();
+  const skillsPromptAddendum = skillsEnabled && tools.length > 0 ? composeSkillsSystemPrompt(lastUserText) : "";
+  const systemPrompt = [userSystemPrompt, skillsPromptAddendum].filter((s) => s.length > 0).join("\n\n");
   const abortCtrl = new AbortController();
   c.req.raw.signal.addEventListener("abort", () => abortCtrl.abort(), { once: true });
   return stream(
@@ -3319,17 +3668,15 @@ app.post("/chat", async (c) => {
     async (sse) => {
       sse.onAbort(() => abortCtrl.abort());
       try {
-        const events = provider.streamMessages({
-          model: modelSpec,
-          system: systemPrompt,
-          messages: turnMessages,
-          tools: [],
-          signal: abortCtrl.signal
+        await runChatLoop({
+          provider,
+          modelSpec,
+          systemPrompt,
+          tools,
+          turnMessages,
+          signal: abortCtrl.signal,
+          writeEvent: (ev) => writeSseEvent(sse, ev)
         });
-        for await (const ev of events) {
-          await writeSseEvent(sse, ev);
-          if (ev.type === "finish") break;
-        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         await writeSseEvent(sse, { type: "finish", reason: "error", error: msg });
@@ -3345,7 +3692,7 @@ app.post("/chat", async (c) => {
   );
 });
 app.post("/shutdown", (c) => {
-  setTimeout(() => process.exit(0), 50);
+  setTimeout(() => process2.exit(0), 50);
   return c.json({ ok: true });
 });
 app.notFound((c) => c.json({ error: "not found" }, 404));
@@ -3361,34 +3708,141 @@ data: ${JSON.stringify(rest)}
 `;
   await sse.write(line);
 }
+async function runChatLoop(args) {
+  const { provider, modelSpec, systemPrompt, tools, turnMessages, signal, writeEvent } = args;
+  const toolIndex = new Map(tools.map((t) => [t.name, t]));
+  for (let step = 0; step < CHAT_STEP_LIMIT; step++) {
+    if (signal.aborted) {
+      await writeEvent({ type: "finish", reason: "error", error: "aborted" });
+      return;
+    }
+    let assistantText = "";
+    const pendingToolCalls = [];
+    let providerFinish = null;
+    const events = provider.streamMessages({
+      model: modelSpec,
+      system: systemPrompt,
+      messages: turnMessages,
+      tools,
+      signal
+    });
+    for await (const ev of events) {
+      if (ev.type === "text-delta") {
+        assistantText += ev.text;
+        await writeEvent(ev);
+        continue;
+      }
+      if (ev.type === "tool-call") {
+        pendingToolCalls.push({ id: ev.id, name: ev.name, arguments: { ...ev.arguments } });
+        continue;
+      }
+      if (ev.type === "usage") {
+        await writeEvent(ev);
+        continue;
+      }
+      if (ev.type === "finish") {
+        providerFinish = ev;
+        break;
+      }
+    }
+    turnMessages.push({
+      role: "assistant",
+      content: assistantText,
+      ...pendingToolCalls.length > 0 ? {
+        toolCalls: pendingToolCalls.map((tc) => ({
+          id: tc.id,
+          name: tc.name,
+          arguments: tc.arguments
+        }))
+      } : {}
+    });
+    await writeEvent({ type: "step-complete", step });
+    if (pendingToolCalls.length === 0) {
+      if (providerFinish) await writeEvent(providerFinish);
+      else await writeEvent({ type: "finish", reason: "stop" });
+      return;
+    }
+    for (const tc of pendingToolCalls) {
+      await writeEvent({
+        type: "tool-call-start",
+        toolCallId: tc.id,
+        name: tc.name,
+        args: tc.arguments
+      });
+      const def = toolIndex.get(tc.name);
+      let output;
+      let isError = false;
+      if (!def) {
+        output = `Unknown tool: ${tc.name}`;
+        isError = true;
+      } else {
+        try {
+          const result = await def.handler(tc.arguments, {
+            sessionId: "sidecar-chat",
+            toolCallId: tc.id,
+            signal
+          });
+          output = result.output;
+        } catch (err) {
+          output = `Tool ${tc.name} threw: ${err instanceof Error ? err.message : String(err)}`;
+          isError = true;
+        }
+      }
+      await writeEvent({
+        type: "tool-call-result",
+        toolCallId: tc.id,
+        name: tc.name,
+        output,
+        isError
+      });
+      turnMessages.push({
+        role: "tool",
+        toolCallId: tc.id,
+        name: tc.name,
+        content: output,
+        isError
+      });
+    }
+  }
+  await writeEvent({
+    type: "finish",
+    reason: "error",
+    error: `tool-call loop exceeded ${CHAT_STEP_LIMIT} steps`
+  });
+}
+(() => {
+  const count = loadSkills().length;
+  process2.stderr.write(`sidecar: skills loaded (count=${count})
+`);
+})();
 var httpServer = serve(
   { fetch: app.fetch, port: 0, hostname: "127.0.0.1" },
   (info) => {
     if (!info || typeof info === "string") {
-      process.stderr.write("sidecar: failed to read bound port\n");
-      process.exit(2);
+      process2.stderr.write("sidecar: failed to read bound port\n");
+      process2.exit(2);
       return;
     }
-    process.stdout.write(`PORT=${info.port}
+    process2.stdout.write(`PORT=${info.port}
 `);
-    process.stdout.write("READY\n");
+    process2.stdout.write("READY\n");
   }
 );
 httpServer.on("error", (err) => {
-  process.stderr.write(`sidecar: server error: ${err.message}
+  process2.stderr.write(`sidecar: server error: ${err.message}
 `);
-  process.exit(3);
+  process2.exit(3);
 });
 var shutdown = (sig) => {
-  process.stderr.write(`sidecar: received ${sig}, shutting down
+  process2.stderr.write(`sidecar: received ${sig}, shutting down
 `);
-  httpServer.close(() => process.exit(0));
-  setTimeout(() => process.exit(1), 2e3).unref();
+  httpServer.close(() => process2.exit(0));
+  setTimeout(() => process2.exit(1), 2e3).unref();
 };
-process.on("SIGTERM", () => shutdown("SIGTERM"));
-process.on("SIGINT", () => shutdown("SIGINT"));
-process.on("SIGHUP", () => shutdown("SIGHUP"));
-process.stdin.on("end", () => shutdown("STDIN_CLOSED"));
-process.stdin.on("close", () => shutdown("STDIN_CLOSED"));
-process.stdin.resume();
+process2.on("SIGTERM", () => shutdown("SIGTERM"));
+process2.on("SIGINT", () => shutdown("SIGINT"));
+process2.on("SIGHUP", () => shutdown("SIGHUP"));
+process2.stdin.on("end", () => shutdown("STDIN_CLOSED"));
+process2.stdin.on("close", () => shutdown("STDIN_CLOSED"));
+process2.stdin.resume();
 //# sourceMappingURL=bioclaw-sidecar-x86_64-pc-windows-msvc.js.map

@@ -15,6 +15,9 @@ src-tauri/target/
 src-tauri/gen/schemas/
 src-tauri/Cargo.lock.bak
 release/
+# Any nested cargo project (e.g. sidecar/launcher-win/target/)
+**/target/
+**/Cargo.lock.bak
 
 # Vite / build cache
 .vite/

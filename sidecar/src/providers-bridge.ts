@@ -26,6 +26,7 @@
 // resolves them at bundle time; no Node ESM lookups happen at runtime because
 // every module is inlined into bioclaw-sidecar-<target>.js.
 import '../../src/lib/providers/openrouter';
+import '../../src/lib/providers/bioclaw-proxy';
 
 export {
   getProvider,

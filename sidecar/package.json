@@ -12,7 +12,8 @@
     "dev": "node --experimental-strip-types src/main.ts",
     "test:permission": "esbuild --bundle --platform=node --format=esm --target=node22 --outfile=/tmp/permission.smoke.mjs tests/permission.smoke.ts && node /tmp/permission.smoke.mjs",
     "test:script": "BIOCLAW_SKILLS_DIR=$PWD/../skills esbuild --bundle --platform=node --format=esm --target=node22 --outfile=/tmp/scriptRunner.smoke.mjs tests/scriptRunner.smoke.ts && BIOCLAW_SKILLS_DIR=$PWD/../skills node /tmp/scriptRunner.smoke.mjs",
-    "test:e2e": "esbuild --bundle --platform=node --format=esm --target=node22 --outfile=/tmp/e2e-uniprot.mjs tests/e2e-uniprot.ts && REPO_ROOT=$(cd .. && pwd) node /tmp/e2e-uniprot.mjs"
+    "test:e2e": "esbuild --bundle --platform=node --format=esm --target=node22 --outfile=/tmp/e2e-uniprot.mjs tests/e2e-uniprot.ts && REPO_ROOT=$(cd .. && pwd) node /tmp/e2e-uniprot.mjs",
+    "test:proxy": "esbuild --bundle --platform=node --format=esm --target=node22 --outfile=/tmp/proxy-provider.smoke.mjs tests/proxy-provider.smoke.ts && node /tmp/proxy-provider.smoke.mjs"
   },
   "dependencies": {
     "hono": "^4.6.14",

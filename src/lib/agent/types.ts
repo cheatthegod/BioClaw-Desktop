@@ -27,8 +27,14 @@ export interface ModelSpec {
   readonly id: string;
   readonly endpoint?: string;
   readonly auth?: {
-    readonly kind: 'bearer' | 'anthropic' | 'none';
+    readonly kind: 'bearer' | 'anthropic' | 'none' | 'cookie';
+    /** For bearer/anthropic: the API key. For cookie: the session token. */
     readonly apiKey?: string;
+    /**
+     * For cookie auth: the cookie name to set. Defaults to
+     * `bioclaw_session` if omitted. Ignored for other kinds.
+     */
+    readonly cookieName?: string;
     /** Extra headers (OpenRouter's `HTTP-Referer` etc.). */
     readonly headers?: Readonly<Record<string, string>>;
   };
@@ -40,7 +46,7 @@ export interface ModelSpec {
   };
 }
 
-export type ProviderId = 'openai' | 'openrouter' | 'anthropic' | 'ollama' | 'openai-compatible';
+export type ProviderId = 'openai' | 'openrouter' | 'anthropic' | 'ollama' | 'openai-compatible' | 'bioclaw-proxy';
 
 /**
  * A tool the agent can call. Two flavours:

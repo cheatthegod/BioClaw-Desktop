@@ -2939,6 +2939,9 @@ function openAiHeaders(model) {
   const auth = model.auth;
   if (auth?.kind === "bearer" && auth.apiKey) {
     headers["authorization"] = `Bearer ${auth.apiKey}`;
+  } else if (auth?.kind === "cookie" && auth.apiKey) {
+    const cookieName = auth.cookieName ?? "bioclaw_session";
+    headers["cookie"] = `${cookieName}=${auth.apiKey}`;
   }
   if (auth?.headers) for (const [k, v] of Object.entries(auth.headers)) headers[k] = v;
   return headers;
@@ -3248,6 +3251,35 @@ var OpenRouterProvider = class {
   }
 };
 registerProvider(new OpenRouterProvider());
+
+// ../src/lib/providers/bioclaw-proxy.ts
+var DEFAULT_SAAS_BASE_URL = "https://chat.bioclaw.tech";
+var BioClawProxyProvider = class {
+  id = "bioclaw-proxy";
+  async *streamMessages(req) {
+    const explicit = req.model.endpoint;
+    const base = (explicit && explicit.length > 0 ? explicit : DEFAULT_SAAS_BASE_URL).replace(/\/+$/, "");
+    const patched = {
+      ...req,
+      model: {
+        ...req.model,
+        // The openai-compatible provider appends `/chat/completions`, so
+        // we hand it `<base>/api/desktop` and the call lands on the SaaS
+        // route `<base>/api/desktop/chat/completions`.
+        endpoint: `${base}/api/desktop`,
+        auth: {
+          kind: "cookie",
+          ...req.model.auth?.apiKey ? { apiKey: req.model.auth.apiKey } : {},
+          cookieName: req.model.auth?.cookieName ?? "bioclaw_session",
+          ...req.model.auth?.headers ? { headers: req.model.auth.headers } : {}
+        }
+      }
+    };
+    const compat = getProvider("openai-compatible");
+    yield* compat.streamMessages(patched);
+  }
+};
+registerProvider(new BioClawProxyProvider());
 
 // src/skills/runner.ts
 var HINT = [
@@ -3946,8 +3978,8 @@ function jsonError(status, message) {
   });
 }
 function buildModelSpec(body) {
-  const providerId = body.provider ?? "openrouter";
-  const authKind = providerId === "anthropic" ? "anthropic" : providerId === "ollama" ? "none" : "bearer";
+  const providerId = body.provider ?? "bioclaw-proxy";
+  const authKind = providerId === "bioclaw-proxy" ? "cookie" : providerId === "anthropic" ? "anthropic" : providerId === "ollama" ? "none" : "bearer";
   return {
     provider: providerId,
     id: body.model,

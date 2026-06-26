@@ -87,11 +87,20 @@ function jsonError(status: number, message: string): Response {
 }
 
 function buildModelSpec(body: ChatRequestBody): ModelSpec {
-  const providerId: ProviderId = body.provider ?? 'openrouter';
-  // OpenRouter + OpenAI-compatible both use bearer auth. Anthropic uses
-  // x-api-key. Ollama uses no auth. We default to bearer because phase-2
-  // shipped with OpenRouter; callers can override `provider` to switch.
-  const authKind = providerId === 'anthropic' ? 'anthropic' : providerId === 'ollama' ? 'none' : 'bearer';
+  const providerId: ProviderId = body.provider ?? 'bioclaw-proxy';
+  // Auth kind by provider:
+  //   bioclaw-proxy        -> cookie  (apiKey carries the bioclaw_session token)
+  //   anthropic            -> anthropic (x-api-key)
+  //   ollama               -> none
+  //   openrouter / openai* -> bearer
+  const authKind =
+    providerId === 'bioclaw-proxy'
+      ? 'cookie'
+      : providerId === 'anthropic'
+        ? 'anthropic'
+        : providerId === 'ollama'
+          ? 'none'
+          : 'bearer';
   return {
     provider: providerId,
     id: body.model,

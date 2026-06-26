@@ -163,6 +163,12 @@ function openAiHeaders(model: ModelSpec): Record<string, string> {
   const auth = model.auth;
   if (auth?.kind === 'bearer' && auth.apiKey) {
     headers['authorization'] = `Bearer ${auth.apiKey}`;
+  } else if (auth?.kind === 'cookie' && auth.apiKey) {
+    // Cookie auth: used by the bioclaw-proxy provider that talks to our
+    // own SaaS. The session token is opaque base64-payload.hmac, server
+    // verifies the HMAC and reads the email out.
+    const cookieName = auth.cookieName ?? 'bioclaw_session';
+    headers['cookie'] = `${cookieName}=${auth.apiKey}`;
   }
   if (auth?.headers) for (const [k, v] of Object.entries(auth.headers)) headers[k] = v;
   return headers;

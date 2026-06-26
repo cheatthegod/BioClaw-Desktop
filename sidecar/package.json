@@ -1,0 +1,26 @@
+{
+  "name": "bioclaw-sidecar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "BioClaw Desktop sidecar — local HTTP server (Hono) wrapping the vendored SessionRunner. Spawned by Tauri as an external binary. Phase-2 minimum scope: chat + SSE stream.",
+  "license": "MIT",
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "build:current": "esbuild src/main.ts --bundle --platform=node --target=node20 --format=esm --outfile=../src-tauri/binaries/bioclaw-sidecar.js --sourcemap=linked --banner:js=\"import { createRequire as _crq } from 'module'; const require = _crq(import.meta.url);\"",
+    "typecheck": "tsc --noEmit",
+    "dev": "node --experimental-strip-types src/main.ts"
+  },
+  "dependencies": {
+    "hono": "^4.6.14",
+    "@hono/node-server": "^1.13.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "esbuild": "^0.24.2",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

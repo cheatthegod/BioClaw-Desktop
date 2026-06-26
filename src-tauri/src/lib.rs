@@ -11,7 +11,11 @@
 use tauri::Manager;
 
 mod commands;
+mod credentials;
+mod sidecar;
 mod tray;
+
+use crate::sidecar::SidecarState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -41,12 +45,40 @@ pub fn run() {
             commands::reveal_in_finder,
             commands::open_external_url,
             commands::quit_app,
+            commands::save_credential,
+            commands::get_credential,
+            commands::delete_credential,
+            commands::list_credential_keys,
+            commands::start_sidecar,
+            commands::stop_sidecar,
+            commands::sidecar_status,
         ])
         .setup(|app| {
+            // Phase-2 default is CLOUD mode (chat.bioclaw.tech in webview);
+            // the sidecar starts on demand when the user toggles to local
+            // mode in settings via `invoke('start_sidecar')`. We register
+            // empty state so the command handlers have a State<SidecarState>
+            // to grab from app.state(). Do NOT spawn the child here.
+            app.manage(SidecarState::new());
             tray::setup_tray(app.handle())?;
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Regular);
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { .. } = event {
+                // Best-effort graceful shutdown of the sidecar on close. We
+                // run blocking inside a tokio runtime block_on so the close
+                // is synchronous from Tauri's POV (otherwise the process can
+                // exit before we send /shutdown, leaving an orphan node).
+                let app = window.app_handle().clone();
+                let state = app.state::<SidecarState>();
+                // We hold a clone of the Arc<Mutex<Inner>> indirectly via
+                // SidecarState; stop() awaits internally.
+                tauri::async_runtime::block_on(async {
+                    let _ = state.stop().await;
+                });
+            }
         })
         .run(tauri::generate_context!())
         .expect("error while running BioClaw Desktop");

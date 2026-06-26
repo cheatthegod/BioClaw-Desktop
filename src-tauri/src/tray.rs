@@ -17,13 +17,11 @@ pub fn setup_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         .menu(&menu)
         .tooltip("BioClaw")
         .icon(app.default_window_icon().cloned().unwrap_or_else(|| {
-            // Fallback: a 1x1 transparent PNG so the tray icon never silently
-            // fails to register if the bundled icon is missing. Real icons
-            // are wired via tauri.conf.json `bundle.icon`.
-            tauri::image::Image::from_bytes(&[
-                0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-            ])
-            .expect("static PNG must parse")
+            // Fallback: a 1x1 transparent RGBA pixel so the tray icon never
+            // silently fails to register if the bundled icon is missing.
+            // Real icons are wired via tauri.conf.json `bundle.icon`.
+            // Using raw RGBA avoids requiring the `image-png` Cargo feature.
+            tauri::image::Image::new_owned(vec![0, 0, 0, 0], 1, 1)
         }))
         .on_menu_event(|app, ev| match ev.id().as_ref() {
             "show" => focus_main(app),

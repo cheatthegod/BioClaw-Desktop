@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { useAppStore } from '../lib/store';
 import { persistPrefs } from '../lib/init';
 import { cn } from '../lib/utils';
+import { ApiKeysPanel } from './ApiKeysPanel';
 
 export function SettingsDrawer() {
   const mode = useAppStore((s) => s.mode);
@@ -51,10 +52,13 @@ export function SettingsDrawer() {
           <ModeOption
             active={mode === 'local'}
             label="本地模式"
-            desc="agent-runner 跑在本机；适合敏感数据 / 离线（待 phase 2 启用）。"
+            desc="agent-runner 跑在本机；适合敏感数据 / 离线。"
             onClick={() => setMode('local')}
-            disabled
           />
+        </Section>
+
+        <Section title="API 密钥">
+          <ApiKeysPanel />
         </Section>
 
         <Section title="远程地址">

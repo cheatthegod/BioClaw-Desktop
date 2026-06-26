@@ -32,6 +32,12 @@ thiserror = "2"
 log = "0.4"
 tokio = { version = "1", features = ["full"] }
 
+# Cross-platform secure credential storage. Default features auto-select the
+# right backend: Keychain (macOS), Credential Manager (Windows), Secret
+# Service / gnome-keyring / kwallet (Linux). See src/credentials.rs.
+keyring = { version = "3", default-features = true }
+dirs = "5"
+
 [lib]
 name = "bioclaw_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]

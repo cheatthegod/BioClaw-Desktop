@@ -3,7 +3,9 @@
 //! filesystem or network should go through a Tauri plugin (so capabilities
 //! gate it) rather than a raw command here.
 
-use tauri::{AppHandle, Manager, Runtime};
+use tauri::{AppHandle, Manager, Runtime, State};
+
+use crate::sidecar::{SidecarState, SidecarStatus};
 
 /// Return the current app version string from Cargo.toml. The front-end uses
 /// this to render the build number in the settings drawer.
@@ -46,4 +48,71 @@ pub async fn open_external_url<R: Runtime>(
 #[tauri::command]
 pub fn quit_app<R: Runtime>(app: AppHandle<R>) {
     app.exit(0);
+}
+
+// --- credentials ----------------------------------------------------------
+//
+// Thin async wrappers around the synchronous `crate::credentials` helpers.
+// We mark them `async` so they're queued onto Tauri's async executor and
+// don't block the UI event loop while the underlying keyring backend (which
+// may dispatch a dbus call on Linux or a Keychain prompt on macOS) is
+// resolving. None of these commands return secret material in their error
+// strings — only the requested account name.
+
+use crate::credentials;
+
+#[tauri::command]
+pub async fn save_credential(account: String, value: String) -> Result<(), String> {
+    credentials::save_credential(&account, &value)
+}
+
+#[tauri::command]
+pub async fn get_credential(account: String) -> Result<Option<String>, String> {
+    credentials::get_credential(&account)
+}
+
+#[tauri::command]
+pub async fn delete_credential(account: String) -> Result<(), String> {
+    credentials::delete_credential(&account)
+}
+
+#[tauri::command]
+pub async fn list_credential_keys() -> Result<Vec<String>, String> {
+    credentials::list_credential_keys()
+}
+
+// --- sidecar lifecycle ----------------------------------------------------
+//
+// These three commands are the only path the renderer has to start, stop,
+// and inspect the local Node-based LLM sidecar. The sidecar is NOT auto-
+// started — the user opts in by toggling "local mode" in settings, at which
+// point the renderer calls `start_sidecar` and uses the returned port to
+// build the `http://127.0.0.1:<port>/chat` URL for direct fetch calls.
+//
+// Capabilities note: we don't need an extra Tauri permission to call these
+// commands — they're plain `#[tauri::command]` handlers gated by the allow-
+// list in capabilities/default.json (see the `core:default` permission +
+// the explicit command name entries we add there).
+
+#[tauri::command]
+pub async fn start_sidecar<R: Runtime>(
+    state: State<'_, SidecarState>,
+    app_handle: AppHandle<R>,
+) -> Result<u16, String> {
+    state.start(&app_handle).await
+}
+
+#[tauri::command]
+pub async fn stop_sidecar<R: Runtime>(
+    state: State<'_, SidecarState>,
+    _app_handle: AppHandle<R>,
+) -> Result<(), String> {
+    state.stop().await
+}
+
+#[tauri::command]
+pub async fn sidecar_status(
+    state: State<'_, SidecarState>,
+) -> Result<SidecarStatus, String> {
+    Ok(state.status().await)
 }

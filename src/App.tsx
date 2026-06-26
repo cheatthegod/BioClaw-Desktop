@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react';
 import { TitleBar } from './components/TitleBar';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { ConnectionGuard } from './components/ConnectionGuard';
+import { LocalChat } from './components/LocalChat';
 import { useAppStore } from './lib/store';
 import { initializeApp } from './lib/init';
 
@@ -58,21 +59,25 @@ export function App() {
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-zinc-100">
       <TitleBar />
       <main className="relative flex-1 overflow-hidden">
-        <ConnectionGuard url={remoteUrl}>
-          {/*
-            iframe is acceptable here because we control the target host
-            (chat.bioclaw.tech) and the CSP in index.html only whitelists it.
-            For native-equivalent integration we'll move to a Tauri child
-            WebView in phase 1.5.
-          */}
-          <iframe
-            key={`${mode}-${remoteUrl}`}
-            src={remoteUrl}
-            title="BioClaw"
-            className="h-full w-full border-0 bg-white"
-            allow="clipboard-read; clipboard-write; fullscreen; camera; microphone"
-          />
-        </ConnectionGuard>
+        {mode === 'local' ? (
+          <LocalChat />
+        ) : (
+          <ConnectionGuard url={remoteUrl}>
+            {/*
+              iframe is acceptable here because we control the target host
+              (chat.bioclaw.tech) and the CSP in index.html only whitelists it.
+              For native-equivalent integration we'll move to a Tauri child
+              WebView in phase 1.5.
+            */}
+            <iframe
+              key={`${mode}-${remoteUrl}`}
+              src={remoteUrl}
+              title="BioClaw"
+              className="h-full w-full border-0 bg-white"
+              allow="clipboard-read; clipboard-write; fullscreen; camera; microphone"
+            />
+          </ConnectionGuard>
+        )}
       </main>
       {isSettingsOpen ? <SettingsDrawer /> : null}
     </div>

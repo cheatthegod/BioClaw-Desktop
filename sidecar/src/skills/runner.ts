@@ -25,9 +25,8 @@ import { getSkill } from './registry';
 const HINT = [
   '',
   '---',
-  '_(Phase-3 desktop sidecar: the skill above is loaded but NOT executed. ',
-  'To follow it, either reproduce the relevant code/commands yourself in your response, ',
-  'or ask the user to run the shell steps for you. Real shell-execution is gated behind a permission prompt that ships in phase 4.)_',
+  '_(BioClaw Desktop sidecar: invoke_skill only LOADS the playbook. ',
+  'To actually run a script the skill ships with, call `run_skill_script(skill_id, script, args)` — that path is gated by user permission and returns real stdout/stderr.)_',
 ].join('\n');
 
 /**

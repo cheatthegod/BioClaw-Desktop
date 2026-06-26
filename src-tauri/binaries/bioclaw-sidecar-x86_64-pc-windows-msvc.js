@@ -121,26 +121,26 @@ var handleParsingNestedValues = (form, key, value) => {
 };
 
 // node_modules/hono/dist/utils/url.js
-var splitPath = (path2) => {
-  const paths = path2.split("/");
+var splitPath = (path3) => {
+  const paths = path3.split("/");
   if (paths[0] === "") {
     paths.shift();
   }
   return paths;
 };
 var splitRoutingPath = (routePath) => {
-  const { groups, path: path2 } = extractGroupsFromPath(routePath);
-  const paths = splitPath(path2);
+  const { groups, path: path3 } = extractGroupsFromPath(routePath);
+  const paths = splitPath(path3);
   return replaceGroupMarks(paths, groups);
 };
-var extractGroupsFromPath = (path2) => {
+var extractGroupsFromPath = (path3) => {
   const groups = [];
-  path2 = path2.replace(/\{[^}]+\}/g, (match2, index) => {
+  path3 = path3.replace(/\{[^}]+\}/g, (match2, index) => {
     const mark = `@${index}`;
     groups.push([mark, match2]);
     return mark;
   });
-  return { groups, path: path2 };
+  return { groups, path: path3 };
 };
 var replaceGroupMarks = (paths, groups) => {
   for (let i = groups.length - 1; i >= 0; i--) {
@@ -197,8 +197,8 @@ var getPath = (request) => {
       const queryIndex = url.indexOf("?", i);
       const hashIndex = url.indexOf("#", i);
       const end = queryIndex === -1 ? hashIndex === -1 ? void 0 : hashIndex : hashIndex === -1 ? queryIndex : Math.min(queryIndex, hashIndex);
-      const path2 = url.slice(start, end);
-      return tryDecodeURI(path2.includes("%25") ? path2.replace(/%25/g, "%2525") : path2);
+      const path3 = url.slice(start, end);
+      return tryDecodeURI(path3.includes("%25") ? path3.replace(/%25/g, "%2525") : path3);
     } else if (charCode === 63 || charCode === 35) {
       break;
     }
@@ -215,11 +215,11 @@ var mergePath = (base, sub, ...rest) => {
   }
   return `${base?.[0] === "/" ? "" : "/"}${base}${sub === "/" ? "" : `${base?.at(-1) === "/" ? "" : "/"}${sub?.[0] === "/" ? sub.slice(1) : sub}`}`;
 };
-var checkOptionalParameter = (path2) => {
-  if (path2.charCodeAt(path2.length - 1) !== 63 || !path2.includes(":")) {
+var checkOptionalParameter = (path3) => {
+  if (path3.charCodeAt(path3.length - 1) !== 63 || !path3.includes(":")) {
     return null;
   }
-  const segments = path2.split("/");
+  const segments = path3.split("/");
   const results = [];
   let basePath = "";
   segments.forEach((segment) => {
@@ -360,9 +360,9 @@ var HonoRequest = class {
    */
   path;
   bodyCache = {};
-  constructor(request, path2 = "/", matchResult = [[]]) {
+  constructor(request, path3 = "/", matchResult = [[]]) {
     this.raw = request;
-    this.path = path2;
+    this.path = path3;
     this.#matchResult = matchResult;
     this.#validatedData = {};
   }
@@ -1114,8 +1114,8 @@ var Hono = class _Hono {
         return this;
       };
     });
-    this.on = (method, path2, ...handlers) => {
-      for (const p of [path2].flat()) {
+    this.on = (method, path3, ...handlers) => {
+      for (const p of [path3].flat()) {
         this.#path = p;
         for (const m of [method].flat()) {
           handlers.map((handler) => {
@@ -1172,8 +1172,8 @@ var Hono = class _Hono {
    * app.route("/api", app2) // GET /api/user
    * ```
    */
-  route(path2, app2) {
-    const subApp = this.basePath(path2);
+  route(path3, app2) {
+    const subApp = this.basePath(path3);
     app2.routes.map((r) => {
       let handler;
       if (app2.errorHandler === errorHandler) {
@@ -1199,9 +1199,9 @@ var Hono = class _Hono {
    * const api = new Hono().basePath('/api')
    * ```
    */
-  basePath(path2) {
+  basePath(path3) {
     const subApp = this.#clone();
-    subApp._basePath = mergePath(this._basePath, path2);
+    subApp._basePath = mergePath(this._basePath, path3);
     return subApp;
   }
   /**
@@ -1275,7 +1275,7 @@ var Hono = class _Hono {
    * })
    * ```
    */
-  mount(path2, applicationHandler, options) {
+  mount(path3, applicationHandler, options) {
     let replaceRequest;
     let optionHandler;
     if (options) {
@@ -1302,7 +1302,7 @@ var Hono = class _Hono {
       return [c.env, executionContext];
     };
     replaceRequest ||= (() => {
-      const mergedPath = mergePath(this._basePath, path2);
+      const mergedPath = mergePath(this._basePath, path3);
       const pathPrefixLength = mergedPath === "/" ? 0 : mergedPath.length;
       return (request) => {
         const url = new URL(request.url);
@@ -1317,19 +1317,19 @@ var Hono = class _Hono {
       }
       await next();
     };
-    this.#addRoute(METHOD_NAME_ALL, mergePath(path2, "*"), handler);
+    this.#addRoute(METHOD_NAME_ALL, mergePath(path3, "*"), handler);
     return this;
   }
-  #addRoute(method, path2, handler, baseRoutePath) {
+  #addRoute(method, path3, handler, baseRoutePath) {
     method = method.toUpperCase();
-    path2 = mergePath(this._basePath, path2);
+    path3 = mergePath(this._basePath, path3);
     const r = {
       basePath: baseRoutePath !== void 0 ? mergePath(this._basePath, baseRoutePath) : this._basePath,
-      path: path2,
+      path: path3,
       method,
       handler
     };
-    this.router.add(method, path2, [handler, r]);
+    this.router.add(method, path3, [handler, r]);
     this.routes.push(r);
   }
   #handleError(err, c) {
@@ -1342,10 +1342,10 @@ var Hono = class _Hono {
     if (method === "HEAD") {
       return (async () => new Response(null, await this.#dispatch(request, executionCtx, env, "GET")))();
     }
-    const path2 = this.getPath(request, { env });
-    const matchResult = this.router.match(method, path2);
+    const path3 = this.getPath(request, { env });
+    const matchResult = this.router.match(method, path3);
     const c = new Context(request, {
-      path: path2,
+      path: path3,
       matchResult,
       env,
       executionCtx,
@@ -1445,7 +1445,7 @@ var Hono = class _Hono {
 
 // node_modules/hono/dist/router/reg-exp-router/matcher.js
 var emptyParam = [];
-function match(method, path2) {
+function match(method, path3) {
   const matchers = this.buildAllMatchers();
   const match2 = (method2, path22) => {
     const matcher = matchers[method2] || matchers[METHOD_NAME_ALL];
@@ -1461,7 +1461,7 @@ function match(method, path2) {
     return [matcher[1][index], match3];
   };
   this.match = match2;
-  return match2(method, path2);
+  return match2(method, path3);
 }
 
 // node_modules/hono/dist/router/reg-exp-router/node.js
@@ -1576,12 +1576,12 @@ var Node = class _Node {
 var Trie = class {
   #context = { varIndex: 0 };
   #root = new Node();
-  insert(path2, index, pathErrorCheckOnly) {
+  insert(path3, index, pathErrorCheckOnly) {
     const paramAssoc = [];
     const groups = [];
     for (let i = 0; ; ) {
       let replaced = false;
-      path2 = path2.replace(/\{[^}]+\}/g, (m) => {
+      path3 = path3.replace(/\{[^}]+\}/g, (m) => {
         const mark = `@\\${i}`;
         groups[i] = [mark, m];
         i++;
@@ -1592,7 +1592,7 @@ var Trie = class {
         break;
       }
     }
-    const tokens = path2.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
+    const tokens = path3.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
     for (let i = groups.length - 1; i >= 0; i--) {
       const [mark] = groups[i];
       for (let j = tokens.length - 1; j >= 0; j--) {
@@ -1631,9 +1631,9 @@ var Trie = class {
 // node_modules/hono/dist/router/reg-exp-router/router.js
 var nullMatcher = [/^$/, [], /* @__PURE__ */ Object.create(null)];
 var wildcardRegExpCache = /* @__PURE__ */ Object.create(null);
-function buildWildcardRegExp(path2) {
-  return wildcardRegExpCache[path2] ??= new RegExp(
-    path2 === "*" ? "" : `^${path2.replace(
+function buildWildcardRegExp(path3) {
+  return wildcardRegExpCache[path3] ??= new RegExp(
+    path3 === "*" ? "" : `^${path3.replace(
       /\/\*$|([.\\+*[^\]$()])/g,
       (_, metaChar) => metaChar ? `\\${metaChar}` : "(?:|/.*)"
     )}$`
@@ -1655,17 +1655,17 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   );
   const staticMap = /* @__PURE__ */ Object.create(null);
   for (let i = 0, j = -1, len = routesWithStaticPathFlag.length; i < len; i++) {
-    const [pathErrorCheckOnly, path2, handlers] = routesWithStaticPathFlag[i];
+    const [pathErrorCheckOnly, path3, handlers] = routesWithStaticPathFlag[i];
     if (pathErrorCheckOnly) {
-      staticMap[path2] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
+      staticMap[path3] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
     } else {
       j++;
     }
     let paramAssoc;
     try {
-      paramAssoc = trie.insert(path2, j, pathErrorCheckOnly);
+      paramAssoc = trie.insert(path3, j, pathErrorCheckOnly);
     } catch (e) {
-      throw e === PATH_ERROR ? new UnsupportedPathError(path2) : e;
+      throw e === PATH_ERROR ? new UnsupportedPathError(path3) : e;
     }
     if (pathErrorCheckOnly) {
       continue;
@@ -1699,12 +1699,12 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   }
   return [regexp, handlerMap, staticMap];
 }
-function findMiddleware(middleware, path2) {
+function findMiddleware(middleware, path3) {
   if (!middleware) {
     return void 0;
   }
   for (const k of Object.keys(middleware).sort((a, b) => b.length - a.length)) {
-    if (buildWildcardRegExp(k).test(path2)) {
+    if (buildWildcardRegExp(k).test(path3)) {
       return [...middleware[k]];
     }
   }
@@ -1718,7 +1718,7 @@ var RegExpRouter = class {
     this.#middleware = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
     this.#routes = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
   }
-  add(method, path2, handler) {
+  add(method, path3, handler) {
     const middleware = this.#middleware;
     const routes = this.#routes;
     if (!middleware || !routes) {
@@ -1733,18 +1733,18 @@ var RegExpRouter = class {
         });
       });
     }
-    if (path2 === "/*") {
-      path2 = "*";
+    if (path3 === "/*") {
+      path3 = "*";
     }
-    const paramCount = (path2.match(/\/:/g) || []).length;
-    if (/\*$/.test(path2)) {
-      const re = buildWildcardRegExp(path2);
+    const paramCount = (path3.match(/\/:/g) || []).length;
+    if (/\*$/.test(path3)) {
+      const re = buildWildcardRegExp(path3);
       if (method === METHOD_NAME_ALL) {
         Object.keys(middleware).forEach((m) => {
-          middleware[m][path2] ||= findMiddleware(middleware[m], path2) || findMiddleware(middleware[METHOD_NAME_ALL], path2) || [];
+          middleware[m][path3] ||= findMiddleware(middleware[m], path3) || findMiddleware(middleware[METHOD_NAME_ALL], path3) || [];
         });
       } else {
-        middleware[method][path2] ||= findMiddleware(middleware[method], path2) || findMiddleware(middleware[METHOD_NAME_ALL], path2) || [];
+        middleware[method][path3] ||= findMiddleware(middleware[method], path3) || findMiddleware(middleware[METHOD_NAME_ALL], path3) || [];
       }
       Object.keys(middleware).forEach((m) => {
         if (method === METHOD_NAME_ALL || method === m) {
@@ -1762,7 +1762,7 @@ var RegExpRouter = class {
       });
       return;
     }
-    const paths = checkOptionalParameter(path2) || [path2];
+    const paths = checkOptionalParameter(path3) || [path3];
     for (let i = 0, len = paths.length; i < len; i++) {
       const path22 = paths[i];
       Object.keys(routes).forEach((m) => {
@@ -1789,13 +1789,13 @@ var RegExpRouter = class {
     const routes = [];
     let hasOwnRoute = method === METHOD_NAME_ALL;
     [this.#middleware, this.#routes].forEach((r) => {
-      const ownRoute = r[method] ? Object.keys(r[method]).map((path2) => [path2, r[method][path2]]) : [];
+      const ownRoute = r[method] ? Object.keys(r[method]).map((path3) => [path3, r[method][path3]]) : [];
       if (ownRoute.length !== 0) {
         hasOwnRoute ||= true;
         routes.push(...ownRoute);
       } else if (method !== METHOD_NAME_ALL) {
         routes.push(
-          ...Object.keys(r[METHOD_NAME_ALL]).map((path2) => [path2, r[METHOD_NAME_ALL][path2]])
+          ...Object.keys(r[METHOD_NAME_ALL]).map((path3) => [path3, r[METHOD_NAME_ALL][path3]])
         );
       }
     });
@@ -1815,13 +1815,13 @@ var SmartRouter = class {
   constructor(init) {
     this.#routers = init.routers;
   }
-  add(method, path2, handler) {
+  add(method, path3, handler) {
     if (!this.#routes) {
       throw new Error(MESSAGE_MATCHER_IS_ALREADY_BUILT);
     }
-    this.#routes.push([method, path2, handler]);
+    this.#routes.push([method, path3, handler]);
   }
-  match(method, path2) {
+  match(method, path3) {
     if (!this.#routes) {
       throw new Error("Fatal error");
     }
@@ -1836,7 +1836,7 @@ var SmartRouter = class {
         for (let i2 = 0, len2 = routes.length; i2 < len2; i2++) {
           router.add(...routes[i2]);
         }
-        res = router.match(method, path2);
+        res = router.match(method, path3);
       } catch (e) {
         if (e instanceof UnsupportedPathError) {
           continue;
@@ -1886,10 +1886,10 @@ var Node2 = class _Node2 {
     }
     this.#patterns = [];
   }
-  insert(method, path2, handler) {
+  insert(method, path3, handler) {
     this.#order = ++this.#order;
     let curNode = this;
-    const parts = splitRoutingPath(path2);
+    const parts = splitRoutingPath(path3);
     const possibleKeys = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const p = parts[i];
@@ -1938,12 +1938,12 @@ var Node2 = class _Node2 {
       }
     }
   }
-  search(method, path2) {
+  search(method, path3) {
     const handlerSets = [];
     this.#params = emptyParams;
     const curNode = this;
     let curNodes = [curNode];
-    const parts = splitPath(path2);
+    const parts = splitPath(path3);
     const curNodesQueue = [];
     const len = parts.length;
     let partOffsets = null;
@@ -1985,13 +1985,13 @@ var Node2 = class _Node2 {
           if (matcher instanceof RegExp) {
             if (partOffsets === null) {
               partOffsets = new Array(len);
-              let offset = path2[0] === "/" ? 1 : 0;
+              let offset = path3[0] === "/" ? 1 : 0;
               for (let p = 0; p < len; p++) {
                 partOffsets[p] = offset;
                 offset += parts[p].length + 1;
               }
             }
-            const restPathString = path2.substring(partOffsets[i]);
+            const restPathString = path3.substring(partOffsets[i]);
             const m = matcher.exec(restPathString);
             if (m) {
               params[name] = m[0];
@@ -2044,18 +2044,18 @@ var TrieRouter = class {
   constructor() {
     this.#node = new Node2();
   }
-  add(method, path2, handler) {
-    const results = checkOptionalParameter(path2);
+  add(method, path3, handler) {
+    const results = checkOptionalParameter(path3);
     if (results) {
       for (let i = 0, len = results.length; i < len; i++) {
         this.#node.insert(method, results[i], handler);
       }
       return;
     }
-    this.#node.insert(method, path2, handler);
+    this.#node.insert(method, path3, handler);
   }
-  match(method, path2) {
-    return this.#node.search(method, path2);
+  match(method, path3) {
+    return this.#node.search(method, path3);
   }
 };
 
@@ -2836,7 +2836,7 @@ var serve = (options, listeningListener) => {
 };
 
 // src/main.ts
-import process2 from "node:process";
+import process3 from "node:process";
 
 // ../src/lib/providers/index.ts
 var OpenAICompatibleProvider = class {
@@ -3253,9 +3253,8 @@ registerProvider(new OpenRouterProvider());
 var HINT = [
   "",
   "---",
-  "_(Phase-3 desktop sidecar: the skill above is loaded but NOT executed. ",
-  "To follow it, either reproduce the relevant code/commands yourself in your response, ",
-  "or ask the user to run the shell steps for you. Real shell-execution is gated behind a permission prompt that ships in phase 4.)_"
+  "_(BioClaw Desktop sidecar: invoke_skill only LOADS the playbook. ",
+  "To actually run a script the skill ships with, call `run_skill_script(skill_id, script, args)` \u2014 that path is gated by user permission and returns real stdout/stderr.)_"
 ].join("\n");
 var MAX_BODY_CHARS = 24e3;
 function clampBody(body) {
@@ -3371,6 +3370,41 @@ function detectRequiresGpu(dirName, body) {
   if (/\bcuda\b/i.test(body)) return true;
   return false;
 }
+function scanSkillScripts(absSkillDir) {
+  const out = [];
+  const scriptsRoot = path.join(absSkillDir, "scripts");
+  if (!fs.existsSync(scriptsRoot)) return out;
+  const stack = [{ dir: scriptsRoot, depth: 0 }];
+  while (stack.length > 0) {
+    const popped = stack.pop();
+    if (!popped) break;
+    const { dir, depth } = popped;
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const e of entries) {
+      const abs = path.join(dir, e.name);
+      if (e.isDirectory() && depth < 1) {
+        stack.push({ dir: abs, depth: depth + 1 });
+        continue;
+      }
+      if (!e.isFile()) continue;
+      if (e.name.startsWith("_")) continue;
+      const lower = e.name.toLowerCase();
+      let kind = null;
+      if (lower.endsWith(".py")) kind = "python";
+      else if (lower.endsWith(".sh") || lower.endsWith(".bash")) kind = "shell";
+      if (!kind) continue;
+      const rel = path.relative(absSkillDir, abs).split(path.sep).join("/");
+      out.push({ relativePath: rel, kind });
+    }
+  }
+  out.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
+  return out;
+}
 function parseSkill(absDir, dirName) {
   const mdPath = path.join(absDir, "SKILL.md");
   if (!fs.existsSync(mdPath)) return null;
@@ -3397,7 +3431,9 @@ function parseSkill(absDir, dirName) {
     body,
     allowedTools: fm.allowedTools,
     requiresApiKey: detectRequiresApiKey(dirName, body),
-    requiresGpu: detectRequiresGpu(dirName, body)
+    requiresGpu: detectRequiresGpu(dirName, body),
+    absoluteDir: absDir,
+    scripts: scanSkillScripts(absDir)
   };
 }
 var cached = null;
@@ -3464,7 +3500,8 @@ function toSummary(s) {
     source: s.source,
     requiresApiKey: s.requiresApiKey,
     requiresGpu: s.requiresGpu,
-    allowedTools: s.allowedTools
+    allowedTools: s.allowedTools,
+    scripts: s.scripts.map((sc) => ({ relativePath: sc.relativePath, kind: sc.kind }))
   };
 }
 function listSkills() {
@@ -3546,7 +3583,7 @@ function buildSkillToolDefinition() {
   };
   return {
     name: "invoke_skill",
-    description: "Load and consult a BioClaw skill (BioNeMo workflow / database query / scientific pipeline). Returns the full SKILL.md content so you can follow its instructions. NOTE: phase-3 does NOT execute shell commands inside the skill \u2014 surface the instructions to the user and ask before running anything that touches their system.",
+    description: "Load and consult a BioClaw skill (BioNeMo workflow / database query / scientific pipeline). Returns the full SKILL.md content so you can follow its instructions. After reading the playbook, use `run_skill_script` to actually execute any Python or shell scripts the skill ships with.",
     schema,
     kind: "local",
     handler: runSkillTool
@@ -3560,7 +3597,17 @@ function composeSkillsSystemPrompt(lastUserText, topK = 6) {
   const lines = [];
   lines.push("## Available BioClaw skills");
   lines.push(
-    "You have access to a tool called `invoke_skill` that loads a BioClaw skill. Each skill is a markdown playbook for a biomedical workflow. Call it with the `skill_id` of one of the skills below when the user's request matches. The tool returns the skill's full SKILL.md \u2014 read it, then either follow it yourself or summarise the steps for the user. In this phase the tool does NOT execute shell commands; ask the user before running anything destructive."
+    "You have two skill tools:"
+  );
+  lines.push(
+    "  1. `invoke_skill(skill_id)` \u2014 load the skill's SKILL.md playbook so you can read its instructions."
+  );
+  lines.push(
+    "  2. `run_skill_script(skill_id, script, args)` \u2014 actually execute a Python or shell script the skill ships with. The user must have enabled script execution; if not, the tool returns a permission-denied result and you should tell the user to enable it in Settings \u2192 Permissions."
+  );
+  lines.push("");
+  lines.push(
+    "Standard flow: call `invoke_skill` first to read the playbook, then call `run_skill_script` for whichever step the user wants. For skills that flag `needs NVIDIA API key` or `needs GPU`, prefer reading-the-playbook + walking the user through it rather than calling run_skill_script \u2014 the local machine may not have the credentials/hardware."
   );
   lines.push("");
   lines.push("Skills (top match first):");
@@ -3568,8 +3615,260 @@ function composeSkillsSystemPrompt(lastUserText, topK = 6) {
     const flags = [];
     if (s.requiresApiKey) flags.push("needs NVIDIA API key");
     if (s.requiresGpu) flags.push("needs GPU");
+    if (s.scripts.length > 0) flags.push(`${s.scripts.length} script(s)`);
     const flagsStr = flags.length > 0 ? ` _(${flags.join(", ")})_` : "";
     lines.push(`- \`${s.id}\`: ${s.description}${flagsStr}`);
+    if (s.scripts.length > 0 && s.scripts.length <= 4) {
+      const scripts = s.scripts.map((sc) => `\`${sc.relativePath}\``).join(", ");
+      lines.push(`    scripts: ${scripts}`);
+    }
+  }
+  return lines.join("\n");
+}
+
+// src/skills/scriptRunner.ts
+import { spawn } from "node:child_process";
+import path2 from "node:path";
+import process2 from "node:process";
+var envFlagPermissionResolver = () => {
+  return process2.env["BIOCLAW_ALLOW_SCRIPT_EXEC"] === "1" ? "allow" : "deny";
+};
+var STDOUT_LIMIT = 64 * 1024;
+var STDERR_LIMIT = 64 * 1024;
+var DEFAULT_TIMEOUT_MS = 3e4;
+var MAX_TIMEOUT_MS = 3e5;
+function spawnAndCollect(interpreter, argv, opts) {
+  return new Promise((resolve) => {
+    const start = Date.now();
+    let stdout = "";
+    let stderr = "";
+    let stdoutTruncated = false;
+    let stderrTruncated = false;
+    let timedOut = false;
+    let aborted = false;
+    const child = spawn(interpreter, argv, {
+      cwd: opts.cwd,
+      env: opts.env,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    const onAbort = () => {
+      aborted = true;
+      child.kill("SIGTERM");
+      setTimeout(() => {
+        if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+      }, 1500).unref();
+    };
+    opts.signal.addEventListener("abort", onAbort, { once: true });
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGTERM");
+      setTimeout(() => {
+        if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+      }, 1500).unref();
+    }, opts.timeoutMs);
+    child.stdout.setEncoding("utf-8");
+    child.stdout.on("data", (chunk) => {
+      if (stdout.length >= STDOUT_LIMIT) {
+        stdoutTruncated = true;
+        return;
+      }
+      const room = STDOUT_LIMIT - stdout.length;
+      if (chunk.length > room) {
+        stdout += chunk.slice(0, room);
+        stdoutTruncated = true;
+      } else {
+        stdout += chunk;
+      }
+    });
+    child.stderr.setEncoding("utf-8");
+    child.stderr.on("data", (chunk) => {
+      if (stderr.length >= STDERR_LIMIT) {
+        stderrTruncated = true;
+        return;
+      }
+      const room = STDERR_LIMIT - stderr.length;
+      if (chunk.length > room) {
+        stderr += chunk.slice(0, room);
+        stderrTruncated = true;
+      } else {
+        stderr += chunk;
+      }
+    });
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      opts.signal.removeEventListener("abort", onAbort);
+      resolve({
+        exitCode: null,
+        signal: null,
+        stdout,
+        stdoutTruncated,
+        stderr: stderr + `
+[sidecar: failed to spawn ${interpreter}: ${err.message}]`,
+        stderrTruncated,
+        timedOut,
+        durationMs: Date.now() - start
+      });
+    });
+    child.on("close", (code, signal) => {
+      clearTimeout(timer);
+      opts.signal.removeEventListener("abort", onAbort);
+      const finalStderr = aborted ? stderr + "\n[sidecar: child was aborted by client]" : timedOut ? stderr + `
+[sidecar: timeout after ${opts.timeoutMs}ms]` : stderr;
+      resolve({
+        exitCode: code,
+        signal,
+        stdout,
+        stdoutTruncated,
+        stderr: finalStderr,
+        stderrTruncated,
+        timedOut,
+        durationMs: Date.now() - start
+      });
+    });
+  });
+}
+function resolveScript(skillAbsDir, scripts, requested) {
+  const normalized = requested.replace(/\\/g, "/");
+  const hit = scripts.find((s) => s.relativePath === normalized);
+  if (!hit) {
+    const sample = scripts.slice(0, 8).map((s) => s.relativePath).join(", ");
+    return `script "${requested}" is not in this skill's allow-list. Available: ${sample || "(none)"}`;
+  }
+  const candidate = path2.resolve(skillAbsDir, hit.relativePath);
+  const dirWithSep = skillAbsDir.endsWith(path2.sep) ? skillAbsDir : skillAbsDir + path2.sep;
+  if (candidate !== skillAbsDir && !candidate.startsWith(dirWithSep)) {
+    return `script "${requested}" resolves outside its skill directory (refusing)`;
+  }
+  return { absPath: candidate, kind: hit.kind };
+}
+function buildScriptRunnerToolDefinition(resolver = envFlagPermissionResolver) {
+  return {
+    name: "run_skill_script",
+    description: "Execute a Python or shell script that ships with a BioClaw skill. Use this AFTER reading SKILL.md (via invoke_skill) to actually run one of the scripts the skill documents. Returns stdout, stderr, exit_code, and timing. The user must have granted execution permission \u2014 if not, the call returns a permission-denied result and you should ask the user to enable it in Settings \u2192 Permissions.",
+    schema: {
+      type: "object",
+      properties: {
+        skill_id: {
+          type: "string",
+          description: 'The id of the skill whose script to run (e.g. "bionemo-science-skills-uniprot-database").'
+        },
+        script: {
+          type: "string",
+          description: 'Relative path of the script inside the skill dir (e.g. "scripts/uniprot_tools.py"). Must be one of the scripts the skill ships with.'
+        },
+        args: {
+          type: "array",
+          description: "Command-line arguments passed to the script after the interpreter. Always pass as an array, NOT a single shell string.",
+          items: { type: "string" }
+        },
+        timeout_ms: {
+          type: "number",
+          description: "Optional timeout in milliseconds. Defaults to 30000, capped at 300000."
+        }
+      },
+      required: ["skill_id", "script"],
+      additionalProperties: false
+    },
+    kind: "local",
+    handler: async (args, ctx) => {
+      const skillId = typeof args["skill_id"] === "string" ? args["skill_id"] : "";
+      const scriptArg = typeof args["script"] === "string" ? args["script"] : "";
+      const argvRaw = Array.isArray(args["args"]) ? args["args"] : [];
+      const argv = argvRaw.filter((x) => typeof x === "string");
+      const timeoutRaw = typeof args["timeout_ms"] === "number" ? args["timeout_ms"] : DEFAULT_TIMEOUT_MS;
+      const timeoutMs = Math.max(1e3, Math.min(MAX_TIMEOUT_MS, Math.floor(timeoutRaw)));
+      if (!skillId) {
+        return errorResult("run_skill_script: missing required argument `skill_id`.");
+      }
+      if (!scriptArg) {
+        return errorResult("run_skill_script: missing required argument `script`.");
+      }
+      const skill = getSkill(skillId);
+      if (!skill) {
+        return errorResult(`run_skill_script: no skill with id "${skillId}" is installed.`);
+      }
+      const resolved = resolveScript(skill.absoluteDir, skill.scripts, scriptArg);
+      if (typeof resolved === "string") return errorResult(`run_skill_script: ${resolved}`);
+      const interpreter = resolved.kind === "python" ? "python3" : "bash";
+      const interpArgs = [resolved.absPath, ...argv];
+      const decision = await resolver({
+        skillId,
+        scriptPath: scriptArg,
+        interpreter,
+        args: argv
+      });
+      if (decision === "deny") {
+        return errorResult(
+          `run_skill_script: execution denied. The user has not granted permission to run scripts from this skill. Tell the user: "I can run \`${scriptArg}\` from \`${skillId}\` for you, but you'll need to allow script execution in Settings \u2192 Permissions first."`
+        );
+      }
+      const minimalEnv = {
+        PATH: process2.env["PATH"] ?? "/usr/local/bin:/usr/bin:/bin",
+        HOME: process2.env["HOME"] ?? "/tmp",
+        LANG: process2.env["LANG"] ?? "C.UTF-8",
+        TMPDIR: process2.env["TMPDIR"] ?? "/tmp"
+      };
+      const result = await spawnAndCollect(interpreter, interpArgs, {
+        cwd: skill.absoluteDir,
+        env: minimalEnv,
+        timeoutMs,
+        signal: ctx.signal
+      });
+      const summary = formatResultForLlm({
+        skillId,
+        script: scriptArg,
+        interpreter,
+        argv,
+        result,
+        decisionLabel: decision
+      });
+      return {
+        output: summary,
+        metadata: {
+          ok: result.exitCode === 0 && !result.timedOut,
+          exit_code: result.exitCode,
+          signal: result.signal,
+          timed_out: result.timedOut,
+          duration_ms: result.durationMs,
+          stdout_truncated: result.stdoutTruncated,
+          stderr_truncated: result.stderrTruncated
+        }
+      };
+    }
+  };
+}
+function errorResult(message) {
+  return { output: message, metadata: { ok: false } };
+}
+function formatResultForLlm(args) {
+  const { skillId, script, interpreter, argv, result } = args;
+  const status = result.timedOut ? `TIMED OUT after ${result.durationMs}ms` : result.signal ? `terminated by ${result.signal}` : `exited ${result.exitCode}`;
+  const cmdLine = `${interpreter} ${script}${argv.length > 0 ? " " + argv.map((a) => JSON.stringify(a)).join(" ") : ""}`;
+  const lines = [];
+  lines.push(`# run_skill_script result`);
+  lines.push(`Skill: \`${skillId}\``);
+  lines.push(`Command: \`${cmdLine}\``);
+  lines.push(`Status: **${status}** (${result.durationMs}ms)`);
+  if (args.decisionLabel === "allow_once") {
+    lines.push("Permission: allowed for this turn only.");
+  }
+  lines.push("");
+  lines.push("## stdout");
+  if (result.stdout.length > 0) {
+    lines.push("```");
+    lines.push(result.stdout.trimEnd());
+    lines.push("```");
+    if (result.stdoutTruncated) lines.push(`_(stdout truncated to ${STDOUT_LIMIT} chars)_`);
+  } else {
+    lines.push("_(empty)_");
+  }
+  if (result.stderr.length > 0) {
+    lines.push("");
+    lines.push("## stderr");
+    lines.push("```");
+    lines.push(result.stderr.trimEnd());
+    lines.push("```");
+    if (result.stderrTruncated) lines.push(`_(stderr truncated to ${STDERR_LIMIT} chars)_`);
   }
   return lines.join("\n");
 }
@@ -3651,6 +3950,7 @@ app.post("/chat", async (c) => {
   const tools = [];
   if (skillsEnabled && listSkills().length > 0) {
     tools.push(buildSkillToolDefinition());
+    tools.push(buildScriptRunnerToolDefinition(envFlagPermissionResolver));
   }
   const lastUserText = (() => {
     for (let i = turnMessages.length - 1; i >= 0; i--) {
@@ -3692,7 +3992,7 @@ app.post("/chat", async (c) => {
   );
 });
 app.post("/shutdown", (c) => {
-  setTimeout(() => process2.exit(0), 50);
+  setTimeout(() => process3.exit(0), 50);
   return c.json({ ok: true });
 });
 app.notFound((c) => c.json({ error: "not found" }, 404));
@@ -3812,37 +4112,37 @@ async function runChatLoop(args) {
 }
 (() => {
   const count = loadSkills().length;
-  process2.stderr.write(`sidecar: skills loaded (count=${count})
+  process3.stderr.write(`sidecar: skills loaded (count=${count})
 `);
 })();
 var httpServer = serve(
   { fetch: app.fetch, port: 0, hostname: "127.0.0.1" },
   (info) => {
     if (!info || typeof info === "string") {
-      process2.stderr.write("sidecar: failed to read bound port\n");
-      process2.exit(2);
+      process3.stderr.write("sidecar: failed to read bound port\n");
+      process3.exit(2);
       return;
     }
-    process2.stdout.write(`PORT=${info.port}
+    process3.stdout.write(`PORT=${info.port}
 `);
-    process2.stdout.write("READY\n");
+    process3.stdout.write("READY\n");
   }
 );
 httpServer.on("error", (err) => {
-  process2.stderr.write(`sidecar: server error: ${err.message}
+  process3.stderr.write(`sidecar: server error: ${err.message}
 `);
-  process2.exit(3);
+  process3.exit(3);
 });
 var shutdown = (sig) => {
-  process2.stderr.write(`sidecar: received ${sig}, shutting down
+  process3.stderr.write(`sidecar: received ${sig}, shutting down
 `);
-  httpServer.close(() => process2.exit(0));
-  setTimeout(() => process2.exit(1), 2e3).unref();
+  httpServer.close(() => process3.exit(0));
+  setTimeout(() => process3.exit(1), 2e3).unref();
 };
-process2.on("SIGTERM", () => shutdown("SIGTERM"));
-process2.on("SIGINT", () => shutdown("SIGINT"));
-process2.on("SIGHUP", () => shutdown("SIGHUP"));
-process2.stdin.on("end", () => shutdown("STDIN_CLOSED"));
-process2.stdin.on("close", () => shutdown("STDIN_CLOSED"));
-process2.stdin.resume();
+process3.on("SIGTERM", () => shutdown("SIGTERM"));
+process3.on("SIGINT", () => shutdown("SIGINT"));
+process3.on("SIGHUP", () => shutdown("SIGHUP"));
+process3.stdin.on("end", () => shutdown("STDIN_CLOSED"));
+process3.stdin.on("close", () => shutdown("STDIN_CLOSED"));
+process3.stdin.resume();
 //# sourceMappingURL=bioclaw-sidecar-x86_64-pc-windows-msvc.js.map

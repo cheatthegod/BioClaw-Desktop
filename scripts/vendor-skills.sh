@@ -1,29 +1,33 @@
 #!/usr/bin/env bash
-# vendor-skills.sh — copy the phase-3 offline-safe SKILL.md subset from the
-# BioClaw-SaaS skill catalog into BioClaw-Desktop-v2/skills/.
+# vendor-skills.sh — copy the BioNeMo skill catalog from BioClaw-SaaS into
+# BioClaw-Desktop-v2/skills/, ready to be picked up by Tauri's
+# `bundle.resources`.
 #
 # Why this script exists:
 #   * The Tauri bundler ships `bundle.resources` paths into the installed
-#     app's `resource_dir()`. We point the resources entry at
-#     ../skills/ (relative to src-tauri/) which means we need a copy in
-#     the desktop repo, not a symlink.
-#   * The full SaaS skill catalog is ~189 directories / many MB. The
-#     phase-3 desktop bundle MUST stay small and we explicitly exclude
-#     skills that require an NVIDIA NGC API key, a local GPU, or a hosted
-#     NIM endpoint. The hard-coded list below is the 6 truly offline skills.
-#   * `tauri:build` invokes this so the resource path always points at a
-#     fresh copy. Re-running is idempotent — we rm -rf the destination
-#     dirs before copying.
+#     app's `resource_dir()`. We point the resources entry at ../skills/
+#     (relative to src-tauri/) so we need a real directory there — not a
+#     symlink.
+#   * The SaaS-side bionemo-* dirs are themselves symlinks (files2 storage).
+#     We use `cp -RL` to follow those symlinks and end up with real files
+#     on disk so `dpkg-deb -c` packages the actual content.
 #
-# Add a skill here when:
-#   * It's published in BioClaw-SaaS/container/skills/<dir>/SKILL.md
-#   * It does NOT mention NVIDIA_API_KEY / NGC_API_KEY in its body
-#   * It does NOT require a GPU at runtime
-#   * It's actually useful for the desktop user persona (offline biomed
-#     research, single-machine workflows)
+# Phase 4 mode: auto-discover ALL bionemo-* directories under
+# $BIOCLAW_SAAS_SKILLS_SRC (or default SaaS path) and copy each. The
+# sidecar's skill registry tags each one with requiresApiKey /
+# requiresGpu based on SKILL.md content, so the front-end can render
+# them differently. We no longer hard-code a subset — the LLM gets to
+# see every skill, and the user picks which ones to actually run via the
+# permission UI.
 #
-# Run from anywhere. Resolves paths from $BASH_SOURCE so the script can be
-# invoked via npm scripts or directly.
+# Override knobs (env vars):
+#   BIOCLAW_SAAS_SKILLS_SRC   — source dir; defaults to the SaaS checkout
+#   BIOCLAW_SKILLS_INCLUDE    — comma-separated regex list; if set, only
+#                                matching directory names are vendored
+#   BIOCLAW_SKILLS_EXCLUDE    — comma-separated regex list; if set,
+#                                matching directory names are skipped
+#
+# Re-running is idempotent — we rm -rf each destination dir before copying.
 
 set -euo pipefail
 
@@ -31,63 +35,86 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DESKTOP_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DEST_DIR="$DESKTOP_ROOT/skills"
 
-# Where the SaaS skills live. Override with $BIOCLAW_SAAS_SKILLS_SRC for CI
-# or a different checkout layout.
 DEFAULT_SRC="/home/ubuntu/Bioclaw_dev/BioClaw-SaaS/container/skills"
 SRC_DIR="${BIOCLAW_SAAS_SKILLS_SRC:-$DEFAULT_SRC}"
-
-# Phase-3 vendored subset. Six skills, all offline + no API key.
-# Order matters only for log readability. To add a skill, append here and
-# document the choice in docs/SKILLS.md.
-SKILLS=(
-  bionemo-nvmolkit
-  bionemo-cuequivariance
-  bionemo-science-skills-uniprot-database
-  bionemo-science-skills-alphafold-database-fetch-and-analyze
-  bionemo-complexa-target
-  bionemo-complexa-sweep
-)
 
 if [[ ! -d "$SRC_DIR" ]]; then
   echo "vendor-skills.sh: source skill catalog not found at $SRC_DIR" >&2
   echo "  set BIOCLAW_SAAS_SKILLS_SRC to override." >&2
-  # In a clean release build the source may not exist (the SaaS repo isn't
-  # cloned). We exit 0 rather than fail the desktop build, since the prior
-  # vendored copy in skills/ may already be fine.
   if [[ -d "$DEST_DIR" ]]; then
     echo "  destination $DEST_DIR exists; assuming a previous vendor pass." >&2
     exit 0
   fi
-  echo "  destination $DEST_DIR missing too — the sidecar will report 0 skills." >&2
   mkdir -p "$DEST_DIR"
   exit 0
 fi
 
 mkdir -p "$DEST_DIR"
 
-copied=0
-skipped=0
-for skill in "${SKILLS[@]}"; do
-  src="$SRC_DIR/$skill"
-  dst="$DEST_DIR/$skill"
-  if [[ ! -d "$src" ]]; then
-    echo "vendor-skills.sh: WARN $skill not found at $src (skipping)" >&2
-    skipped=$((skipped + 1))
-    continue
+# Auto-discover every bionemo-* under SRC_DIR. Resolves symlinks. Sort for
+# deterministic CI output.
+mapfile -t discovered < <(
+  find "$SRC_DIR" -maxdepth 1 \( -type d -o -type l \) -name 'bionemo-*' \
+    -printf '%f\n' | sort
+)
+
+if [[ ${#discovered[@]} -eq 0 ]]; then
+  echo "vendor-skills.sh: no bionemo-* skill directories found under $SRC_DIR" >&2
+  exit 1
+fi
+
+# Apply optional include/exclude regex filters.
+matches_any() {
+  local name="$1"; shift
+  local filters="$1"
+  [[ -z "$filters" ]] && return 1
+  IFS=',' read -ra patterns <<< "$filters"
+  for pattern in "${patterns[@]}"; do
+    [[ "$name" =~ $pattern ]] && return 0
+  done
+  return 1
+}
+
+ids=()
+for name in "${discovered[@]}"; do
+  if [[ -n "${BIOCLAW_SKILLS_INCLUDE:-}" ]]; then
+    matches_any "$name" "$BIOCLAW_SKILLS_INCLUDE" || continue
   fi
-  rm -rf "$dst"
-  # We copy the entire skill directory so any companion reference files
-  # (references/api.md etc.) come along. Skills that mention NGC_API_KEY
-  # internally are excluded by the curated list above — we do NOT scan.
-  cp -RL "$src" "$dst"
-  copied=$((copied + 1))
-  echo "vendor-skills.sh: copied $skill"
+  if [[ -n "${BIOCLAW_SKILLS_EXCLUDE:-}" ]]; then
+    matches_any "$name" "$BIOCLAW_SKILLS_EXCLUDE" && continue
+  fi
+  ids+=("$name")
 done
 
-# Final size report so a future bundle-size regression is obvious in CI logs.
+# Wipe the destination so deletions / renames on the SaaS side propagate.
+# We do this AFTER discovery so a missing source dir aborts before we wipe.
+find "$DEST_DIR" -mindepth 1 -maxdepth 1 -type d -name 'bionemo-*' -exec rm -rf {} +
+
+copied=0
+skipped_no_skill_md=0
+
+for id in "${ids[@]}"; do
+  src="$SRC_DIR/$id"
+  dst="$DEST_DIR/$id"
+
+  if [[ ! -e "$src/SKILL.md" ]]; then
+    # Some directories under bionemo-* are wrapper / index dirs without a
+    # SKILL.md. Skip silently — the loader on the sidecar side does the
+    # same.
+    skipped_no_skill_md=$((skipped_no_skill_md + 1))
+    continue
+  fi
+
+  # -R recursive, -L follow symlinks (the SaaS-side bionemo-* are symlinks
+  # to canonical files2 storage; we need real content for `dpkg-deb -c` to
+  # actually package something).
+  cp -RL "$src" "$dst"
+  copied=$((copied + 1))
+done
+
 if command -v du >/dev/null 2>&1; then
   size="$(du -sh "$DEST_DIR" 2>/dev/null | awk '{print $1}')"
-  echo "vendor-skills.sh: vendored $copied skill(s) ($skipped skipped) into $DEST_DIR ($size)"
+  echo "vendor-skills.sh: vendored $copied skill(s) (skipped $skipped_no_skill_md without SKILL.md) into $DEST_DIR ($size)"
 else
-  echo "vendor-skills.sh: vendored $copied skill(s) ($skipped skipped) into $DEST_DIR"
+  echo "vendor-skills.sh: vendored $copied skill(s) (skipped $skipped_no_skill_md without SKILL.md) into $DEST_DIR"
 fi

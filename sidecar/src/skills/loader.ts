@@ -45,6 +45,28 @@ export interface DesktopSkill {
   /** Frontmatter allowed-tools list, if present. Used by future shell exec gate. */
   readonly allowedTools: readonly string[];
   /**
+   * Absolute path on disk to the skill's root directory (the one containing
+   * SKILL.md). The script-runner needs this to resolve relative script paths
+   * safely without re-walking the filesystem on every tool call.
+   */
+  readonly absoluteDir: string;
+  /**
+   * Relative paths to executable scripts shipped with the skill. We scan
+   * `scripts/` one level deep at load time and surface anything with a
+   * Python or shell extension so the LLM can see *what* it has to run
+   * without having to call an `ls` tool first. Each entry is relative to
+   * `absoluteDir` and uses forward-slash separators (Windows-safe).
+   */
+  readonly scripts: readonly SkillScript[];
+}
+
+/** A runnable script shipped inside a skill. */
+export interface SkillScript {
+  /** Path relative to the skill dir, forward-slash separators. */
+  readonly relativePath: string;
+  /** 'python' | 'shell'. Drives which interpreter the runner picks. */
+  readonly kind: 'python' | 'shell';
+  /**
    * Heuristic: true if the skill needs an NVIDIA NGC / NVAIE API key to
    * actually run. We use this to grey the card out in the desktop UI and to
    * refuse to expose it as an LLM tool until the user has supplied a key.
@@ -167,6 +189,53 @@ function detectRequiresGpu(dirName: string, body: string): boolean {
   return false;
 }
 
+/**
+ * Walk `scripts/` one level deep (and `scripts/<subdir>/` so workflow skills
+ * with `complexa-binder-design/scripts/foo.py` get caught too). Returns a
+ * stable, sorted list of executable script paths relative to the skill dir.
+ * Skips files starting with `_` (Python private helpers) so the LLM sees
+ * only the entry points.
+ */
+function scanSkillScripts(absSkillDir: string): SkillScript[] {
+  const out: SkillScript[] = [];
+  const scriptsRoot = path.join(absSkillDir, 'scripts');
+  if (!fs.existsSync(scriptsRoot)) return out;
+
+  // Two-level walk: scripts/*.py + scripts/*/scripts/*.py is overkill; the
+  // BioNeMo catalog uses scripts/foo.py uniformly, but a couple of workflow
+  // skills nest under scripts/<subdir>/foo.py. We accept up to depth 2.
+  const stack: Array<{ dir: string; depth: number }> = [{ dir: scriptsRoot, depth: 0 }];
+  while (stack.length > 0) {
+    const popped = stack.pop();
+    if (!popped) break;
+    const { dir, depth } = popped;
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const e of entries) {
+      const abs = path.join(dir, e.name);
+      if (e.isDirectory() && depth < 1) {
+        stack.push({ dir: abs, depth: depth + 1 });
+        continue;
+      }
+      if (!e.isFile()) continue;
+      if (e.name.startsWith('_')) continue;
+      const lower = e.name.toLowerCase();
+      let kind: SkillScript['kind'] | null = null;
+      if (lower.endsWith('.py')) kind = 'python';
+      else if (lower.endsWith('.sh') || lower.endsWith('.bash')) kind = 'shell';
+      if (!kind) continue;
+      const rel = path.relative(absSkillDir, abs).split(path.sep).join('/');
+      out.push({ relativePath: rel, kind });
+    }
+  }
+  out.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
+  return out;
+}
+
 function parseSkill(absDir: string, dirName: string): DesktopSkill | null {
   const mdPath = path.join(absDir, 'SKILL.md');
   if (!fs.existsSync(mdPath)) return null;
@@ -196,6 +265,8 @@ function parseSkill(absDir: string, dirName: string): DesktopSkill | null {
     allowedTools: fm.allowedTools,
     requiresApiKey: detectRequiresApiKey(dirName, body),
     requiresGpu: detectRequiresGpu(dirName, body),
+    absoluteDir: absDir,
+    scripts: scanSkillScripts(absDir),
   };
 }
 

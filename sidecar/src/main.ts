@@ -42,6 +42,10 @@ import {
   listSkills,
 } from './skills/registry.js';
 import { loadSkills } from './skills/loader.js';
+import {
+  buildScriptRunnerToolDefinition,
+  envFlagPermissionResolver,
+} from './skills/scriptRunner.js';
 
 const SIDECAR_VERSION = '0.2.0';
 
@@ -170,6 +174,10 @@ app.post('/chat', async (c) => {
   const tools: ToolDefinition[] = [];
   if (skillsEnabled && listSkills().length > 0) {
     tools.push(buildSkillToolDefinition());
+    // Script runner uses the env-flag resolver in this revision. Step 4 of
+    // phase 4 will replace this with a resolver that round-trips through
+    // the Tauri webview for a real permission prompt.
+    tools.push(buildScriptRunnerToolDefinition(envFlagPermissionResolver));
   }
 
   // Find the most recent user message — we use that text to rank skills

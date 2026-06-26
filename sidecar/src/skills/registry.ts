@@ -57,6 +57,8 @@ export interface SkillSummary {
   readonly requiresApiKey: boolean;
   readonly requiresGpu: boolean;
   readonly allowedTools: readonly string[];
+  /** Relative script paths the skill ships with. Same shape as DesktopSkill.scripts. */
+  readonly scripts: ReadonlyArray<{ relativePath: string; kind: 'python' | 'shell' }>;
 }
 
 function toSummary(s: DesktopSkill): SkillSummary {
@@ -70,6 +72,7 @@ function toSummary(s: DesktopSkill): SkillSummary {
     requiresApiKey: s.requiresApiKey,
     requiresGpu: s.requiresGpu,
     allowedTools: s.allowedTools,
+    scripts: s.scripts.map((sc) => ({ relativePath: sc.relativePath, kind: sc.kind })),
   };
 }
 
@@ -163,7 +166,7 @@ export function buildSkillToolDefinition(): ToolDefinition {
   return {
     name: 'invoke_skill',
     description:
-      'Load and consult a BioClaw skill (BioNeMo workflow / database query / scientific pipeline). Returns the full SKILL.md content so you can follow its instructions. NOTE: phase-3 does NOT execute shell commands inside the skill — surface the instructions to the user and ask before running anything that touches their system.',
+      'Load and consult a BioClaw skill (BioNeMo workflow / database query / scientific pipeline). Returns the full SKILL.md content so you can follow its instructions. After reading the playbook, use `run_skill_script` to actually execute any Python or shell scripts the skill ships with.',
     schema,
     kind: 'local',
     handler: runSkillTool,
@@ -188,10 +191,18 @@ export function composeSkillsSystemPrompt(lastUserText: string, topK = 6): strin
   const lines: string[] = [];
   lines.push('## Available BioClaw skills');
   lines.push(
-    'You have access to a tool called `invoke_skill` that loads a BioClaw skill. ' +
-      'Each skill is a markdown playbook for a biomedical workflow. Call it with the `skill_id` of one of the skills below when the user\'s request matches. ' +
-      'The tool returns the skill\'s full SKILL.md — read it, then either follow it yourself or summarise the steps for the user. ' +
-      'In this phase the tool does NOT execute shell commands; ask the user before running anything destructive.',
+    'You have two skill tools:',
+  );
+  lines.push(
+    '  1. `invoke_skill(skill_id)` — load the skill\'s SKILL.md playbook so you can read its instructions.',
+  );
+  lines.push(
+    '  2. `run_skill_script(skill_id, script, args)` — actually execute a Python or shell script the skill ships with. The user must have enabled script execution; if not, the tool returns a permission-denied result and you should tell the user to enable it in Settings → Permissions.',
+  );
+  lines.push('');
+  lines.push(
+    'Standard flow: call `invoke_skill` first to read the playbook, then call `run_skill_script` for whichever step the user wants. ' +
+      'For skills that flag `needs NVIDIA API key` or `needs GPU`, prefer reading-the-playbook + walking the user through it rather than calling run_skill_script — the local machine may not have the credentials/hardware.',
   );
   lines.push('');
   lines.push('Skills (top match first):');
@@ -199,8 +210,13 @@ export function composeSkillsSystemPrompt(lastUserText: string, topK = 6): strin
     const flags: string[] = [];
     if (s.requiresApiKey) flags.push('needs NVIDIA API key');
     if (s.requiresGpu) flags.push('needs GPU');
+    if (s.scripts.length > 0) flags.push(`${s.scripts.length} script(s)`);
     const flagsStr = flags.length > 0 ? ` _(${flags.join(', ')})_` : '';
     lines.push(`- \`${s.id}\`: ${s.description}${flagsStr}`);
+    if (s.scripts.length > 0 && s.scripts.length <= 4) {
+      const scripts = s.scripts.map((sc) => `\`${sc.relativePath}\``).join(', ');
+      lines.push(`    scripts: ${scripts}`);
+    }
   }
   return lines.join('\n');
 }

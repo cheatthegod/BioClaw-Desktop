@@ -59,18 +59,24 @@ async function buildOne(triple) {
   // On unix the shebang (`#!/usr/bin/env node`) + chmod +x makes the file
   // directly executable; the kernel reads the shebang and execs node.
   //
-  // On windows there is no shebang support. Phase-2 ships a `.exe`-named
-  // file that is actually the JS bundle; this WILL FAIL on Windows when
-  // Tauri tries to exec it. The phase-3 plan is to ship a tiny native
-  // launcher.exe that calls `node bioclaw-sidecar.js` — until then the
-  // Windows installer is documented as "requires Node on PATH and a future
-  // launcher fix". The bundle file is still emitted so `tauri build`
-  // doesn't fail bundling; runtime users on windows get a clear error.
+  // On windows there is no shebang support, so a `.exe`-named JS file
+  // cannot be executed by the OS. We emit ONLY the `.js` bundle for the
+  // windows-msvc triple; the real `bioclaw-sidecar-<triple>.exe` is built
+  // by `sidecar/launcher-win/` (a tiny native Rust launcher) in CI and
+  // dropped alongside this `.js` so Tauri's externalBin path resolves at
+  // bundle-time.
+  //
+  // For local dev where Linux/macOS contributors don't have a Windows
+  // toolchain, the missing `.exe` is fine: `tauri dev` only picks the
+  // current-host triple's binary.
   const isWindows = triple.includes('windows');
-  const suffix = isWindows ? '.exe' : '';
-  const outfile = resolve(OUT_DIR, `bioclaw-sidecar-${triple}${suffix}`);
+  const suffix = isWindows ? '' : ''; // both branches drop the suffix here
+  const outfile = isWindows
+    ? null // launcher-win produces the .exe at build time in CI
+    : resolve(OUT_DIR, `bioclaw-sidecar-${triple}${suffix}`);
   // Also emit a .js companion for the sourcemap reference and for direct
-  // node invocation during dev / debugging.
+  // node invocation during dev / debugging. On windows this IS the only
+  // artifact esbuild emits — the launcher.exe will exec `node` against it.
   const jsCompanion = resolve(OUT_DIR, `bioclaw-sidecar-${triple}.js`);
   await build({
     entryPoints: [ENTRY],
@@ -89,23 +95,31 @@ async function buildOne(triple) {
     },
     logLevel: 'info',
   });
-  // Copy the JS companion to the Tauri-expected externalBin path. On unix
-  // this is `bioclaw-sidecar-<triple>` (no extension); on windows it's
-  // `bioclaw-sidecar-<triple>.exe`. Tauri-build refuses to bundle if the
-  // file is missing at exactly that path.
-  await copyFile(jsCompanion, outfile);
-  // chmod 0755 so the unix file is directly executable. The shebang in the
-  // banner makes the kernel exec `node`; without exec bit the spawn fails
-  // with EACCES.
-  try {
-    await chmod(outfile, 0o755);
-    await chmod(jsCompanion, 0o755);
-  } catch {
-    // Some filesystems (e.g. an NTFS mount on linux) don't accept chmod.
-    // Document this in SIDECAR.md — best-effort.
+  // Unix: copy the JS companion to the Tauri-expected externalBin path
+  // (`bioclaw-sidecar-<triple>` with no extension). Tauri-build refuses
+  // to bundle if the file is missing at that exact path.
+  if (outfile) {
+    await copyFile(jsCompanion, outfile);
+    // chmod 0755 so the unix file is directly executable. The shebang in
+    // the banner makes the kernel exec `node`; without exec bit the spawn
+    // fails with EACCES.
+    try {
+      await chmod(outfile, 0o755);
+      await chmod(jsCompanion, 0o755);
+    } catch {
+      // Some filesystems (e.g. an NTFS mount on linux) don't accept chmod.
+      // Document this in SIDECAR.md — best-effort.
+    }
+  } else {
+    try {
+      await chmod(jsCompanion, 0o755);
+    } catch {
+      /* best-effort */
+    }
   }
-  const s = await stat(outfile);
-  return { triple, outfile, bytes: s.size };
+  const reportPath = outfile ?? jsCompanion;
+  const s = await stat(reportPath);
+  return { triple, outfile: reportPath, bytes: s.size };
 }
 
 async function main() {

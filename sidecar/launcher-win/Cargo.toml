@@ -1,0 +1,21 @@
+[package]
+name = "bioclaw-sidecar-launcher"
+version = "0.1.0"
+edition = "2021"
+description = "Tiny Windows launcher that locates node.exe and execs the bundled sidecar.js"
+authors = ["BioClaw <hello@bioclaw.tech>"]
+license = "MIT"
+
+# Single-binary launcher. No deps — we want to compile down to ~150 KB so the
+# Windows installer overhead is minimal. The Tauri externalBin convention
+# expects this binary to be named bioclaw-sidecar-x86_64-pc-windows-msvc.exe
+# and to sit next to bioclaw-sidecar-x86_64-pc-windows-msvc.js.
+
+[dependencies]
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "z"
+strip = true

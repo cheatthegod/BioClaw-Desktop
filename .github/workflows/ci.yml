@@ -169,6 +169,22 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      - name: Build sidecar bundle
+        working-directory: sidecar
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build Windows sidecar launcher.exe
+        if: matrix.platform.os == 'windows-latest'
+        working-directory: sidecar/launcher-win
+        shell: pwsh
+        run: |
+          cargo build --release --target x86_64-pc-windows-msvc
+          Copy-Item -Force `
+            target/x86_64-pc-windows-msvc/release/bioclaw-sidecar-launcher.exe `
+            ../../src-tauri/binaries/bioclaw-sidecar-x86_64-pc-windows-msvc.exe
+
       - name: Tauri build (no release)
         uses: tauri-apps/tauri-action@v0
         with:

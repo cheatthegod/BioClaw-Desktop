@@ -18,8 +18,11 @@ import { ConnectionGuard } from './components/ConnectionGuard';
 import { LocalChat } from './components/LocalChat';
 import { PermissionPrompt } from './components/PermissionPrompt';
 import { LoginGate } from './components/LoginGate';
+import { SetupWizard } from './components/SetupWizard';
 import { useAppStore } from './lib/store';
 import { useAuthStore } from './lib/auth-state';
+import { useEnvStore } from './lib/env-state';
+import { useSidecar } from './hooks/useSidecar';
 import { initializeApp } from './lib/init';
 
 export function App() {
@@ -66,6 +69,52 @@ export function App() {
     return <LoginGate />;
   }
 
+  return <AuthedShell mode={mode} remoteUrl={remoteUrl} isSettingsOpen={isSettingsOpen} />;
+}
+
+/**
+ * Everything below LoginGate: sidecar lifecycle, env state machine,
+ * and the actual chat shell. Pulled into its own component because it
+ * depends on the sidecar hook (`useSidecar`), which we don't want
+ * paying for during the unauthenticated bootstrap.
+ */
+function AuthedShell({
+  mode,
+  remoteUrl,
+  isSettingsOpen,
+}: {
+  mode: 'local' | 'remote';
+  remoteUrl: string;
+  isSettingsOpen: boolean;
+}) {
+  const sidecar = useSidecar(mode === 'local');
+  const envState = useEnvStore((s) => s.state);
+  const refreshEnv = useEnvStore((s) => s.refresh);
+  // First poll once the sidecar reports a port, plus a 4-s heartbeat
+  // so a parallel `bioclaw env setup` from the CLI eventually flips
+  // the wizard out of view.
+  useEffect(() => {
+    if (!sidecar.port) return;
+    void refreshEnv(sidecar.port);
+    const id = setInterval(() => {
+      if (sidecar.port) void refreshEnv(sidecar.port);
+    }, 4000);
+    return () => clearInterval(id);
+  }, [sidecar.port, refreshEnv]);
+
+  // Only block on the SetupWizard in local mode (where the bundled
+  // env is what runs scripts). The cloud iframe path doesn't need
+  // Python on the user's machine at all.
+  const needsSetup =
+    mode === 'local' && sidecar.port !== null && envState?.status === 'needs-setup';
+  const [wizardDismissed, setWizardDismissed] = useState(false);
+  // Reset the dismissed flag whenever the env transitions away from
+  // ready, so a future repair (e.g. user wipes ~/.bioclaw/env) shows
+  // the wizard again without restarting the app.
+  useEffect(() => {
+    if (envState?.status === 'ready') setWizardDismissed(false);
+  }, [envState?.status]);
+
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-bg">
       <TitleBar />
@@ -92,6 +141,9 @@ export function App() {
       </main>
       {isSettingsOpen ? <SettingsDrawer /> : null}
       <PermissionPrompt />
+      {needsSetup && !wizardDismissed && sidecar.port !== null ? (
+        <SetupWizard port={sidecar.port} onDone={() => setWizardDismissed(true)} />
+      ) : null}
     </div>
   );
 }

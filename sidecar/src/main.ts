@@ -50,6 +50,8 @@ import {
   resolvePendingPermission,
   type PermissionEvent,
 } from './skills/scriptRunner.js';
+import { readEnvState } from './env/state.js';
+import { runSetup, type SetupEvent } from './env/setup.js';
 import { randomUUID } from 'node:crypto';
 
 const SIDECAR_VERSION = '0.2.0';
@@ -134,9 +136,19 @@ function validateChatBody(value: unknown): ChatRequestBody | string {
 
 const app = new Hono();
 
-app.get('/health', (c) =>
-  c.json({ ok: true, version: SIDECAR_VERSION, skills: loadSkills().length }),
-);
+app.get('/health', (c) => {
+  const envState = readEnvState();
+  return c.json({
+    ok: true,
+    version: SIDECAR_VERSION,
+    skills: loadSkills().length,
+    env: {
+      status: envState.status,
+      pythonPath: envState.pythonPath,
+      projectDir: envState.projectDir,
+    },
+  });
+});
 
 // Skills catalog for the desktop UI. Returns metadata only — the body lives
 // inside the sidecar and is only ever sent to the LLM through the
@@ -144,6 +156,52 @@ app.get('/health', (c) =>
 app.get('/skills', (c) => {
   const skills = listSkills();
   return c.json({ skills, count: skills.length });
+});
+
+// Bundled-Python env detail. The SetupWizard polls this to decide
+// whether to render the welcome screen, the install progress, or
+// dismiss itself.
+app.get('/env/state', (c) => c.json(readEnvState()));
+
+// Drive `uv python install` + `uv sync` against the bundled
+// pyproject.toml + uv.lock. Streams progress as SSE so the wizard
+// can render a live console.
+//
+// Wire format:
+//   POST /env/setup
+//     body: { extras?: string[], indexUrl?: string }
+//   resp: text/event-stream
+//     event: phase  data: {"label":"..."}
+//     event: log    data: {"stream":"stdout"|"stderr","line":"..."}
+//     event: done   data: {}
+//     event: error  data: {"message":"..."}
+app.post('/env/setup', async (c) => {
+  let body: { extras?: string[]; indexUrl?: string } = {};
+  try {
+    body = (await c.req.json()) as typeof body;
+  } catch {
+    // empty body is fine — equivalent to base install with default index.
+  }
+  const abortCtrl = new AbortController();
+  c.req.raw.signal.addEventListener('abort', () => abortCtrl.abort(), { once: true });
+
+  return stream(c, async (sse) => {
+    sse.onAbort(() => abortCtrl.abort());
+    const emit = (ev: SetupEvent) => {
+      // Fire-and-forget — if the stream is dead, abort cascades up.
+      void writeSseEvent(sse, ev as unknown as SseEvent);
+    };
+    try {
+      await runSetup({
+        ...(body.extras && body.extras.length > 0 ? { extras: body.extras } : {}),
+        ...(body.indexUrl ? { indexUrl: body.indexUrl } : {}),
+        signal: abortCtrl.signal,
+        emit,
+      });
+    } catch {
+      // runSetup already emitted an 'error' event; do nothing more.
+    }
+  });
 });
 
 app.post('/chat', async (c) => {
@@ -364,7 +422,8 @@ type SseEvent =
       readonly isError: boolean;
     }
   | { readonly type: 'step-complete'; readonly step: number }
-  | PermissionEvent;
+  | PermissionEvent
+  | SetupEvent;
 
 async function writeSseEvent(sse: SseWritable, ev: SseEvent): Promise<void> {
   // Include `type` in BOTH the SSE `event:` line (so EventSource-style

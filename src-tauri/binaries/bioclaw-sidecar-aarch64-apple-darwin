@@ -121,26 +121,26 @@ var handleParsingNestedValues = (form, key, value) => {
 };
 
 // node_modules/hono/dist/utils/url.js
-var splitPath = (path3) => {
-  const paths = path3.split("/");
+var splitPath = (path6) => {
+  const paths = path6.split("/");
   if (paths[0] === "") {
     paths.shift();
   }
   return paths;
 };
 var splitRoutingPath = (routePath) => {
-  const { groups, path: path3 } = extractGroupsFromPath(routePath);
-  const paths = splitPath(path3);
+  const { groups, path: path6 } = extractGroupsFromPath(routePath);
+  const paths = splitPath(path6);
   return replaceGroupMarks(paths, groups);
 };
-var extractGroupsFromPath = (path3) => {
+var extractGroupsFromPath = (path6) => {
   const groups = [];
-  path3 = path3.replace(/\{[^}]+\}/g, (match2, index) => {
+  path6 = path6.replace(/\{[^}]+\}/g, (match2, index) => {
     const mark = `@${index}`;
     groups.push([mark, match2]);
     return mark;
   });
-  return { groups, path: path3 };
+  return { groups, path: path6 };
 };
 var replaceGroupMarks = (paths, groups) => {
   for (let i = groups.length - 1; i >= 0; i--) {
@@ -197,8 +197,8 @@ var getPath = (request) => {
       const queryIndex = url.indexOf("?", i);
       const hashIndex = url.indexOf("#", i);
       const end = queryIndex === -1 ? hashIndex === -1 ? void 0 : hashIndex : hashIndex === -1 ? queryIndex : Math.min(queryIndex, hashIndex);
-      const path3 = url.slice(start, end);
-      return tryDecodeURI(path3.includes("%25") ? path3.replace(/%25/g, "%2525") : path3);
+      const path6 = url.slice(start, end);
+      return tryDecodeURI(path6.includes("%25") ? path6.replace(/%25/g, "%2525") : path6);
     } else if (charCode === 63 || charCode === 35) {
       break;
     }
@@ -215,11 +215,11 @@ var mergePath = (base, sub, ...rest) => {
   }
   return `${base?.[0] === "/" ? "" : "/"}${base}${sub === "/" ? "" : `${base?.at(-1) === "/" ? "" : "/"}${sub?.[0] === "/" ? sub.slice(1) : sub}`}`;
 };
-var checkOptionalParameter = (path3) => {
-  if (path3.charCodeAt(path3.length - 1) !== 63 || !path3.includes(":")) {
+var checkOptionalParameter = (path6) => {
+  if (path6.charCodeAt(path6.length - 1) !== 63 || !path6.includes(":")) {
     return null;
   }
-  const segments = path3.split("/");
+  const segments = path6.split("/");
   const results = [];
   let basePath = "";
   segments.forEach((segment) => {
@@ -360,9 +360,9 @@ var HonoRequest = class {
    */
   path;
   bodyCache = {};
-  constructor(request, path3 = "/", matchResult = [[]]) {
+  constructor(request, path6 = "/", matchResult = [[]]) {
     this.raw = request;
-    this.path = path3;
+    this.path = path6;
     this.#matchResult = matchResult;
     this.#validatedData = {};
   }
@@ -1114,8 +1114,8 @@ var Hono = class _Hono {
         return this;
       };
     });
-    this.on = (method, path3, ...handlers) => {
-      for (const p of [path3].flat()) {
+    this.on = (method, path6, ...handlers) => {
+      for (const p of [path6].flat()) {
         this.#path = p;
         for (const m of [method].flat()) {
           handlers.map((handler) => {
@@ -1172,8 +1172,8 @@ var Hono = class _Hono {
    * app.route("/api", app2) // GET /api/user
    * ```
    */
-  route(path3, app2) {
-    const subApp = this.basePath(path3);
+  route(path6, app2) {
+    const subApp = this.basePath(path6);
     app2.routes.map((r) => {
       let handler;
       if (app2.errorHandler === errorHandler) {
@@ -1199,9 +1199,9 @@ var Hono = class _Hono {
    * const api = new Hono().basePath('/api')
    * ```
    */
-  basePath(path3) {
+  basePath(path6) {
     const subApp = this.#clone();
-    subApp._basePath = mergePath(this._basePath, path3);
+    subApp._basePath = mergePath(this._basePath, path6);
     return subApp;
   }
   /**
@@ -1275,7 +1275,7 @@ var Hono = class _Hono {
    * })
    * ```
    */
-  mount(path3, applicationHandler, options) {
+  mount(path6, applicationHandler, options) {
     let replaceRequest;
     let optionHandler;
     if (options) {
@@ -1302,7 +1302,7 @@ var Hono = class _Hono {
       return [c.env, executionContext];
     };
     replaceRequest ||= (() => {
-      const mergedPath = mergePath(this._basePath, path3);
+      const mergedPath = mergePath(this._basePath, path6);
       const pathPrefixLength = mergedPath === "/" ? 0 : mergedPath.length;
       return (request) => {
         const url = new URL(request.url);
@@ -1317,19 +1317,19 @@ var Hono = class _Hono {
       }
       await next();
     };
-    this.#addRoute(METHOD_NAME_ALL, mergePath(path3, "*"), handler);
+    this.#addRoute(METHOD_NAME_ALL, mergePath(path6, "*"), handler);
     return this;
   }
-  #addRoute(method, path3, handler, baseRoutePath) {
+  #addRoute(method, path6, handler, baseRoutePath) {
     method = method.toUpperCase();
-    path3 = mergePath(this._basePath, path3);
+    path6 = mergePath(this._basePath, path6);
     const r = {
       basePath: baseRoutePath !== void 0 ? mergePath(this._basePath, baseRoutePath) : this._basePath,
-      path: path3,
+      path: path6,
       method,
       handler
     };
-    this.router.add(method, path3, [handler, r]);
+    this.router.add(method, path6, [handler, r]);
     this.routes.push(r);
   }
   #handleError(err, c) {
@@ -1342,10 +1342,10 @@ var Hono = class _Hono {
     if (method === "HEAD") {
       return (async () => new Response(null, await this.#dispatch(request, executionCtx, env, "GET")))();
     }
-    const path3 = this.getPath(request, { env });
-    const matchResult = this.router.match(method, path3);
+    const path6 = this.getPath(request, { env });
+    const matchResult = this.router.match(method, path6);
     const c = new Context(request, {
-      path: path3,
+      path: path6,
       matchResult,
       env,
       executionCtx,
@@ -1445,7 +1445,7 @@ var Hono = class _Hono {
 
 // node_modules/hono/dist/router/reg-exp-router/matcher.js
 var emptyParam = [];
-function match(method, path3) {
+function match(method, path6) {
   const matchers = this.buildAllMatchers();
   const match2 = (method2, path22) => {
     const matcher = matchers[method2] || matchers[METHOD_NAME_ALL];
@@ -1461,7 +1461,7 @@ function match(method, path3) {
     return [matcher[1][index], match3];
   };
   this.match = match2;
-  return match2(method, path3);
+  return match2(method, path6);
 }
 
 // node_modules/hono/dist/router/reg-exp-router/node.js
@@ -1576,12 +1576,12 @@ var Node = class _Node {
 var Trie = class {
   #context = { varIndex: 0 };
   #root = new Node();
-  insert(path3, index, pathErrorCheckOnly) {
+  insert(path6, index, pathErrorCheckOnly) {
     const paramAssoc = [];
     const groups = [];
     for (let i = 0; ; ) {
       let replaced = false;
-      path3 = path3.replace(/\{[^}]+\}/g, (m) => {
+      path6 = path6.replace(/\{[^}]+\}/g, (m) => {
         const mark = `@\\${i}`;
         groups[i] = [mark, m];
         i++;
@@ -1592,7 +1592,7 @@ var Trie = class {
         break;
       }
     }
-    const tokens = path3.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
+    const tokens = path6.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
     for (let i = groups.length - 1; i >= 0; i--) {
       const [mark] = groups[i];
       for (let j = tokens.length - 1; j >= 0; j--) {
@@ -1631,9 +1631,9 @@ var Trie = class {
 // node_modules/hono/dist/router/reg-exp-router/router.js
 var nullMatcher = [/^$/, [], /* @__PURE__ */ Object.create(null)];
 var wildcardRegExpCache = /* @__PURE__ */ Object.create(null);
-function buildWildcardRegExp(path3) {
-  return wildcardRegExpCache[path3] ??= new RegExp(
-    path3 === "*" ? "" : `^${path3.replace(
+function buildWildcardRegExp(path6) {
+  return wildcardRegExpCache[path6] ??= new RegExp(
+    path6 === "*" ? "" : `^${path6.replace(
       /\/\*$|([.\\+*[^\]$()])/g,
       (_, metaChar) => metaChar ? `\\${metaChar}` : "(?:|/.*)"
     )}$`
@@ -1655,17 +1655,17 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   );
   const staticMap = /* @__PURE__ */ Object.create(null);
   for (let i = 0, j = -1, len = routesWithStaticPathFlag.length; i < len; i++) {
-    const [pathErrorCheckOnly, path3, handlers] = routesWithStaticPathFlag[i];
+    const [pathErrorCheckOnly, path6, handlers] = routesWithStaticPathFlag[i];
     if (pathErrorCheckOnly) {
-      staticMap[path3] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
+      staticMap[path6] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
     } else {
       j++;
     }
     let paramAssoc;
     try {
-      paramAssoc = trie.insert(path3, j, pathErrorCheckOnly);
+      paramAssoc = trie.insert(path6, j, pathErrorCheckOnly);
     } catch (e) {
-      throw e === PATH_ERROR ? new UnsupportedPathError(path3) : e;
+      throw e === PATH_ERROR ? new UnsupportedPathError(path6) : e;
     }
     if (pathErrorCheckOnly) {
       continue;
@@ -1699,12 +1699,12 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   }
   return [regexp, handlerMap, staticMap];
 }
-function findMiddleware(middleware, path3) {
+function findMiddleware(middleware, path6) {
   if (!middleware) {
     return void 0;
   }
   for (const k of Object.keys(middleware).sort((a, b) => b.length - a.length)) {
-    if (buildWildcardRegExp(k).test(path3)) {
+    if (buildWildcardRegExp(k).test(path6)) {
       return [...middleware[k]];
     }
   }
@@ -1718,7 +1718,7 @@ var RegExpRouter = class {
     this.#middleware = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
     this.#routes = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
   }
-  add(method, path3, handler) {
+  add(method, path6, handler) {
     const middleware = this.#middleware;
     const routes = this.#routes;
     if (!middleware || !routes) {
@@ -1733,18 +1733,18 @@ var RegExpRouter = class {
         });
       });
     }
-    if (path3 === "/*") {
-      path3 = "*";
+    if (path6 === "/*") {
+      path6 = "*";
     }
-    const paramCount = (path3.match(/\/:/g) || []).length;
-    if (/\*$/.test(path3)) {
-      const re = buildWildcardRegExp(path3);
+    const paramCount = (path6.match(/\/:/g) || []).length;
+    if (/\*$/.test(path6)) {
+      const re = buildWildcardRegExp(path6);
       if (method === METHOD_NAME_ALL) {
         Object.keys(middleware).forEach((m) => {
-          middleware[m][path3] ||= findMiddleware(middleware[m], path3) || findMiddleware(middleware[METHOD_NAME_ALL], path3) || [];
+          middleware[m][path6] ||= findMiddleware(middleware[m], path6) || findMiddleware(middleware[METHOD_NAME_ALL], path6) || [];
         });
       } else {
-        middleware[method][path3] ||= findMiddleware(middleware[method], path3) || findMiddleware(middleware[METHOD_NAME_ALL], path3) || [];
+        middleware[method][path6] ||= findMiddleware(middleware[method], path6) || findMiddleware(middleware[METHOD_NAME_ALL], path6) || [];
       }
       Object.keys(middleware).forEach((m) => {
         if (method === METHOD_NAME_ALL || method === m) {
@@ -1762,7 +1762,7 @@ var RegExpRouter = class {
       });
       return;
     }
-    const paths = checkOptionalParameter(path3) || [path3];
+    const paths = checkOptionalParameter(path6) || [path6];
     for (let i = 0, len = paths.length; i < len; i++) {
       const path22 = paths[i];
       Object.keys(routes).forEach((m) => {
@@ -1789,13 +1789,13 @@ var RegExpRouter = class {
     const routes = [];
     let hasOwnRoute = method === METHOD_NAME_ALL;
     [this.#middleware, this.#routes].forEach((r) => {
-      const ownRoute = r[method] ? Object.keys(r[method]).map((path3) => [path3, r[method][path3]]) : [];
+      const ownRoute = r[method] ? Object.keys(r[method]).map((path6) => [path6, r[method][path6]]) : [];
       if (ownRoute.length !== 0) {
         hasOwnRoute ||= true;
         routes.push(...ownRoute);
       } else if (method !== METHOD_NAME_ALL) {
         routes.push(
-          ...Object.keys(r[METHOD_NAME_ALL]).map((path3) => [path3, r[METHOD_NAME_ALL][path3]])
+          ...Object.keys(r[METHOD_NAME_ALL]).map((path6) => [path6, r[METHOD_NAME_ALL][path6]])
         );
       }
     });
@@ -1815,13 +1815,13 @@ var SmartRouter = class {
   constructor(init) {
     this.#routers = init.routers;
   }
-  add(method, path3, handler) {
+  add(method, path6, handler) {
     if (!this.#routes) {
       throw new Error(MESSAGE_MATCHER_IS_ALREADY_BUILT);
     }
-    this.#routes.push([method, path3, handler]);
+    this.#routes.push([method, path6, handler]);
   }
-  match(method, path3) {
+  match(method, path6) {
     if (!this.#routes) {
       throw new Error("Fatal error");
     }
@@ -1836,7 +1836,7 @@ var SmartRouter = class {
         for (let i2 = 0, len2 = routes.length; i2 < len2; i2++) {
           router.add(...routes[i2]);
         }
-        res = router.match(method, path3);
+        res = router.match(method, path6);
       } catch (e) {
         if (e instanceof UnsupportedPathError) {
           continue;
@@ -1886,10 +1886,10 @@ var Node2 = class _Node2 {
     }
     this.#patterns = [];
   }
-  insert(method, path3, handler) {
+  insert(method, path6, handler) {
     this.#order = ++this.#order;
     let curNode = this;
-    const parts = splitRoutingPath(path3);
+    const parts = splitRoutingPath(path6);
     const possibleKeys = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const p = parts[i];
@@ -1938,12 +1938,12 @@ var Node2 = class _Node2 {
       }
     }
   }
-  search(method, path3) {
+  search(method, path6) {
     const handlerSets = [];
     this.#params = emptyParams;
     const curNode = this;
     let curNodes = [curNode];
-    const parts = splitPath(path3);
+    const parts = splitPath(path6);
     const curNodesQueue = [];
     const len = parts.length;
     let partOffsets = null;
@@ -1985,13 +1985,13 @@ var Node2 = class _Node2 {
           if (matcher instanceof RegExp) {
             if (partOffsets === null) {
               partOffsets = new Array(len);
-              let offset = path3[0] === "/" ? 1 : 0;
+              let offset = path6[0] === "/" ? 1 : 0;
               for (let p = 0; p < len; p++) {
                 partOffsets[p] = offset;
                 offset += parts[p].length + 1;
               }
             }
-            const restPathString = path3.substring(partOffsets[i]);
+            const restPathString = path6.substring(partOffsets[i]);
             const m = matcher.exec(restPathString);
             if (m) {
               params[name] = m[0];
@@ -2044,18 +2044,18 @@ var TrieRouter = class {
   constructor() {
     this.#node = new Node2();
   }
-  add(method, path3, handler) {
-    const results = checkOptionalParameter(path3);
+  add(method, path6, handler) {
+    const results = checkOptionalParameter(path6);
     if (results) {
       for (let i = 0, len = results.length; i < len; i++) {
         this.#node.insert(method, results[i], handler);
       }
       return;
     }
-    this.#node.insert(method, path3, handler);
+    this.#node.insert(method, path6, handler);
   }
-  match(method, path3) {
-    return this.#node.search(method, path3);
+  match(method, path6) {
+    return this.#node.search(method, path6);
   }
 };
 
@@ -2836,7 +2836,7 @@ var serve = (options, listeningListener) => {
 };
 
 // src/main.ts
-import process3 from "node:process";
+import process5 from "node:process";
 
 // ../src/lib/providers/index.ts
 var OpenAICompatibleProvider = class {
@@ -3967,6 +3967,201 @@ function formatResultForLlm(args) {
   return lines.join("\n");
 }
 
+// src/env/state.ts
+import fs2 from "node:fs";
+import path4 from "node:path";
+
+// src/env/paths.ts
+import path3 from "node:path";
+import os from "node:os";
+import process3 from "node:process";
+function defaultProjectDir() {
+  const override = process3.env["BIOCLAW_ENV_DIR"];
+  if (override && override.length > 0) return override;
+  return path3.join(os.homedir(), ".bioclaw", "env");
+}
+function venvPython(projectDir) {
+  if (process3.platform === "win32") {
+    return path3.join(projectDir, ".venv", "Scripts", "python.exe");
+  }
+  return path3.join(projectDir, ".venv", "bin", "python");
+}
+function resourceDir() {
+  const v = process3.env["BIOCLAW_RESOURCE_DIR"];
+  return v && v.length > 0 ? v : null;
+}
+function bundledEnvSourceDir() {
+  const r = resourceDir();
+  return r ? path3.join(r, "bioclaw-env") : null;
+}
+function bundledUvBinary() {
+  return process3.platform === "win32" ? "uv.exe" : "uv";
+}
+
+// src/env/state.ts
+function readEnvState() {
+  const projectDir = defaultProjectDir();
+  const bundledSourceDir = bundledEnvSourceDir();
+  const pyproject = path4.join(projectDir, "pyproject.toml");
+  const lock = path4.join(projectDir, "uv.lock");
+  const pyVersion = path4.join(projectDir, ".python-version");
+  const projectInitialized = fs2.existsSync(pyproject) && fs2.existsSync(lock) && fs2.existsSync(pyVersion);
+  const py = venvPython(projectDir);
+  const venvOk = fs2.existsSync(py);
+  let status;
+  if (!projectInitialized && !venvOk) status = "needs-setup";
+  else if (venvOk) status = "ready";
+  else if (projectInitialized && !venvOk) status = "needs-setup";
+  else status = "unknown";
+  return {
+    status,
+    projectDir,
+    pythonPath: venvOk ? py : null,
+    projectInitialized,
+    bundledSourceDir
+  };
+}
+
+// src/env/setup.ts
+import { spawn as spawn2 } from "node:child_process";
+import fs3 from "node:fs";
+import path5 from "node:path";
+import process4 from "node:process";
+async function runSetup(opts) {
+  const projectDir = defaultProjectDir();
+  const bundledSrc = bundledEnvSourceDir();
+  if (!bundledSrc) {
+    opts.emit({ type: "error", message: "No bundled env source (BIOCLAW_RESOURCE_DIR is unset)." });
+    throw new Error("no bundled env source");
+  }
+  try {
+    opts.emit({ type: "phase", label: "Initialising project files" });
+    await initProjectDir(bundledSrc, projectDir);
+    opts.emit({ type: "phase", label: "Installing Python 3.11 (uv-managed)" });
+    await runUv(["python", "install", "3.11"], projectDir, opts);
+    const args = ["sync", "--frozen"];
+    for (const e of opts.extras ?? []) {
+      args.push("--extra", e);
+    }
+    opts.emit({
+      type: "phase",
+      label: opts.extras && opts.extras.length > 0 ? `Resolving + installing base + ${opts.extras.join(", ")} (this is the slow first-run step)` : "Resolving + installing base packages (this is the slow first-run step)"
+    });
+    await runUv(args, projectDir, opts);
+    opts.emit({ type: "done" });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    opts.emit({ type: "error", message: msg });
+    throw err;
+  }
+}
+async function initProjectDir(bundledSrc, projectDir) {
+  await fs3.promises.mkdir(projectDir, { recursive: true });
+  const PIN_FILES = ["pyproject.toml", "uv.lock", ".python-version"];
+  for (const f of PIN_FILES) {
+    const from = path5.join(bundledSrc, f);
+    const to = path5.join(projectDir, f);
+    if (!fs3.existsSync(from)) {
+      throw new Error(`Bundled env is missing ${f} (looked at ${from})`);
+    }
+    await fs3.promises.copyFile(from, to);
+  }
+  const readme = path5.join(bundledSrc, "README.md");
+  if (fs3.existsSync(readme)) {
+    try {
+      await fs3.promises.copyFile(readme, path5.join(projectDir, "README.md"));
+    } catch {
+    }
+  }
+}
+function runUv(args, projectDir, opts) {
+  return new Promise((resolve, reject) => {
+    const uv = resolveUvPath();
+    const env = {
+      PATH: process4.env["PATH"] ?? "/usr/local/bin:/usr/bin:/bin",
+      HOME: process4.env["HOME"] ?? "/tmp",
+      LANG: process4.env["LANG"] ?? "C.UTF-8",
+      TMPDIR: process4.env["TMPDIR"] ?? "/tmp",
+      // Honour the user's mirror selection if set.
+      ...opts.indexUrl ? { UV_INDEX_URL: opts.indexUrl } : {},
+      // Force colour off so the streamed log lines don't contain
+      // ANSI escape codes (the wizard UI renders them as garbage).
+      NO_COLOR: "1"
+    };
+    const child = spawn2(uv, args, {
+      cwd: projectDir,
+      env,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    let stdoutBuf = "";
+    let stderrBuf = "";
+    const onAbort = () => {
+      child.kill("SIGTERM");
+      setTimeout(() => {
+        if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+      }, 1500).unref();
+    };
+    opts.signal.addEventListener("abort", onAbort, { once: true });
+    child.stdout.setEncoding("utf-8");
+    child.stdout.on("data", (chunk) => {
+      stdoutBuf += chunk;
+      flushLines(stdoutBuf, "stdout");
+      stdoutBuf = lastIncompleteLine(stdoutBuf);
+    });
+    child.stderr.setEncoding("utf-8");
+    child.stderr.on("data", (chunk) => {
+      stderrBuf += chunk;
+      flushLines(stderrBuf, "stderr");
+      stderrBuf = lastIncompleteLine(stderrBuf);
+    });
+    function flushLines(buf, stream2) {
+      const parts = buf.split("\n");
+      for (let i = 0; i < parts.length - 1; i++) {
+        const line = parts[i];
+        if (line !== void 0 && line.length > 0) opts.emit({ type: "log", stream: stream2, line });
+      }
+    }
+    function lastIncompleteLine(buf) {
+      const idx = buf.lastIndexOf("\n");
+      return idx === -1 ? buf : buf.slice(idx + 1);
+    }
+    child.on("error", (err) => {
+      opts.signal.removeEventListener("abort", onAbort);
+      reject(new Error(`failed to spawn uv: ${err.message}`));
+    });
+    child.on("close", (code, signal) => {
+      opts.signal.removeEventListener("abort", onAbort);
+      if (stdoutBuf.length > 0) opts.emit({ type: "log", stream: "stdout", line: stdoutBuf });
+      if (stderrBuf.length > 0) opts.emit({ type: "log", stream: "stderr", line: stderrBuf });
+      if (signal === "SIGTERM" || signal === "SIGKILL") {
+        reject(new Error("uv was cancelled"));
+      } else if (code !== 0) {
+        reject(new Error(`uv exited ${code}`));
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+function resolveUvPath() {
+  const exe = bundledUvBinary();
+  const candidates = [];
+  try {
+    const argv1 = process4.argv[1];
+    if (argv1) candidates.push(path5.join(path5.dirname(argv1), exe));
+  } catch {
+  }
+  const r = process4.env["BIOCLAW_RESOURCE_DIR"];
+  if (r) candidates.push(path5.join(r, exe), path5.join(r, "binaries", exe));
+  candidates.push(exe);
+  candidates.push(path5.join(process4.env["HOME"] ?? "/tmp", ".local", "bin", exe));
+  for (const c of candidates) {
+    if (c === exe) return c;
+    if (fs3.existsSync(c)) return c;
+  }
+  return exe;
+}
+
 // src/main.ts
 import { randomUUID } from "node:crypto";
 var SIDECAR_VERSION = "0.2.0";
@@ -4010,13 +4205,47 @@ function validateChatBody(value) {
   return value;
 }
 var app = new Hono2();
-app.get(
-  "/health",
-  (c) => c.json({ ok: true, version: SIDECAR_VERSION, skills: loadSkills().length })
-);
+app.get("/health", (c) => {
+  const envState = readEnvState();
+  return c.json({
+    ok: true,
+    version: SIDECAR_VERSION,
+    skills: loadSkills().length,
+    env: {
+      status: envState.status,
+      pythonPath: envState.pythonPath,
+      projectDir: envState.projectDir
+    }
+  });
+});
 app.get("/skills", (c) => {
   const skills = listSkills();
   return c.json({ skills, count: skills.length });
+});
+app.get("/env/state", (c) => c.json(readEnvState()));
+app.post("/env/setup", async (c) => {
+  let body = {};
+  try {
+    body = await c.req.json();
+  } catch {
+  }
+  const abortCtrl = new AbortController();
+  c.req.raw.signal.addEventListener("abort", () => abortCtrl.abort(), { once: true });
+  return stream(c, async (sse) => {
+    sse.onAbort(() => abortCtrl.abort());
+    const emit = (ev) => {
+      void writeSseEvent(sse, ev);
+    };
+    try {
+      await runSetup({
+        ...body.extras && body.extras.length > 0 ? { extras: body.extras } : {},
+        ...body.indexUrl ? { indexUrl: body.indexUrl } : {},
+        signal: abortCtrl.signal,
+        emit
+      });
+    } catch {
+    }
+  });
 });
 app.post("/chat", async (c) => {
   let raw2;
@@ -4144,7 +4373,7 @@ app.post("/permissions/preload", async (c) => {
   return c.json({ ok: true, loaded: valid.length });
 });
 app.post("/shutdown", (c) => {
-  setTimeout(() => process3.exit(0), 50);
+  setTimeout(() => process5.exit(0), 50);
   return c.json({ ok: true });
 });
 app.notFound((c) => c.json({ error: "not found" }, 404));
@@ -4263,37 +4492,37 @@ async function runChatLoop(args) {
 }
 (() => {
   const count = loadSkills().length;
-  process3.stderr.write(`sidecar: skills loaded (count=${count})
+  process5.stderr.write(`sidecar: skills loaded (count=${count})
 `);
 })();
 var httpServer = serve(
   { fetch: app.fetch, port: 0, hostname: "127.0.0.1" },
   (info) => {
     if (!info || typeof info === "string") {
-      process3.stderr.write("sidecar: failed to read bound port\n");
-      process3.exit(2);
+      process5.stderr.write("sidecar: failed to read bound port\n");
+      process5.exit(2);
       return;
     }
-    process3.stdout.write(`PORT=${info.port}
+    process5.stdout.write(`PORT=${info.port}
 `);
-    process3.stdout.write("READY\n");
+    process5.stdout.write("READY\n");
   }
 );
 httpServer.on("error", (err) => {
-  process3.stderr.write(`sidecar: server error: ${err.message}
+  process5.stderr.write(`sidecar: server error: ${err.message}
 `);
-  process3.exit(3);
+  process5.exit(3);
 });
 var shutdown = (sig) => {
-  process3.stderr.write(`sidecar: received ${sig}, shutting down
+  process5.stderr.write(`sidecar: received ${sig}, shutting down
 `);
-  httpServer.close(() => process3.exit(0));
-  setTimeout(() => process3.exit(1), 2e3).unref();
+  httpServer.close(() => process5.exit(0));
+  setTimeout(() => process5.exit(1), 2e3).unref();
 };
-process3.on("SIGTERM", () => shutdown("SIGTERM"));
-process3.on("SIGINT", () => shutdown("SIGINT"));
-process3.on("SIGHUP", () => shutdown("SIGHUP"));
-process3.stdin.on("end", () => shutdown("STDIN_CLOSED"));
-process3.stdin.on("close", () => shutdown("STDIN_CLOSED"));
-process3.stdin.resume();
+process5.on("SIGTERM", () => shutdown("SIGTERM"));
+process5.on("SIGINT", () => shutdown("SIGINT"));
+process5.on("SIGHUP", () => shutdown("SIGHUP"));
+process5.stdin.on("end", () => shutdown("STDIN_CLOSED"));
+process5.stdin.on("close", () => shutdown("STDIN_CLOSED"));
+process5.stdin.resume();
 //# sourceMappingURL=bioclaw-sidecar-aarch64-apple-darwin.js.map

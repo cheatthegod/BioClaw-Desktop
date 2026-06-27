@@ -19,6 +19,12 @@ release/
 **/target/
 **/Cargo.lock.bak
 
+# Vendored uv binaries (~60 MB each). Re-fetched per build via
+# `npm run vendor:uv` — the version pin lives in scripts/vendor-uv.sh.
+# (Sidecar / launcher binaries DO commit because they're tiny and we
+# want CI builds to be reproducible without a full build pipeline.)
+src-tauri/binaries/uv-*
+
 # Vite / build cache
 .vite/
 .cache/

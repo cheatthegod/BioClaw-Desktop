@@ -46,9 +46,13 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "externalBin": ["binaries/bioclaw-sidecar"],
+    "externalBin": ["binaries/bioclaw-sidecar", "binaries/uv"],
     "resources": {
-      "../skills": "skills"
+      "../skills": "skills",
+      "../bioclaw-env/pyproject.toml": "bioclaw-env/pyproject.toml",
+      "../bioclaw-env/uv.lock": "bioclaw-env/uv.lock",
+      "../bioclaw-env/.python-version": "bioclaw-env/.python-version",
+      "../bioclaw-env/README.md": "bioclaw-env/README.md"
     },
     "icon": [
       "icons/32x32.png",

@@ -117,13 +117,17 @@ impl SidecarState {
         // that via `GET /health`.
         match app.path().resource_dir() {
             Ok(res_dir) => {
+                let res_dir_str = res_dir.to_string_lossy().into_owned();
+                log::info!("sidecar: BIOCLAW_RESOURCE_DIR={}", res_dir_str);
+                cmd = cmd.env("BIOCLAW_RESOURCE_DIR", &res_dir_str);
+
                 let skills_dir = res_dir.join("skills");
                 let skills_dir_str = skills_dir.to_string_lossy().into_owned();
                 log::info!("sidecar: BIOCLAW_SKILLS_DIR={}", skills_dir_str);
                 cmd = cmd.env("BIOCLAW_SKILLS_DIR", skills_dir_str);
             }
             Err(e) => {
-                log::warn!("sidecar: could not resolve resource_dir for skills: {e}");
+                log::warn!("sidecar: could not resolve resource_dir: {e}");
             }
         }
 

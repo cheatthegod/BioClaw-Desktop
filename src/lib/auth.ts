@@ -57,9 +57,15 @@ export async function requestOtp(email: string, saasUrlOverride?: string): Promi
 }
 
 /**
- * Submit the OTP. On success the SaaS sets a session cookie via
- * Set-Cookie; we parse the cookie value out and return the opaque
- * token. The caller persists it to the OS keychain.
+ * Submit the OTP. On success the SaaS returns the session token in
+ * the JSON body — the body path is the canonical one for desktop. The
+ * SaaS ALSO sets a normal `Set-Cookie` so web users keep working
+ * unchanged, but the desktop can't read Set-Cookie from a `fetch()`
+ * response: `Set-Cookie` is a "forbidden response header name" per
+ * the Fetch spec, no browser exposes it to JS regardless of
+ * `Access-Control-Expose-Headers`. So we read body.token instead, and
+ * only fall back to the cookie parser if a future SaaS version drops
+ * the body-token shim (defensive, shouldn't fire today).
  *
  * Throws AuthError on non-2xx (wrong code, expired, allow-list reject).
  */
@@ -73,7 +79,7 @@ export async function verifyOtp(
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ email, code }),
-    // We need to read Set-Cookie ourselves; don't auto-follow.
+    credentials: 'include',
     redirect: 'manual',
   });
   if (!res.ok) {
@@ -83,6 +89,15 @@ export async function verifyOtp(
       message: detail?.['error'] ?? `Invalid code (HTTP ${res.status})`,
     } satisfies AuthError;
   }
+  const bodyJson = (await safeReadJson(res)) as
+    | { ok?: boolean; token?: string; email?: string }
+    | null;
+  if (bodyJson?.token && bodyJson.token.length > 0) {
+    return { token: bodyJson.token, email: bodyJson.email ?? email };
+  }
+  // Fallback: try the cookie parser. Will almost certainly return null
+  // in a Tauri webview, but keeps the code resilient if the SaaS ever
+  // drops the body-token field by accident.
   const setCookie =
     res.headers.get('set-cookie') ??
     (res.headers as unknown as { getSetCookie?: () => string[] }).getSetCookie?.()?.join('\n');
@@ -90,7 +105,9 @@ export async function verifyOtp(
   if (!token) {
     throw {
       status: 500,
-      message: 'Server did not return a session cookie',
+      message:
+        'Server did not return a session token. ' +
+        'Either the SaaS is out of date (missing body.token shim) or the response was tampered with.',
     } satisfies AuthError;
   }
   return { token, email };

@@ -137,7 +137,11 @@ else
   echo
   echo "==> uv sync --frozen --python $PYTHON_BIN  (base only)"
 fi
-UV_CACHE_DIR="$ENV_DIR/_uv-cache" "$UV_BIN" sync --frozen --python "$PYTHON_BIN" "${EXTRA_ARGS[@]}"
+# bash 3.2 (shipped on macOS) treats "${arr[@]}" of an empty array as
+# "unbound variable" under set -u. The `+` parameter expansion is the
+# only portable workaround that also works on bash 5.
+UV_CACHE_DIR="$ENV_DIR/_uv-cache" "$UV_BIN" sync --frozen --python "$PYTHON_BIN" \
+  ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}
 
 # --------------------------------------------------------------------
 # 3. Throw away .venv — it has absolute paths from this build host.

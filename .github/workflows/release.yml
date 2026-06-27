@@ -116,6 +116,10 @@ jobs:
       # --------------------------------------------------------------------
       - name: Vendor uv binary
         env:
+          # Pin uv so vendor-uv.sh skips its "query GitHub API for latest"
+          # branch, which hits the 60 req/hour anon rate limit on shared
+          # CI IPs (macOS runner ran into this on preview6).
+          UV_VERSION: '0.11.25'
           # All three matrix entries are single-triple now (mac dropped
           # universal in favor of aarch64-only for previews — runs on
           # Intel via Rosetta).

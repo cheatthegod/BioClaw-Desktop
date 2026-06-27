@@ -42,9 +42,9 @@ export function App() {
 
   if (error) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-zinc-50 p-8 text-center text-zinc-700">
+      <div className="flex h-screen w-screen items-center justify-center bg-bg p-8 text-center text-ink-soft">
         <div>
-          <div className="text-lg font-semibold text-red-600">启动失败</div>
+          <div className="text-lg font-semibold text-danger">启动失败</div>
           <pre className="mt-4 max-w-xl whitespace-pre-wrap text-sm">{error}</pre>
         </div>
       </div>
@@ -53,7 +53,7 @@ export function App() {
 
   if (!ready) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-zinc-50 text-sm text-zinc-500">
+      <div className="flex h-screen w-screen items-center justify-center bg-bg text-sm text-muted">
         Initializing BioClaw…
       </div>
     );
@@ -67,7 +67,7 @@ export function App() {
   }
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-zinc-100">
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-bg">
       <TitleBar />
       <main className="relative flex-1 overflow-hidden">
         {mode === 'local' ? (
@@ -84,7 +84,7 @@ export function App() {
               key={`${mode}-${remoteUrl}`}
               src={remoteUrl}
               title="BioClaw"
-              className="h-full w-full border-0 bg-white"
+              className="h-full w-full border-0 bg-surface"
               allow="clipboard-read; clipboard-write; fullscreen; camera; microphone"
             />
           </ConnectionGuard>

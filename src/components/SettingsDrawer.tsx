@@ -30,13 +30,13 @@ export function SettingsDrawer() {
   }
 
   return (
-    <div className="absolute inset-y-0 right-0 z-20 flex w-80 flex-col border-l border-zinc-200 bg-white shadow-xl">
-      <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
-        <h2 className="text-[13px] font-semibold text-zinc-800">设置</h2>
+    <div className="absolute inset-y-0 right-0 z-20 flex w-80 flex-col border-l border-line/40 bg-surface shadow-xl">
+      <div className="flex items-center justify-between border-b border-line/40 px-4 py-3">
+        <h2 className="text-[13px] font-semibold text-ink">设置</h2>
         <button
           type="button"
           onClick={toggleSettings}
-          className="text-[12px] text-zinc-500 hover:text-zinc-800"
+          className="text-[12px] text-muted hover:text-ink"
         >
           关闭
         </button>
@@ -66,7 +66,7 @@ export function SettingsDrawer() {
           <input
             value={remoteDraft}
             onChange={(e) => setRemoteDraft(e.target.value)}
-            className="w-full rounded border border-zinc-300 bg-white px-2.5 py-1.5 text-[12px] focus:border-zinc-500 focus:outline-none"
+            className="w-full rounded border border-line/60 bg-surface px-2.5 py-1.5 text-[12px] focus:border-line focus:outline-none"
             placeholder="https://chat.bioclaw.tech"
           />
         </Section>
@@ -75,17 +75,17 @@ export function SettingsDrawer() {
           <input
             value={localDraft}
             onChange={(e) => setLocalDraft(e.target.value)}
-            className="w-full rounded border border-zinc-300 bg-white px-2.5 py-1.5 text-[12px] focus:border-zinc-500 focus:outline-none"
+            className="w-full rounded border border-line/60 bg-surface px-2.5 py-1.5 text-[12px] focus:border-line focus:outline-none"
             placeholder="http://127.0.0.1:3000"
           />
         </Section>
       </div>
 
-      <div className="border-t border-zinc-200 px-4 py-3">
+      <div className="border-t border-line/40 px-4 py-3">
         <button
           type="button"
           onClick={() => void save()}
-          className="w-full rounded bg-zinc-900 px-3 py-2 text-[12px] font-semibold text-white hover:bg-zinc-800"
+          className="w-full rounded bg-ink px-3 py-2 text-[12px] font-semibold text-white hover:bg-ink"
         >
           保存
         </button>
@@ -97,7 +97,7 @@ export function SettingsDrawer() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-2">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">{title}</div>
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">{title}</div>
       {children}
     </section>
   );
@@ -108,19 +108,19 @@ function AccountRow() {
   const logout = useAuthStore((s) => s.logout);
   const busy = useAuthStore((s) => s.busy);
   if (!email) {
-    return <div className="text-[12px] text-zinc-500">未登录</div>;
+    return <div className="text-[12px] text-muted">未登录</div>;
   }
   return (
     <div className="space-y-2">
-      <div className="rounded border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-[12px] text-zinc-800">
-        <div className="text-[10px] uppercase tracking-wider text-zinc-500">已登录</div>
+      <div className="rounded border border-line/40 bg-bg px-2.5 py-2 text-[12px] text-ink">
+        <div className="text-[10px] uppercase tracking-wider text-muted">已登录</div>
         <div className="mt-0.5 truncate font-mono">{email}</div>
       </div>
       <button
         type="button"
         onClick={() => void logout()}
         disabled={busy}
-        className="w-full rounded border border-zinc-300 bg-white px-2.5 py-1.5 text-[12px] text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded border border-line/60 bg-surface px-2.5 py-1.5 text-[12px] text-ink-soft hover:bg-bg disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy ? '处理中…' : '登出'}
       </button>
@@ -149,13 +149,13 @@ function ModeOption({
       className={cn(
         'w-full rounded border px-3 py-2 text-left transition',
         active
-          ? 'border-zinc-900 bg-zinc-900 text-white'
-          : 'border-zinc-200 bg-white text-zinc-800 hover:border-zinc-400',
+          ? 'border-line-strong bg-ink text-white'
+          : 'border-line/40 bg-surface text-ink hover:border-line',
         disabled && 'cursor-not-allowed opacity-50',
       )}
     >
       <div className="text-[12px] font-semibold">{label}</div>
-      <div className={cn('mt-0.5 text-[11px]', active ? 'text-zinc-300' : 'text-zinc-500')}>{desc}</div>
+      <div className={cn('mt-0.5 text-[11px]', active ? 'text-muted-2' : 'text-muted')}>{desc}</div>
     </button>
   );
 }

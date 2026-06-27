@@ -6,10 +6,12 @@
  * On success the auth store transitions to loginStep='done' and the
  * parent (App.tsx) swaps over to the main app shell.
  *
- * Visual style mirrors the rest of the desktop UI: zinc-tinted neutral
- * background, teal primary action, subtle border on the card. We
- * deliberately keep the chrome minimal — this is the first thing the
- * user sees on every fresh install.
+ * Visual style mirrors chat.bioclaw.tech: the "Biomni Editorial Sage"
+ * palette (single sage off-white surface, charcoal hairlines, muted
+ * forest-sage accent on the primary button) and the editorial type
+ * stack (Inter body, Instrument Serif display, JetBrains Mono code).
+ * We deliberately keep the chrome minimal — this is the first thing
+ * the user sees on every fresh install.
  */
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../lib/auth-state';
@@ -19,8 +21,8 @@ export function LoginGate() {
   if (step === 'done') return null;
 
   return (
-    <div className="flex h-screen w-screen items-center justify-center bg-gradient-to-br from-zinc-50 to-teal-50/30 p-6">
-      <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-8 shadow-xl">
+    <div className="flex h-screen w-screen items-center justify-center bg-bg p-6">
+      <div className="w-full max-w-md rounded-xl border border-line/40 bg-surface p-8">
         <Header />
         {step === 'enter-email' ? <EmailStep /> : <CodeStep />}
         <Footer />
@@ -32,15 +34,15 @@ export function LoginGate() {
 function Header() {
   return (
     <div className="mb-6 text-center">
-      <h1 className="text-2xl font-semibold text-zinc-900">BioClaw Desktop</h1>
-      <p className="mt-1 text-sm text-zinc-500">Sign in with your BioClaw email to get started.</p>
+      <h1 className="font-serif text-[34px] leading-tight text-ink">BioClaw Desktop</h1>
+      <p className="mt-1 text-sm text-muted">Sign in with your BioClaw email to get started.</p>
     </div>
   );
 }
 
 function Footer() {
   return (
-    <p className="mt-6 text-center text-xs text-zinc-400">
+    <p className="mt-6 text-center text-xs text-muted-2">
       We don't store passwords — you'll get a one-time code by email.
     </p>
   );
@@ -62,7 +64,7 @@ function EmailStep() {
       className="space-y-4"
     >
       <div>
-        <label htmlFor="email" className="block text-xs font-medium uppercase tracking-wide text-zinc-600">
+        <label htmlFor="email" className="block text-xs font-medium uppercase tracking-wide text-ink-soft">
           Email
         </label>
         <input
@@ -73,7 +75,7 @@ function EmailStep() {
           required
           value={pendingEmail}
           onChange={(e) => setEmail(e.target.value)}
-          className="mt-1 block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-100"
+          className="mt-1 block w-full rounded-lg border border-line/60 bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted-2 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
           placeholder="you@university.edu"
           disabled={busy}
         />
@@ -82,7 +84,7 @@ function EmailStep() {
       <button
         type="submit"
         disabled={busy || pendingEmail.length === 0}
-        className="w-full rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
+        className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:bg-line/40"
       >
         {busy ? 'Sending…' : 'Send code'}
       </button>
@@ -115,11 +117,11 @@ function CodeStep() {
       }}
       className="space-y-4"
     >
-      <p className="text-sm text-zinc-600">
-        We sent a 6-digit code to <span className="font-medium text-zinc-900">{pendingEmail}</span>.
+      <p className="text-sm text-ink-soft">
+        We sent a 6-digit code to <span className="font-medium text-ink">{pendingEmail}</span>.
       </p>
       <div>
-        <label htmlFor="otp-code" className="block text-xs font-medium uppercase tracking-wide text-zinc-600">
+        <label htmlFor="otp-code" className="block text-xs font-medium uppercase tracking-wide text-ink-soft">
           Code
         </label>
         <input
@@ -132,7 +134,7 @@ function CodeStep() {
           required
           value={code}
           onChange={(e) => onCodeChange(e.target.value)}
-          className="mt-1 block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-center font-mono text-xl tracking-[0.4em] text-zinc-900 placeholder:text-zinc-300 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-100"
+          className="mt-1 block w-full rounded-lg border border-line/60 bg-surface px-3 py-2 text-center font-mono text-xl tracking-[0.4em] text-ink placeholder:text-muted-2 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
           placeholder="••••••"
           disabled={busy}
         />
@@ -143,14 +145,14 @@ function CodeStep() {
           type="button"
           onClick={goBack}
           disabled={busy}
-          className="flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed"
+          className="flex-1 rounded-lg border border-line/60 bg-surface px-4 py-2.5 text-sm font-medium text-ink-soft hover:bg-bg disabled:cursor-not-allowed"
         >
           Back
         </button>
         <button
           type="submit"
           disabled={busy || code.length < 4}
-          className="flex-1 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
+          className="flex-1 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:bg-line/40"
         >
           {busy ? 'Verifying…' : 'Sign in'}
         </button>
@@ -161,7 +163,7 @@ function CodeStep() {
 
 function ErrorBanner({ message }: { message: string }) {
   return (
-    <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+    <div className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
       {message}
     </div>
   );

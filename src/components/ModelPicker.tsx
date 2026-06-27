@@ -41,7 +41,7 @@ export function ModelPicker() {
       <select
         value={selectedModel}
         onChange={onChange}
-        className="appearance-none rounded-md border border-zinc-200 bg-white py-1 pl-2.5 pr-7 text-[12px] font-medium text-zinc-700 hover:border-zinc-300 focus:border-zinc-500 focus:outline-none"
+        className="appearance-none rounded-md border border-line/40 bg-surface py-1 pl-2.5 pr-7 text-[12px] font-medium text-ink-soft hover:border-line/60 focus:border-line focus:outline-none"
       >
         {MODEL_OPTIONS.map((opt) => (
           <option key={opt.id} value={opt.id}>
@@ -49,7 +49,7 @@ export function ModelPicker() {
           </option>
         ))}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-2 h-3 w-3 text-zinc-400" />
+      <ChevronDown className="pointer-events-none absolute right-2 h-3 w-3 text-muted-2" />
     </label>
   );
 }

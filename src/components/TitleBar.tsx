@@ -17,18 +17,18 @@ export function TitleBar() {
   return (
     <div
       data-tauri-drag-region
-      className="flex h-9 shrink-0 items-center justify-between border-b border-zinc-200 bg-zinc-50/95 px-2 backdrop-blur"
+      className="flex h-9 shrink-0 items-center justify-between border-b border-line/40 bg-bg/95 px-2 backdrop-blur"
     >
       <div className="flex items-center gap-2 pl-2" data-tauri-drag-region>
-        <span className="text-[12px] font-semibold tracking-tight text-zinc-700" data-tauri-drag-region>
+        <span className="text-[12px] font-semibold tracking-tight text-ink-soft" data-tauri-drag-region>
           BioClaw
         </span>
         <span
           className={cn(
             'inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]',
             mode === 'remote'
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-              : 'border-violet-200 bg-violet-50 text-violet-700',
+              ? 'border-accent/30 bg-accent-soft text-success'
+              : 'border-line/60 bg-bg text-ink-soft',
           )}
           data-tauri-drag-region
         >
@@ -72,8 +72,8 @@ function TitleBarButton({
       onClick={onClick}
       title={title}
       className={cn(
-        'flex h-6 w-7 items-center justify-center rounded text-zinc-500 transition',
-        danger ? 'hover:bg-red-500 hover:text-white' : 'hover:bg-zinc-200 hover:text-zinc-800',
+        'flex h-6 w-7 items-center justify-center rounded text-muted transition',
+        danger ? 'hover:bg-danger hover:text-white' : 'hover:bg-accent-soft hover:text-ink',
       )}
     >
       {children}

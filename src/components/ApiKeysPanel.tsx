@@ -61,7 +61,7 @@ export function ApiKeysPanel() {
   return (
     <div className="space-y-3">
       {error && (
-        <div className="rounded border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] text-red-700">
+        <div className="rounded border border-danger/30 bg-danger/10 px-2.5 py-1.5 text-[11px] text-danger">
           {error}
         </div>
       )}
@@ -129,13 +129,13 @@ function KeyRow({
   }
 
   return (
-    <div className="rounded border border-zinc-200 bg-white p-2.5">
+    <div className="rounded border border-line/40 bg-surface p-2.5">
       <div className="mb-1.5 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <span className="text-[12px] font-semibold text-zinc-800">{row.label}</span>
+          <span className="text-[12px] font-semibold text-ink">{row.label}</span>
           {stored && (
             <span
-              className="inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700"
+              className="inline-flex items-center gap-0.5 rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-medium text-success"
               title="已存入系统钥匙串"
             >
               <Check className="h-2.5 w-2.5" /> 已存
@@ -146,7 +146,7 @@ function KeyRow({
           <button
             type="button"
             onClick={onRequestDelete}
-            className="rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-red-600"
+            className="rounded p-1 text-muted-2 hover:bg-bg hover:text-danger"
             title="删除已存的密钥"
             aria-label={`delete ${row.label} key`}
           >
@@ -163,12 +163,12 @@ function KeyRow({
             placeholder={stored ? '••••••  (输入新值以覆盖)' : row.placeholder}
             autoComplete="off"
             spellCheck={false}
-            className="w-full rounded border border-zinc-300 bg-white px-2 py-1 pr-7 text-[11px] focus:border-zinc-500 focus:outline-none"
+            className="w-full rounded border border-line/60 bg-surface px-2 py-1 pr-7 text-[11px] focus:border-line focus:outline-none"
           />
           <button
             type="button"
             onClick={() => setReveal((v) => !v)}
-            className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+            className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-2 hover:bg-bg hover:text-ink-soft"
             aria-label={reveal ? 'hide value' : 'show value'}
             tabIndex={-1}
           >
@@ -182,10 +182,10 @@ function KeyRow({
           className={cn(
             'rounded px-2 py-1 text-[11px] font-semibold transition',
             !draft || saving
-              ? 'cursor-not-allowed bg-zinc-200 text-zinc-400'
+              ? 'cursor-not-allowed bg-accent-soft text-muted-2'
               : justSaved
-                ? 'bg-emerald-600 text-white'
-                : 'bg-zinc-900 text-white hover:bg-zinc-800',
+                ? 'bg-success text-white'
+                : 'bg-ink text-white hover:bg-ink',
           )}
         >
           {justSaved ? '已保存' : saving ? '...' : '保存'}
@@ -206,9 +206,9 @@ function ConfirmDeleteModal({
 }) {
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/30">
-      <div className="w-72 rounded-lg bg-white p-4 shadow-xl">
-        <h3 className="text-[13px] font-semibold text-zinc-900">删除该密钥?</h3>
-        <p className="mt-1 text-[11px] text-zinc-600">
+      <div className="w-72 rounded-lg bg-surface p-4 shadow-xl">
+        <h3 className="text-[13px] font-semibold text-ink">删除该密钥?</h3>
+        <p className="mt-1 text-[11px] text-ink-soft">
           将从系统钥匙串中永久移除 <span className="font-mono">{account}</span>，
           此操作不可撤销。
         </p>
@@ -216,14 +216,14 @@ function ConfirmDeleteModal({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded px-2.5 py-1 text-[11px] text-zinc-700 hover:bg-zinc-100"
+            className="rounded px-2.5 py-1 text-[11px] text-ink-soft hover:bg-bg"
           >
             取消
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700"
+            className="rounded bg-danger px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-danger/90"
           >
             删除
           </button>

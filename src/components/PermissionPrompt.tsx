@@ -25,13 +25,13 @@ export function PermissionPrompt() {
   const argsLine = pending.args.length > 0 ? pending.args.join(' ') : '(no arguments)';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">
-      <div className="w-full max-w-lg rounded-xl border border-zinc-200 bg-white shadow-xl">
-        <div className="border-b border-zinc-200 px-6 py-4">
-          <h2 className="text-base font-semibold text-zinc-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-6">
+      <div className="w-full max-w-lg rounded-xl border border-line bg-surface shadow-lg">
+        <div className="border-b border-line/40 px-6 py-4">
+          <h2 className="text-base font-semibold text-ink">
             Allow this skill to run a script?
           </h2>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-muted">
             The AI is asking to execute code on your machine. Review the command, then choose.
           </p>
         </div>
@@ -43,25 +43,25 @@ export function PermissionPrompt() {
           <Field label="Arguments" value={argsLine} mono />
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-zinc-200 px-6 py-4 sm:flex-row sm:justify-end">
+        <div className="flex flex-col gap-2 border-t border-line/40 px-6 py-4 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={() => void resolve('deny')}
-            className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+            className="rounded-lg border border-line/60 bg-surface px-4 py-2 text-sm font-medium text-ink-soft hover:bg-bg"
           >
             Deny
           </button>
           <button
             type="button"
             onClick={() => void resolve('allow_once')}
-            className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+            className="rounded-lg border border-line/60 bg-surface px-4 py-2 text-sm font-medium text-ink-soft hover:bg-bg"
           >
             Allow once
           </button>
           <button
             type="button"
             onClick={() => void resolve('allow')}
-            className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent/90"
           >
             Allow always
           </button>
@@ -74,11 +74,11 @@ export function PermissionPrompt() {
 function Field({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="grid grid-cols-[7rem_1fr] gap-3">
-      <div className="text-xs uppercase tracking-wide text-zinc-500">{label}</div>
+      <div className="text-xs uppercase tracking-wide text-muted">{label}</div>
       <div
         className={
           (mono ? 'font-mono text-xs ' : '') +
-          'break-all rounded-md bg-zinc-50 px-2 py-1 text-zinc-800'
+          'break-all rounded-md bg-bg px-2 py-1 text-ink'
         }
       >
         {value}

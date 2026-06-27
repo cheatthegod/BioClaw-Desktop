@@ -3,7 +3,7 @@
 //! filesystem or network should go through a Tauri plugin (so capabilities
 //! gate it) rather than a raw command here.
 
-use tauri::{AppHandle, Manager, Runtime, State};
+use tauri::{AppHandle, Runtime, State};
 
 use crate::sidecar::{SidecarState, SidecarStatus};
 
@@ -16,11 +16,14 @@ pub fn app_version() -> &'static str {
 
 /// Open a path in the host file manager (Finder / Explorer / xdg). Used by
 /// the settings drawer's "Reveal log directory" button (phase 2).
+///
+/// Note: `tauri_plugin_shell::Shell::open` was deprecated in favour of
+/// the standalone `tauri-plugin-opener` crate. Migration is on the
+/// post-v0.2 list; for now we keep the existing API and silence the
+/// deprecation warning so `cargo clippy -D warnings` still passes.
+#[allow(deprecated)]
 #[tauri::command]
-pub async fn reveal_in_finder<R: Runtime>(
-    app: AppHandle<R>,
-    path: String,
-) -> Result<(), String> {
+pub async fn reveal_in_finder<R: Runtime>(app: AppHandle<R>, path: String) -> Result<(), String> {
     use tauri_plugin_shell::ShellExt;
     app.shell()
         .open(&path, None)
@@ -30,11 +33,9 @@ pub async fn reveal_in_finder<R: Runtime>(
 /// Open an HTTPS URL in the user's default browser. The web UI uses this
 /// for any link that should NOT load inside the BioClaw chrome (e.g. the
 /// pricing page, third-party docs).
+#[allow(deprecated)]
 #[tauri::command]
-pub async fn open_external_url<R: Runtime>(
-    app: AppHandle<R>,
-    url: String,
-) -> Result<(), String> {
+pub async fn open_external_url<R: Runtime>(app: AppHandle<R>, url: String) -> Result<(), String> {
     if !url.starts_with("https://") && !url.starts_with("http://") {
         return Err("URL must be http(s)://".into());
     }
@@ -111,8 +112,6 @@ pub async fn stop_sidecar<R: Runtime>(
 }
 
 #[tauri::command]
-pub async fn sidecar_status(
-    state: State<'_, SidecarState>,
-) -> Result<SidecarStatus, String> {
+pub async fn sidecar_status(state: State<'_, SidecarState>) -> Result<SidecarStatus, String> {
     Ok(state.status().await)
 }

@@ -99,14 +99,15 @@ pub fn delete_credential(account: &str) -> Result<(), String> {
 /// source of truth.
 pub fn list_credential_keys() -> Result<Vec<String>, String> {
     let path = index_path()?;
-    let _guard = index_lock().lock().map_err(|e| format!("index lock: {e}"))?;
+    let _guard = index_lock()
+        .lock()
+        .map_err(|e| format!("index lock: {e}"))?;
     if !path.exists() {
         return Ok(vec![]);
     }
-    let raw = fs::read_to_string(&path)
-        .map_err(|e| format!("read {}: {e}", path.display()))?;
-    let parsed: BTreeSet<String> = serde_json::from_str(&raw)
-        .map_err(|e| format!("parse {}: {e}", path.display()))?;
+    let raw = fs::read_to_string(&path).map_err(|e| format!("read {}: {e}", path.display()))?;
+    let parsed: BTreeSet<String> =
+        serde_json::from_str(&raw).map_err(|e| format!("parse {}: {e}", path.display()))?;
     Ok(parsed.into_iter().collect())
 }
 
@@ -142,33 +143,33 @@ fn index_path() -> Result<PathBuf, String> {
 
 fn add_to_index(account: &str) -> Result<(), String> {
     let path = index_path()?;
-    let _guard = index_lock().lock().map_err(|e| format!("index lock: {e}"))?;
+    let _guard = index_lock()
+        .lock()
+        .map_err(|e| format!("index lock: {e}"))?;
     let mut set: BTreeSet<String> = if path.exists() {
-        let raw = fs::read_to_string(&path)
-            .map_err(|e| format!("read {}: {e}", path.display()))?;
+        let raw = fs::read_to_string(&path).map_err(|e| format!("read {}: {e}", path.display()))?;
         serde_json::from_str(&raw).unwrap_or_default()
     } else {
         BTreeSet::new()
     };
     set.insert(account.to_string());
-    let raw = serde_json::to_string_pretty(&set)
-        .map_err(|e| format!("serialise index: {e}"))?;
+    let raw = serde_json::to_string_pretty(&set).map_err(|e| format!("serialise index: {e}"))?;
     fs::write(&path, raw).map_err(|e| format!("write {}: {e}", path.display()))?;
     Ok(())
 }
 
 fn remove_from_index(account: &str) -> Result<(), String> {
     let path = index_path()?;
-    let _guard = index_lock().lock().map_err(|e| format!("index lock: {e}"))?;
+    let _guard = index_lock()
+        .lock()
+        .map_err(|e| format!("index lock: {e}"))?;
     if !path.exists() {
         return Ok(());
     }
-    let raw = fs::read_to_string(&path)
-        .map_err(|e| format!("read {}: {e}", path.display()))?;
+    let raw = fs::read_to_string(&path).map_err(|e| format!("read {}: {e}", path.display()))?;
     let mut set: BTreeSet<String> = serde_json::from_str(&raw).unwrap_or_default();
     set.remove(account);
-    let out = serde_json::to_string_pretty(&set)
-        .map_err(|e| format!("serialise index: {e}"))?;
+    let out = serde_json::to_string_pretty(&set).map_err(|e| format!("serialise index: {e}"))?;
     fs::write(&path, out).map_err(|e| format!("write {}: {e}", path.display()))?;
     Ok(())
 }

@@ -19,6 +19,11 @@ use crate::sidecar::SidecarState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // `mut` is needed under #[cfg(not(debug_assertions))] below; the
+    // dev build never executes that branch so clippy sees it as
+    // unused. Suppress the warning so `cargo clippy -D warnings`
+    // passes in both profiles.
+    #[allow(unused_mut)]
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())

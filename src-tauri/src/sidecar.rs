@@ -88,6 +88,11 @@ impl SidecarState {
         }
     }
 
+    /// Currently unused but kept for the future watchdog task — when the
+    /// sidecar exits unexpectedly we'll restart it once before falling
+    /// back to user-visible error UI. Suppressing dead-code keeps
+    /// `cargo clippy -D warnings` happy in the interim.
+    #[allow(dead_code)]
     pub async fn is_running(&self) -> bool {
         self.inner.lock().await.child.is_some()
     }
@@ -104,9 +109,9 @@ impl SidecarState {
         let shell = app.shell();
         // tauri-plugin-shell::sidecar() looks up the binary by its externalBin
         // base name, then appends the host's target triple at runtime.
-        let mut cmd = shell
-            .sidecar(SIDECAR_NAME)
-            .map_err(|e| format!("sidecar resolve failed (is {SIDECAR_NAME} in externalBin?): {e}"))?;
+        let mut cmd = shell.sidecar(SIDECAR_NAME).map_err(|e| {
+            format!("sidecar resolve failed (is {SIDECAR_NAME} in externalBin?): {e}")
+        })?;
 
         // Phase 3: hand the sidecar an absolute path to the vendored skills
         // tree shipped with the app. Tauri places `bundle.resources` entries
@@ -157,7 +162,10 @@ impl SidecarState {
                         }
                     }
                     CommandEvent::Stderr(buf) => {
-                        log::warn!("sidecar stderr: {}", String::from_utf8_lossy(&buf).trim_end());
+                        log::warn!(
+                            "sidecar stderr: {}",
+                            String::from_utf8_lossy(&buf).trim_end()
+                        );
                     }
                     CommandEvent::Error(e) => {
                         log::error!("sidecar error: {e}");
@@ -166,7 +174,11 @@ impl SidecarState {
                         }
                     }
                     CommandEvent::Terminated(payload) => {
-                        log::info!("sidecar exited code={:?} signal={:?}", payload.code, payload.signal);
+                        log::info!(
+                            "sidecar exited code={:?} signal={:?}",
+                            payload.code,
+                            payload.signal
+                        );
                         if let Some(tx) = port_tx.take() {
                             let _ = tx.send(Err(format!(
                                 "sidecar exited before announcing PORT (code={:?})",
@@ -280,10 +292,11 @@ async fn health_check(port: u16) -> bool {
         // this. The /health response is a small JSON; we only check that
         // 200 OK comes back.
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
-        let mut s = tokio::net::TcpStream::connect(("127.0.0.1", port)).await.ok()?;
-        let req = format!(
-            "GET /health HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n"
-        );
+        let mut s = tokio::net::TcpStream::connect(("127.0.0.1", port))
+            .await
+            .ok()?;
+        let req =
+            format!("GET /health HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n");
         s.write_all(req.as_bytes()).await.ok()?;
         let mut buf = Vec::with_capacity(256);
         s.read_to_end(&mut buf).await.ok()?;
@@ -310,7 +323,9 @@ async fn post_shutdown(port: u16) -> Result<(), String> {
             body.len(),
             body
         );
-        s.write_all(req.as_bytes()).await.map_err(|e| format!("write: {e}"))?;
+        s.write_all(req.as_bytes())
+            .await
+            .map_err(|e| format!("write: {e}"))?;
         let mut buf = Vec::with_capacity(128);
         let _ = s.read_to_end(&mut buf).await;
         Ok::<_, String>(())

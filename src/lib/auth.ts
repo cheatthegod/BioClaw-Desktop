@@ -89,9 +89,11 @@ export async function verifyOtp(
       message: detail?.['error'] ?? `Invalid code (HTTP ${res.status})`,
     } satisfies AuthError;
   }
-  const bodyJson = (await safeReadJson(res)) as
-    | { ok?: boolean; token?: string; email?: string }
-    | null;
+  const bodyJson = (await safeReadJson(res)) as {
+    ok?: boolean;
+    token?: string;
+    email?: string;
+  } | null;
   if (bodyJson?.token && bodyJson.token.length > 0) {
     return { token: bodyJson.token, email: bodyJson.email ?? email };
   }

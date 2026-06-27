@@ -94,6 +94,27 @@ jobs:
         working-directory: ./src-tauri
         run: cargo fmt --all -- --check
 
+      # Tauri's build.rs validates that every entry in
+      # bundle.externalBin AND bundle.resources actually exists on
+      # disk, even during `cargo clippy` / `cargo check`. We stub
+      # them out — touching zero-byte placeholders — so clippy can
+      # do its thing. Clippy only checks for existence, not size or
+      # signature; the actual binaries get vendored in the build-
+      # matrix job below for the real installer build.
+      - name: Stub externalBin + resources so build.rs check passes
+        run: |
+          mkdir -p src-tauri/binaries
+          touch src-tauri/binaries/uv-x86_64-unknown-linux-gnu
+          touch src-tauri/binaries/bioclaw-sidecar-x86_64-unknown-linux-gnu
+          touch src-tauri/binaries/bioclaw-env.zip
+          chmod +x src-tauri/binaries/uv-x86_64-unknown-linux-gnu \
+                   src-tauri/binaries/bioclaw-sidecar-x86_64-unknown-linux-gnu
+          # bundle.resources: skills/ tree — vendor it from the SaaS
+          # checkout if available; otherwise stub a placeholder so
+          # the resource walker doesn't blow up.
+          mkdir -p skills/bionemo-stub
+          : > skills/bionemo-stub/SKILL.md
+
       - name: cargo clippy
         working-directory: ./src-tauri
         run: cargo clippy --all-targets --all-features -- -D warnings

@@ -175,6 +175,15 @@ jobs:
           npm ci
           npm run build
 
+      - name: Vendor uv binary
+        env:
+          BIOCLAW_UV_TARGETS: >-
+            ${{ matrix.platform.os == 'macos-14'
+                  && 'x86_64-apple-darwin aarch64-apple-darwin'
+                  || matrix.platform.rust-target }}
+        shell: bash
+        run: bash scripts/vendor-uv.sh
+
       - name: Build Windows sidecar launcher.exe
         if: matrix.platform.os == 'windows-latest'
         working-directory: sidecar/launcher-win

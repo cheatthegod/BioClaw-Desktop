@@ -104,6 +104,22 @@ jobs:
           npm run build
 
       # --------------------------------------------------------------------
+      # Vendor uv per platform — Astral's prebuilt binary. tauri-bundler
+      # picks it up via the externalBin entry in tauri.conf.json.
+      # --------------------------------------------------------------------
+      - name: Vendor uv binary
+        env:
+          # macos-universal needs BOTH apple-darwin triples because Tauri
+          # produces a universal bundle by lipo'ing two single-arch builds.
+          # Linux + Windows are single-triple each.
+          BIOCLAW_UV_TARGETS: >-
+            ${{ matrix.platform.os == 'macos-14'
+                  && 'x86_64-apple-darwin aarch64-apple-darwin'
+                  || matrix.platform.rust-target }}
+        shell: bash
+        run: bash scripts/vendor-uv.sh
+
+      # --------------------------------------------------------------------
       # Windows-only: build the tiny native launcher.exe that locates
       # node.exe and execs the sidecar JS bundle. Without this, Windows
       # users would download an installer whose sidecar is just a

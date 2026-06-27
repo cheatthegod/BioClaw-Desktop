@@ -65,9 +65,19 @@ export function App() {
 
   // Email-login gate. Once the user signs in (or we've hydrated a token
   // from the OS keychain), loginStep flips to 'done' and we render the
-  // normal shell.
+  // normal shell. The custom TitleBar wraps LoginGate too — the
+  // tauri.conf.json sets `decorations: false`, so without our own
+  // titlebar the user has no minimise / close buttons on Windows
+  // (macOS draws its native traffic-light buttons regardless).
   if (loginStep !== 'done') {
-    return <LoginGate />;
+    return (
+      <div className="flex h-screen w-screen flex-col overflow-hidden bg-bg">
+        <TitleBar />
+        <main className="relative flex-1 overflow-hidden">
+          <LoginGate />
+        </main>
+      </div>
+    );
   }
 
   return <AuthedShell mode={mode} remoteUrl={remoteUrl} isSettingsOpen={isSettingsOpen} />;

@@ -182,6 +182,16 @@ jobs:
         shell: bash
         run: bash scripts/vendor-uv.sh
 
+      - name: Vendor skills catalog
+        shell: bash
+        run: bash scripts/vendor-skills.sh
+
+      - name: Vendor bioclaw-env zip (Python + uv-cache)
+        env:
+          BIOCLAW_ENV_TARGET: ${{ matrix.platform.rust-target }}
+        shell: bash
+        run: bash scripts/vendor-env.sh
+
       - name: Build Windows sidecar launcher.exe
         if: matrix.platform.os == 'windows-latest'
         working-directory: sidecar/launcher-win

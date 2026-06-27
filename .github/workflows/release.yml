@@ -123,6 +123,25 @@ jobs:
         run: bash scripts/vendor-uv.sh
 
       # --------------------------------------------------------------------
+      # Vendor the bundled Python env zip — runs `uv python install
+      # --install-dir _base` + `uv sync --frozen` against the bundled
+      # `_uv-cache/`, then zips it as `binaries/bioclaw-env.zip`
+      # (alongside a triple-suffixed copy). Tauri ships the zip as a
+      # bundle resource; the sidecar extracts + runs `uv sync --offline`
+      # on first launch for the OmicOS-style no-network unpack flow.
+      # ~5-8 min per platform on a clean cache; takes ~250 MB of installer
+      # space but eliminates the SetupWizard from the user experience.
+      # --------------------------------------------------------------------
+      - name: Vendor skills catalog
+        shell: bash
+        run: bash scripts/vendor-skills.sh
+      - name: Vendor bioclaw-env zip (Python + uv-cache)
+        env:
+          BIOCLAW_ENV_TARGET: ${{ matrix.platform.rust-target }}
+        shell: bash
+        run: bash scripts/vendor-env.sh
+
+      # --------------------------------------------------------------------
       # Windows-only: build the tiny native launcher.exe that locates
       # node.exe and execs the sidecar JS bundle. Without this, Windows
       # users would download an installer whose sidecar is just a

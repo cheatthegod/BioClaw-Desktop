@@ -1,0 +1,146 @@
+[project]
+name = "bioclaw-env"
+version = "0.1.0"
+description = "Bundled sandbox Python for BioClaw Desktop's skill runner."
+readme = "README.md"
+requires-python = "==3.11.*"
+license = "MIT"
+authors = [{ name = "BioClaw" }]
+
+# ─── Top-level deps ────────────────────────────────────────────────────────
+#
+# Keep this list small and CURATED. Transitive deps come along
+# automatically and are pinned by uv.lock. Any package added here means
+# (a) every installer gets it whether the user runs that skill or not,
+# (b) it has to wheel-resolve cleanly on linux-x64, mac-x64, mac-arm64,
+#     and windows-x64. Tied to wheel availability — `uv lock` will fail
+#     fast if a dep has no win wheel + no buildable sdist.
+#
+# Anything heavier (scanpy, pyrosetta, gpu-torch, ...) lives in
+# `[project.optional-dependencies]` so a plain `uv sync` produces a
+# working base env on every platform without surprises.
+#
+dependencies = [
+  # Web client — every "fetch a record from an HTTP API" skill leans on
+  # this (Uniprot, AlphaFold-DB, PubMed E-utilities, RCSB). Stdlib
+  # `urllib` is the actual fallback in the offline skills we ship today,
+  # but `requests` shows up in enough community skills (and in any
+  # Python the LLM writes ad-hoc) that having it base means fewer
+  # "ImportError: requests" moments.
+  "requests",
+
+  # NCBI / Entrez client — the backbone of every literature / sequence
+  # lookup skill. Pure-Python, BSD-licensed, ships universal wheels.
+  "biopython",
+
+  # YAML config readers — many community skills ship `params.yaml` or
+  # `config.yaml`. Pure-Python wheels everywhere.
+  "pyyaml",
+
+  # Notebook surface. We persist conversations as notebooks (phase-5)
+  # and `ipykernel` lets a user attach Jupyter Lab to this env if they
+  # want to drop down into a REPL on the same kernel the agent uses.
+  "ipykernel",
+  "nbformat",
+
+  # Plot endpoints. Plotly outputs portable JSON; the agent can produce
+  # interactive figures the desktop can render inline without dragging
+  # in matplotlib's font/backend stack for simple cases.
+  "plotly",
+
+  # Office IO — `bioclaw write_docx`, `bioclaw write_xlsx`, etc. share
+  # this. Same picks as OmicOS — all MIT/BSD, all pure-Python wheels.
+  "python-docx",   # MIT  — Word read/write/edit
+  "openpyxl",      # MIT  — Excel read/write with formulas + formatting
+  "xlsxwriter",    # MIT  — Excel write with charts + conditional fmt
+  "python-pptx",   # MIT  — PowerPoint read/write/edit
+  "pypdf",         # BSD  — PDF read, merge, split, form-fill
+  "pdfplumber",    # MIT  — PDF text + table extraction with layout
+  "reportlab",     # BSD  — PDF generation from scratch
+]
+
+# Opt-in extras. Users pick at `bioclaw env setup --extra scientific`
+# (or via the SetupWizard's checkbox). Kept out of base because each
+# either (a) adds substantial size, (b) has cross-platform wheel
+# instability, or (c) is GPU-specific.
+[project.optional-dependencies]
+
+# Standard scientific stack — numpy / pandas / scipy / matplotlib.
+# Wheel-stable on all four target platforms; adds ~300 MB to the venv.
+scientific = [
+  "numpy",
+  "pandas",
+  "scipy",
+  "matplotlib",
+]
+
+# Single-cell omics — scanpy + anndata. Heavy import tree; only useful
+# for the scanpy-* and complexa-* skill families.
+single-cell = [
+  "scanpy",
+  "anndata",
+]
+
+# Local LLM serving / inference — used by skills that want a CPU-only
+# sentence-transformers embedding without hitting a remote endpoint.
+local-llm = [
+  "sentence-transformers",
+]
+
+# Phylogenetics — phykit, dendropy. Used by the phylogenomics skill
+# family if/when we port it from OmicOS.
+phylo = [
+  "phykit",
+  "dendropy",
+]
+
+# Opt-in GPU stack. `uv sync --extra gpu` adds torch from the CUDA wheel
+# index (see [tool.uv.sources] + [[tool.uv.index]] below). Excluded
+# from base because the CUDA torch wheel is huge (2 GB+) and Windows
+# WSL / pure-Linux users need different CUDA SKUs.
+gpu = [
+  "torch",
+]
+
+[tool.uv]
+# Project mode — uv manages the venv from pyproject.toml + uv.lock.
+managed = true
+
+# Old-glibc safety net. Constraints capped to versions whose cp311
+# Linux wheels still target manylinux_2_17 (or older / abi3-cp37). This
+# protects users on CentOS 7 / Sherlock-style HPC login nodes whose
+# glibc < 2.28 — without these caps, uv resolves to the very latest
+# releases that only ship manylinux_2_28 wheels and install fails.
+#
+# Sourced from the OmicOS env's hard-won list (they ran into the same
+# bugs first); revisit when CentOS 7 EOLs out of their HPC fleets.
+constraint-dependencies = [
+  "numpy<2.3",
+  "scipy<1.17",
+  "pandas<2.4",
+  "scikit-learn<1.8",
+  "scikit-image<0.26",
+  "matplotlib<3.11",
+  "contourpy<1.4",
+  "pillow<13",
+  "statsmodels<0.15",
+  "h5py<3.15",
+  "pyarrow<21",
+  "torch<2.7",
+  # llvmlite 0.46+ dropped macosx_x86_64 wheels; pin numba to 0.62 era
+  # so Intel-mac sdist build doesn't try to compile LLVM.
+  "numba<0.63",
+  "llvmlite<0.46",
+  "igraph<0.12",
+]
+
+# torch comes from PyTorch's CUDA wheel index, not PyPI. `explicit = true`
+# means only packages that opt-in via [tool.uv.sources] use this index,
+# so we don't accidentally pull anything else through it.
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu124", marker = "sys_platform != 'darwin'" }]

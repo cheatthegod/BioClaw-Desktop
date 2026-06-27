@@ -38,8 +38,19 @@ DEST_DIR="$DESKTOP_ROOT/src-tauri/binaries"
 UV_PYTHON_VERSION="${UV_PYTHON_VERSION:-3.11}"
 
 # Detect target triple — same default behaviour as vendor-uv.sh.
+#
+# Special-case: `universal-apple-darwin` is a Rust lipo concept, not a
+# real Python platform. uv has no "universal" Python interpreter, so we
+# bundle aarch64-apple-darwin (which runs natively on Apple Silicon and
+# under Rosetta 2 on Intel Macs). Newer fix would build BOTH and ship
+# separate zips per arch, but that requires a matrix split; the
+# Rosetta path is fine for preview builds.
 if [[ -n "${BIOCLAW_ENV_TARGET:-}" ]]; then
   TARGET="$BIOCLAW_ENV_TARGET"
+  if [[ "$TARGET" == "universal-apple-darwin" ]]; then
+    echo "vendor-env.sh: universal-apple-darwin -> aarch64-apple-darwin (Rosetta-compatible)" >&2
+    TARGET="aarch64-apple-darwin"
+  fi
 else
   if command -v rustc >/dev/null 2>&1; then
     TARGET="$(rustc -vV | awk -F': ' '/host:/ {print $2}')"
@@ -155,14 +166,34 @@ ALIAS="$DEST_DIR/bioclaw-env.zip"
 echo
 echo "==> packaging zip"
 rm -f "$OUT" "$ALIAS"
-( cd "$ENV_DIR" \
-  && zip -qr "$OUT" \
-        _base \
-        _uv-cache \
-        pyproject.toml \
-        uv.lock \
-        .python-version \
-        README.md \
+# Pick the archiver — `zip` everywhere except Windows runners, where
+# Git Bash ships without it. `7z` is pre-installed on windows-latest
+# GitHub runners and produces an identical zip. Verified to work on
+# both with the same internal layout (paths stored forward-slash).
+(
+  cd "$ENV_DIR"
+  if command -v zip >/dev/null 2>&1; then
+    zip -qr "$OUT" \
+      _base \
+      _uv-cache \
+      pyproject.toml \
+      uv.lock \
+      .python-version \
+      README.md
+  elif command -v 7z >/dev/null 2>&1; then
+    # `-bso0 -bsp0` quiets the progress lines so the CI log isn't 4 MB
+    # of "Compressing ... 1%" output. `-tzip` selects the zip format.
+    7z a -tzip -bso0 -bsp0 "$OUT" \
+      _base \
+      _uv-cache \
+      pyproject.toml \
+      uv.lock \
+      .python-version \
+      README.md
+  else
+    echo "vendor-env.sh: neither zip nor 7z is on PATH" >&2
+    exit 1
+  fi
 )
 cp "$OUT" "$ALIAS"
 

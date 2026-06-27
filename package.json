@@ -1,6 +1,6 @@
 {
   "name": "bioclaw-desktop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "BioClaw Desktop — AI-powered biomedical research agent. Tauri 2 + React 19 + Vite.",
@@ -22,7 +22,8 @@
     "tauri:dev": "tauri dev",
     "vendor:skills": "bash scripts/vendor-skills.sh",
     "vendor:uv": "bash scripts/vendor-uv.sh",
-    "vendor:all": "npm run vendor:skills && npm run vendor:uv",
+    "vendor:env": "bash scripts/vendor-env.sh",
+    "vendor:all": "npm run vendor:skills && npm run vendor:uv && npm run vendor:env",
     "tauri:build": "npm run vendor:all && tauri build",
     "tauri:build:mac": "npm run vendor:all && tauri build --target universal-apple-darwin",
     "tauri:build:win": "npm run vendor:all && tauri build --target x86_64-pc-windows-msvc",

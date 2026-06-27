@@ -2972,9 +2972,11 @@ function openAiBody(req) {
     stream: true,
     stream_options: { include_usage: true }
   };
-  if (req.model.params?.temperature !== void 0) body["temperature"] = req.model.params.temperature;
+  if (req.model.params?.temperature !== void 0)
+    body["temperature"] = req.model.params.temperature;
   if (req.model.params?.topP !== void 0) body["top_p"] = req.model.params.topP;
-  if (req.model.params?.maxOutputTokens !== void 0) body["max_tokens"] = req.model.params.maxOutputTokens;
+  if (req.model.params?.maxOutputTokens !== void 0)
+    body["max_tokens"] = req.model.params.maxOutputTokens;
   if (req.tools.length > 0) {
     body["tools"] = req.tools.map((t) => ({
       type: "function",
@@ -3025,7 +3027,8 @@ function anthropicBody(req) {
     max_tokens: req.model.params?.maxOutputTokens ?? 4096
   };
   if (systemText) body["system"] = systemText;
-  if (req.model.params?.temperature !== void 0) body["temperature"] = req.model.params.temperature;
+  if (req.model.params?.temperature !== void 0)
+    body["temperature"] = req.model.params.temperature;
   if (req.model.params?.topP !== void 0) body["top_p"] = req.model.params.topP;
   if (req.tools.length > 0) {
     body["tools"] = req.tools.map((t) => ({
@@ -3258,7 +3261,10 @@ var BioClawProxyProvider = class {
   id = "bioclaw-proxy";
   async *streamMessages(req) {
     const explicit = req.model.endpoint;
-    const base = (explicit && explicit.length > 0 ? explicit : DEFAULT_SAAS_BASE_URL).replace(/\/+$/, "");
+    const base = (explicit && explicit.length > 0 ? explicit : DEFAULT_SAAS_BASE_URL).replace(
+      /\/+$/,
+      ""
+    );
     const patched = {
       ...req,
       model: {
@@ -3994,12 +4000,18 @@ function bundledEnvSourceDir() {
   const r = resourceDir();
   return r ? path3.join(r, "bioclaw-env") : null;
 }
+function bundledEnvZip() {
+  const r = resourceDir();
+  if (!r) return null;
+  const p = path3.join(r, "bioclaw-env.zip");
+  return p;
+}
 function bundledUvBinary() {
   return process3.platform === "win32" ? "uv.exe" : "uv";
 }
 
 // src/env/state.ts
-function readEnvState() {
+function readDiskState() {
   const projectDir = defaultProjectDir();
   const bundledSourceDir = bundledEnvSourceDir();
   const pyproject = path4.join(projectDir, "pyproject.toml");
@@ -4008,17 +4020,58 @@ function readEnvState() {
   const projectInitialized = fs2.existsSync(pyproject) && fs2.existsSync(lock) && fs2.existsSync(pyVersion);
   const py = venvPython(projectDir);
   const venvOk = fs2.existsSync(py);
+  return {
+    projectDir,
+    bundledSourceDir,
+    projectInitialized,
+    pythonPath: venvOk ? py : null,
+    venvOk
+  };
+}
+var currentInstall = null;
+function beginInstall(initialPhase = "Preparing local Python kernel") {
+  currentInstall = { phase: initialPhase, lastError: null, doneAt: null };
+}
+function setInstallPhase(phase) {
+  if (currentInstall) currentInstall.phase = phase;
+}
+function failInstall(message) {
+  if (currentInstall) {
+    currentInstall.lastError = message;
+    currentInstall.doneAt = Date.now();
+  }
+}
+function completeInstall() {
+  if (currentInstall) currentInstall.doneAt = Date.now();
+}
+function clearInstall() {
+  currentInstall = null;
+}
+function isInstalling() {
+  return currentInstall !== null && currentInstall.doneAt === null;
+}
+function readEnvState() {
+  const disk = readDiskState();
   let status;
-  if (!projectInitialized && !venvOk) status = "needs-setup";
-  else if (venvOk) status = "ready";
-  else if (projectInitialized && !venvOk) status = "needs-setup";
-  else status = "unknown";
+  if (isInstalling()) {
+    status = "installing";
+  } else if (disk.venvOk) {
+    status = "ready";
+  } else if (!disk.projectInitialized && !disk.venvOk) {
+    status = "needs-setup";
+  } else if (disk.projectInitialized && !disk.venvOk) {
+    status = "needs-setup";
+  } else {
+    status = "unknown";
+  }
   return {
     status,
-    projectDir,
-    pythonPath: venvOk ? py : null,
-    projectInitialized,
-    bundledSourceDir
+    projectDir: disk.projectDir,
+    pythonPath: disk.pythonPath,
+    projectInitialized: disk.projectInitialized,
+    bundledSourceDir: disk.bundledSourceDir,
+    ...currentInstall?.phase ? { installPhase: currentInstall.phase } : {},
+    ...currentInstall?.lastError ? { lastError: currentInstall.lastError } : {}
   };
 }
 
@@ -4029,31 +4082,120 @@ import path5 from "node:path";
 import process4 from "node:process";
 async function runSetup(opts) {
   const projectDir = defaultProjectDir();
+  const zip = bundledEnvZip();
   const bundledSrc = bundledEnvSourceDir();
-  if (!bundledSrc) {
-    opts.emit({ type: "error", message: "No bundled env source (BIOCLAW_RESOURCE_DIR is unset)." });
-    throw new Error("no bundled env source");
+  const wantOnline = (opts.extras?.length ?? 0) > 0;
+  if (!wantOnline && zip && fs3.existsSync(zip)) {
+    return runOfflineSetup({ zip, projectDir, opts });
   }
+  if (bundledSrc) {
+    return runOnlineSetup({ bundledSrc, projectDir, opts });
+  }
+  opts.emit({
+    type: "error",
+    message: "No bundled env: BIOCLAW_RESOURCE_DIR is unset AND no bioclaw-env.zip on disk."
+  });
+  throw new Error("no bundled env source");
+}
+async function runOfflineSetup(args) {
+  const { zip, projectDir, opts } = args;
   try {
-    opts.emit({ type: "phase", label: "Initialising project files" });
-    await initProjectDir(bundledSrc, projectDir);
-    opts.emit({ type: "phase", label: "Installing Python 3.11 (uv-managed)" });
-    await runUv(["python", "install", "3.11"], projectDir, opts);
-    const args = ["sync", "--frozen"];
-    for (const e of opts.extras ?? []) {
-      args.push("--extra", e);
+    opts.emit({ type: "phase", label: "Unpacking local Python kernel" });
+    await extractZip(zip, projectDir, opts.signal);
+    const pythonBin = locateBundledPython(projectDir);
+    if (!pythonBin) {
+      throw new Error(`Bundled python not found under ${projectDir}/_base`);
     }
-    opts.emit({
-      type: "phase",
-      label: opts.extras && opts.extras.length > 0 ? `Resolving + installing base + ${opts.extras.join(", ")} (this is the slow first-run step)` : "Resolving + installing base packages (this is the slow first-run step)"
-    });
-    await runUv(args, projectDir, opts);
+    opts.emit({ type: "phase", label: "Finalising venv (offline, no network)" });
+    await runUvOffline(
+      ["sync", "--frozen", "--offline", "--python", pythonBin],
+      projectDir,
+      opts
+    );
     opts.emit({ type: "done" });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     opts.emit({ type: "error", message: msg });
     throw err;
   }
+}
+async function runOnlineSetup(args) {
+  const { bundledSrc, projectDir, opts } = args;
+  try {
+    opts.emit({ type: "phase", label: "Initialising project files" });
+    await initProjectDir(bundledSrc, projectDir);
+    opts.emit({ type: "phase", label: "Installing Python 3.11 (uv-managed)" });
+    await runUv(["python", "install", "3.11"], projectDir, opts);
+    const syncArgs = ["sync", "--frozen"];
+    for (const e of opts.extras ?? []) {
+      syncArgs.push("--extra", e);
+    }
+    opts.emit({
+      type: "phase",
+      label: opts.extras && opts.extras.length > 0 ? `Resolving + installing base + ${opts.extras.join(", ")} (downloading wheels)` : "Resolving + installing base packages (downloading wheels)"
+    });
+    await runUv(syncArgs, projectDir, opts);
+    opts.emit({ type: "done" });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    opts.emit({ type: "error", message: msg });
+    throw err;
+  }
+}
+function locateBundledPython(projectDir) {
+  const baseDir = path5.join(projectDir, "_base");
+  if (!fs3.existsSync(baseDir)) return null;
+  let entries;
+  try {
+    entries = fs3.readdirSync(baseDir);
+  } catch {
+    return null;
+  }
+  for (const e of entries) {
+    const full = path5.join(baseDir, e);
+    if (!fs3.statSync(full).isDirectory()) continue;
+    const posix = path5.join(full, "bin", "python3");
+    if (fs3.existsSync(posix)) return posix;
+    const posix2 = path5.join(full, "bin", "python");
+    if (fs3.existsSync(posix2)) return posix2;
+    const win = path5.join(full, "python.exe");
+    if (fs3.existsSync(win)) return win;
+  }
+  return null;
+}
+async function extractZip(zipPath, destDir, signal) {
+  await fs3.promises.mkdir(destDir, { recursive: true });
+  return new Promise((resolve, reject) => {
+    const cmd = process4.platform === "win32" ? "tar" : "unzip";
+    const args = process4.platform === "win32" ? ["-xf", zipPath, "-C", destDir] : ["-q", "-o", zipPath, "-d", destDir];
+    const child = spawn2(cmd, args, { stdio: ["ignore", "pipe", "pipe"] });
+    const onAbort = () => {
+      child.kill("SIGTERM");
+      setTimeout(() => {
+        if (child.exitCode === null) child.kill("SIGKILL");
+      }, 1500).unref();
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+    let stderr = "";
+    child.stderr.setEncoding("utf-8");
+    child.stderr.on("data", (chunk) => stderr += chunk);
+    child.on("error", (err) => {
+      signal.removeEventListener("abort", onAbort);
+      reject(new Error(`failed to spawn ${cmd}: ${err.message}`));
+    });
+    child.on("close", (code) => {
+      signal.removeEventListener("abort", onAbort);
+      if (code === 0) resolve();
+      else reject(new Error(`${cmd} exited ${code}: ${stderr.slice(0, 200)}`));
+    });
+  });
+}
+function runUvOffline(args, projectDir, opts) {
+  const extraEnv = {
+    UV_CACHE_DIR: path5.join(projectDir, "_uv-cache"),
+    UV_PYTHON_INSTALL_DIR: path5.join(projectDir, "_base")
+  };
+  return runUv(args, projectDir, opts, extraEnv);
 }
 async function initProjectDir(bundledSrc, projectDir) {
   await fs3.promises.mkdir(projectDir, { recursive: true });
@@ -4074,7 +4216,7 @@ async function initProjectDir(bundledSrc, projectDir) {
     }
   }
 }
-function runUv(args, projectDir, opts) {
+function runUv(args, projectDir, opts, extraEnv = {}) {
   return new Promise((resolve, reject) => {
     const uv = resolveUvPath();
     const env = {
@@ -4086,7 +4228,8 @@ function runUv(args, projectDir, opts) {
       ...opts.indexUrl ? { UV_INDEX_URL: opts.indexUrl } : {},
       // Force colour off so the streamed log lines don't contain
       // ANSI escape codes (the wizard UI renders them as garbage).
-      NO_COLOR: "1"
+      NO_COLOR: "1",
+      ...extraEnv
     };
     const child = spawn2(uv, args, {
       cwd: projectDir,
@@ -4163,6 +4306,7 @@ function resolveUvPath() {
 }
 
 // src/main.ts
+import fs4 from "node:fs";
 import { randomUUID } from "node:crypto";
 var SIDECAR_VERSION = "0.2.0";
 var CHAT_STEP_LIMIT = 8;
@@ -4494,6 +4638,42 @@ async function runChatLoop(args) {
   const count = loadSkills().length;
   process5.stderr.write(`sidecar: skills loaded (count=${count})
 `);
+})();
+(() => {
+  const disk = readDiskState();
+  if (disk.venvOk) {
+    process5.stderr.write("sidecar: env already ready, skipping auto-install\n");
+    return;
+  }
+  const zip = bundledEnvZip();
+  if (!zip || !fs4.existsSync(zip)) {
+    process5.stderr.write(
+      "sidecar: no bundled env zip; user will need to trigger install via SetupWizard\n"
+    );
+    return;
+  }
+  process5.stderr.write(`sidecar: auto-installing env from ${zip}
+`);
+  beginInstall("Unpacking local Python kernel");
+  const abortCtrl = new AbortController();
+  process5.on("SIGTERM", () => abortCtrl.abort());
+  process5.on("SIGINT", () => abortCtrl.abort());
+  runSetup({
+    signal: abortCtrl.signal,
+    emit: (ev) => {
+      if (ev.type === "phase") setInstallPhase(ev.label);
+      if (ev.type === "error") failInstall(ev.message);
+    }
+  }).then(() => {
+    completeInstall();
+    setTimeout(() => clearInstall(), 1500).unref();
+    process5.stderr.write("sidecar: auto-install complete\n");
+  }).catch((err) => {
+    const msg = err instanceof Error ? err.message : String(err);
+    failInstall(msg);
+    process5.stderr.write(`sidecar: auto-install failed: ${msg}
+`);
+  });
 })();
 var httpServer = serve(
   { fetch: app.fetch, port: 0, hostname: "127.0.0.1" },

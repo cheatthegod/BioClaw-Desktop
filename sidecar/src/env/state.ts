@@ -1,38 +1,56 @@
-// Env state detection. Used by:
-//   * GET /health  — surfaces { needsSetup: bool, projectDir, pythonPath }
-//   * GET /env/state — explicit query from the SetupWizard
-//   * the `run_skill_script` tool — picks which interpreter to invoke
-//     (bundled venv first, then user-selected, then host python3 as
-//     a last-resort fallback so existing-Phase-4 behavior still
-//     works on machines where the user hasn't run setup yet).
+// Env state — single source of truth for the bundled-Python lifecycle.
+//
+// Three "kinds" of state coexist:
+//   1. Disk facts (synchronous) — does the project dir exist, is the
+//      venv populated, was the bundle source extracted? Read via
+//      `readDiskState()`.
+//   2. In-flight install — the auto-setup task that fires on sidecar
+//      start when a bundled zip exists. Held in module-level mutable
+//      state (`currentInstall`) so /env/state reflects progress
+//      without a second IPC mechanism.
+//   3. Composite — `readEnvState()` merges the two: if an install is
+//      in progress we report `status: 'installing'` regardless of
+//      what's on disk, so the frontend renders the inline progress
+//      banner instead of pretending the env is ready.
+//
+// Consumers:
+//   * GET /health         — surfaces `env.status` for boot decisions.
+//   * GET /env/state      — full state for the frontend banner.
+//   * run_skill_script    — uses `preferredInterpreter()` to pick the
+//                           venv python (falls back to host python3).
 
 import fs from 'node:fs';
 import path from 'node:path';
+
 import { defaultProjectDir, venvPython, bundledEnvSourceDir } from './paths.js';
 
-export type EnvStatus = 'unknown' | 'needs-setup' | 'ready' | 'broken';
+export type EnvStatus = 'unknown' | 'needs-setup' | 'installing' | 'ready' | 'broken';
 
 export interface EnvState {
-  /** Coarse state for the wizard's decision tree. */
   readonly status: EnvStatus;
-  /** Resolved project dir (whether it exists yet or not). */
   readonly projectDir: string;
-  /** Path to the venv interpreter, OR null when no venv exists. */
   readonly pythonPath: string | null;
-  /** Has the bundled `bioclaw-env/` source been copied into projectDir yet? */
   readonly projectInitialized: boolean;
-  /** Path of the bundled source (read-only). */
   readonly bundledSourceDir: string | null;
+  /** Set while status === 'installing'. Latest phase label from the installer. */
+  readonly installPhase?: string;
+  /** Set if the last install attempt failed; cleared on retry. */
+  readonly lastError?: string;
 }
 
-/** Synchronous probe — fast, no shell exec. */
-export function readEnvState(): EnvState {
+interface DiskFacts {
+  readonly projectDir: string;
+  readonly bundledSourceDir: string | null;
+  readonly projectInitialized: boolean;
+  readonly pythonPath: string | null;
+  readonly venvOk: boolean;
+}
+
+/** Synchronous probe of disk-side facts only. */
+export function readDiskState(): DiskFacts {
   const projectDir = defaultProjectDir();
   const bundledSourceDir = bundledEnvSourceDir();
 
-  // The wizard treats the project as "initialized" once we've copied
-  // pyproject.toml + uv.lock + .python-version from the bundle. Those
-  // three are the contract uv reads from.
   const pyproject = path.join(projectDir, 'pyproject.toml');
   const lock = path.join(projectDir, 'uv.lock');
   const pyVersion = path.join(projectDir, '.python-version');
@@ -42,26 +60,80 @@ export function readEnvState(): EnvState {
   const py = venvPython(projectDir);
   const venvOk = fs.existsSync(py);
 
-  let status: EnvStatus;
-  if (!projectInitialized && !venvOk) status = 'needs-setup';
-  else if (venvOk) status = 'ready';
-  else if (projectInitialized && !venvOk) status = 'needs-setup';
-  else status = 'unknown';
-
   return {
-    status,
     projectDir,
-    pythonPath: venvOk ? py : null,
-    projectInitialized,
     bundledSourceDir,
+    projectInitialized,
+    pythonPath: venvOk ? py : null,
+    venvOk,
   };
 }
 
-/** Pick the interpreter to use for `run_skill_script`. Returns null
- *  when nothing is available — the runner falls back to `python3` on
- *  PATH in that case (Phase-4 behavior). */
+// ---- in-flight install bookkeeping ---------------------------------
+
+interface CurrentInstall {
+  phase: string;
+  lastError: string | null;
+  doneAt: number | null;
+}
+let currentInstall: CurrentInstall | null = null;
+
+export function beginInstall(initialPhase = 'Preparing local Python kernel'): void {
+  currentInstall = { phase: initialPhase, lastError: null, doneAt: null };
+}
+export function setInstallPhase(phase: string): void {
+  if (currentInstall) currentInstall.phase = phase;
+}
+export function failInstall(message: string): void {
+  if (currentInstall) {
+    currentInstall.lastError = message;
+    currentInstall.doneAt = Date.now();
+  }
+}
+export function completeInstall(): void {
+  if (currentInstall) currentInstall.doneAt = Date.now();
+}
+/** Drop the install bookkeeping. Called after a clean success — the
+ *  composite read then exposes status: 'ready' purely from disk. */
+export function clearInstall(): void {
+  currentInstall = null;
+}
+export function isInstalling(): boolean {
+  return currentInstall !== null && currentInstall.doneAt === null;
+}
+
+// ---- composite read ------------------------------------------------
+
+/** What the frontend sees. Merges disk facts with the in-flight install. */
+export function readEnvState(): EnvState {
+  const disk = readDiskState();
+
+  let status: EnvStatus;
+  if (isInstalling()) {
+    status = 'installing';
+  } else if (disk.venvOk) {
+    status = 'ready';
+  } else if (!disk.projectInitialized && !disk.venvOk) {
+    status = 'needs-setup';
+  } else if (disk.projectInitialized && !disk.venvOk) {
+    status = 'needs-setup';
+  } else {
+    status = 'unknown';
+  }
+
+  return {
+    status,
+    projectDir: disk.projectDir,
+    pythonPath: disk.pythonPath,
+    projectInitialized: disk.projectInitialized,
+    bundledSourceDir: disk.bundledSourceDir,
+    ...(currentInstall?.phase ? { installPhase: currentInstall.phase } : {}),
+    ...(currentInstall?.lastError ? { lastError: currentInstall.lastError } : {}),
+  };
+}
+
+/** Pick the interpreter for `run_skill_script`. Null = fall back to PATH. */
 export function preferredInterpreter(): string | null {
-  // Future: also honour BIOCLAW_KERNEL_PYTHON for user-selected envs.
   const state = readEnvState();
   if (state.status === 'ready' && state.pythonPath) return state.pythonPath;
   return null;

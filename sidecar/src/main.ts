@@ -50,8 +50,19 @@ import {
   resolvePendingPermission,
   type PermissionEvent,
 } from './skills/scriptRunner.js';
-import { readEnvState } from './env/state.js';
+import {
+  readEnvState,
+  beginInstall,
+  setInstallPhase,
+  completeInstall,
+  clearInstall,
+  failInstall,
+  isInstalling,
+  readDiskState,
+} from './env/state.js';
 import { runSetup, type SetupEvent } from './env/setup.js';
+import { bundledEnvZip } from './env/paths.js';
+import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
 
 const SIDECAR_VERSION = '0.2.0';
@@ -593,6 +604,67 @@ async function runChatLoop(args: RunChatLoopArgs): Promise<void> {
   const count = loadSkills().length;
   process.stderr.write(`sidecar: skills loaded (count=${count})\n`);
 })();
+
+// Auto-install the bundled Python env on startup if it isn't ready yet
+// AND a bundled zip is on disk. The OmicOS-style fast path: unpack zip,
+// run `uv sync --frozen --offline` against the bundled wheel cache, done.
+// Total ~30-60 s on first launch, zero network calls, zero user-facing
+// dialogs. The frontend polls /env/state during this window and renders
+// an inline "Preparing local Python kernel" banner.
+//
+// We DON'T await — the HTTP server should be up immediately so /chat
+// (which doesn't depend on the python env) keeps working. Skills that
+// need python wait via `preferredInterpreter()` falling back to PATH.
+(() => {
+  const disk = readDiskState();
+  if (disk.venvOk) {
+    process.stderr.write('sidecar: env already ready, skipping auto-install\n');
+    return;
+  }
+  const zip = bundledEnvZip();
+  if (!zip || !fs.existsSync(zip)) {
+    process.stderr.write(
+      'sidecar: no bundled env zip; user will need to trigger install via SetupWizard\n',
+    );
+    return;
+  }
+  process.stderr.write(`sidecar: auto-installing env from ${zip}\n`);
+  beginInstall('Unpacking local Python kernel');
+  const abortCtrl = new AbortController();
+  // Best-effort: if the sidecar gets shut down mid-install, abort the
+  // subprocess so we don't leave a stale uv child running.
+  process.on('SIGTERM', () => abortCtrl.abort());
+  process.on('SIGINT', () => abortCtrl.abort());
+  runSetup({
+    signal: abortCtrl.signal,
+    emit: (ev) => {
+      if (ev.type === 'phase') setInstallPhase(ev.label);
+      // We deliberately DON'T pipe log lines anywhere — the inline
+      // banner only shows the phase label. The /env/setup endpoint
+      // (manual trigger) is what gives the full SSE log for the
+      // wizard's repair/extras UX.
+      if (ev.type === 'error') failInstall(ev.message);
+    },
+  })
+    .then(() => {
+      completeInstall();
+      // Drop the install bookkeeping after a short cooldown so /env/state
+      // flips to `ready` cleanly. The cooldown gives the frontend one
+      // poll window to see the final phase ("Finalising venv (offline...)")
+      // before the banner dismisses.
+      setTimeout(() => clearInstall(), 1500).unref();
+      process.stderr.write('sidecar: auto-install complete\n');
+    })
+    .catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      failInstall(msg);
+      process.stderr.write(`sidecar: auto-install failed: ${msg}\n`);
+    });
+})();
+
+// Silence the eslint unused-import warning — these names are part of
+// the env state API surface for future endpoints.
+void isInstalling;
 
 const httpServer = serve(
   { fetch: app.fetch, port: 0, hostname: '127.0.0.1' },

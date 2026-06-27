@@ -46,6 +46,18 @@ export function bundledEnvSourceDir(): string | null {
   return r ? path.join(r, 'bioclaw-env') : null;
 }
 
+/** Pre-baked env zip (CPython + uv-cache + sources) — primary install
+ *  path. Tauri ships it as a bundle resource at
+ *  `<resource_dir>/bioclaw-env.zip`. The legacy
+ *  `bundledEnvSourceDir()` (pyproject + lock as loose files) is still
+ *  accepted as a fallback for the network-install code path. */
+export function bundledEnvZip(): string | null {
+  const r = resourceDir();
+  if (!r) return null;
+  const p = path.join(r, 'bioclaw-env.zip');
+  return p;
+}
+
 /** Where the bundled uv binary lives. tauri-bundler renames
  *  `binaries/uv-<rustc-triple>(.exe)` to plain `uv(.exe)` at install
  *  time and drops it next to the main binary. We probe both the

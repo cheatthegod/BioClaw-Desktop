@@ -9,7 +9,7 @@
  */
 import { create } from 'zustand';
 
-export type EnvStatus = 'unknown' | 'needs-setup' | 'ready' | 'broken';
+export type EnvStatus = 'unknown' | 'needs-setup' | 'installing' | 'ready' | 'broken';
 
 export interface EnvState {
   status: EnvStatus;
@@ -17,6 +17,10 @@ export interface EnvState {
   pythonPath: string | null;
   projectInitialized: boolean;
   bundledSourceDir: string | null;
+  /** Set while status === 'installing'. Drives the EnvInstallBanner label. */
+  installPhase?: string;
+  /** Set if a prior install attempt failed. */
+  lastError?: string;
 }
 
 interface EnvStore {

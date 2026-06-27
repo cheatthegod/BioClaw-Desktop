@@ -19,6 +19,7 @@ import { LocalChat } from './components/LocalChat';
 import { PermissionPrompt } from './components/PermissionPrompt';
 import { LoginGate } from './components/LoginGate';
 import { SetupWizard } from './components/SetupWizard';
+import { EnvInstallBanner } from './components/EnvInstallBanner';
 import { useAppStore } from './lib/store';
 import { useAuthStore } from './lib/auth-state';
 import { useEnvStore } from './lib/env-state';
@@ -102,22 +103,19 @@ function AuthedShell({
     return () => clearInterval(id);
   }, [sidecar.port, refreshEnv]);
 
-  // Only block on the SetupWizard in local mode (where the bundled
-  // env is what runs scripts). The cloud iframe path doesn't need
-  // Python on the user's machine at all.
-  const needsSetup =
-    mode === 'local' && sidecar.port !== null && envState?.status === 'needs-setup';
-  const [wizardDismissed, setWizardDismissed] = useState(false);
-  // Reset the dismissed flag whenever the env transitions away from
-  // ready, so a future repair (e.g. user wipes ~/.bioclaw/env) shows
-  // the wizard again without restarting the app.
-  useEffect(() => {
-    if (envState?.status === 'ready') setWizardDismissed(false);
-  }, [envState?.status]);
+  // Manual SetupWizard — opens for repair / extras only. The
+  // OmicOS-style first-launch flow is now driven entirely by the
+  // sidecar (extract zip + offline sync, ~30-60 s) with an inline
+  // banner. The wizard is wired here purely as a stub for the
+  // Settings-triggered extras / repair surface; that hook lives in
+  // SettingsDrawer (TODO) and isn't user-visible yet.
+  const [wizardOpen, setWizardOpen] = useState(false);
+  void envState;
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-bg">
       <TitleBar />
+      <EnvInstallBanner />
       <main className="relative flex-1 overflow-hidden">
         {mode === 'local' ? (
           <LocalChat />
@@ -141,8 +139,8 @@ function AuthedShell({
       </main>
       {isSettingsOpen ? <SettingsDrawer /> : null}
       <PermissionPrompt />
-      {needsSetup && !wizardDismissed && sidecar.port !== null ? (
-        <SetupWizard port={sidecar.port} onDone={() => setWizardDismissed(true)} />
+      {wizardOpen && sidecar.port !== null ? (
+        <SetupWizard port={sidecar.port} onDone={() => setWizardOpen(false)} />
       ) : null}
     </div>
   );

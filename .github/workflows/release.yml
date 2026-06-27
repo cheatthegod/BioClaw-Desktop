@@ -70,11 +70,14 @@ jobs:
 
       - name: Install system deps for tauri (Linux)
         if: matrix.platform.os == 'ubuntu-22.04'
+        # libappindicator3-dev and libayatana-appindicator3-dev are
+        # mutually exclusive (apt conflict). Tauri 2 wants ONLY the
+        # ayatana variant on Ubuntu 22+; the old indicator name lingered
+        # in our deps list from when we copied from a Tauri 1 template.
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
             librsvg2-dev \
             patchelf \
             libssl-dev \

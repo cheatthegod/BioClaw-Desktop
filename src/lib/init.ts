@@ -25,7 +25,9 @@ interface PersistedPrefs {
 export async function initializeApp(): Promise<void> {
   // tauri-plugin-store v2 API: `Store.load` lazily creates the file.
   const store = await Store.load(STORE_FILE, { autoSave: true, defaults: {} });
-  const mode = (await store.get<AppMode>('mode')) ?? 'remote';
+  // Default to 'local' — see store.ts for why the remote-iframe path
+  // breaks under chat.bioclaw.tech's X-Frame-Options: DENY.
+  const mode = (await store.get<AppMode>('mode')) ?? 'local';
   const remoteUrl = (await store.get<string>('remoteUrl')) ?? 'https://chat.bioclaw.tech';
   const localUrl = (await store.get<string>('localUrl')) ?? 'http://127.0.0.1:3000';
   const selectedModel = (await store.get<string>('selectedModel')) ?? DEFAULT_MODEL;

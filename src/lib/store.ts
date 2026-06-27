@@ -31,7 +31,13 @@ const DEFAULT_LOCAL = 'http://127.0.0.1:3000';
 export const DEFAULT_MODEL = 'openai/gpt-4o-mini';
 
 export const useAppStore = create<AppState>((set) => ({
-  mode: 'remote',
+  // Default to local mode. The remote-iframe path is blocked by
+  // chat.bioclaw.tech's `X-Frame-Options: DENY` (standard browser
+  // security) so users always saw "已阻止此内容" / "Content blocked"
+  // after login. Local mode goes through the bundled sidecar +
+  // bioclaw-proxy provider straight to /api/desktop/chat/completions —
+  // no iframe, no frame-ancestors concerns.
+  mode: 'local',
   remoteUrl: DEFAULT_REMOTE,
   localUrl: DEFAULT_LOCAL,
   isSettingsOpen: false,

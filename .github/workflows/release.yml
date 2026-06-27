@@ -163,9 +163,47 @@ jobs:
             ../../src-tauri/binaries/bioclaw-sidecar-x86_64-pc-windows-msvc.exe
 
       # --------------------------------------------------------------------
+      # Forward code-signing secrets to the bundler ONLY if they're actually
+      # configured. tauri-action interprets `APPLE_CERTIFICATE=` (empty
+      # string) as "import this empty p12" and the macOS .dmg build aborts.
+      # See the long comment under the next step for the full backstory.
+      # --------------------------------------------------------------------
+      - name: Forward signing secrets (if configured)
+        shell: bash
+        env:
+          APPLE_CERTIFICATE:           ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD:  ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY:      ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID:                    ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD:              ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID:               ${{ secrets.APPLE_TEAM_ID }}
+          WINDOWS_CERTIFICATE:         ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD \
+                      APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD \
+                      APPLE_TEAM_ID WINDOWS_CERTIFICATE \
+                      WINDOWS_CERTIFICATE_PASSWORD; do
+            value="${!name:-}"
+            if [[ -n "$value" ]]; then
+              # Use the heredoc form so multi-line secrets (.p12 base64
+              # blobs) round-trip cleanly. End-marker prefixed with __
+              # so it can't collide with any plausible secret content.
+              {
+                echo "${name}<<__SECRET_${name}__"
+                printf '%s\n' "$value"
+                echo "__SECRET_${name}__"
+              } >> "$GITHUB_ENV"
+              echo "  forwarding $name (length ${#value})"
+            else
+              echo "  skip $name (unset)"
+            fi
+          done
+
+      # --------------------------------------------------------------------
       # tauri-action: build + sign + upload to a draft GitHub Release.
       # tauri-action reads the APPLE_*, WINDOWS_CERTIFICATE_* and
-      # TAURI_SIGNING_* env vars below and wires them into the bundler.
+      # TAURI_SIGNING_* env vars and wires them into the bundler.
       # --------------------------------------------------------------------
       - name: Tauri build, sign & upload to draft release
         uses: tauri-apps/tauri-action@v0
@@ -177,20 +215,21 @@ jobs:
           CARGO_HTTP_MULTIPLEXING: 'false'
           CARGO_NET_RETRY: '10'
           CARGO_HTTP_TIMEOUT: '120'
-          # ---- macOS code-signing + notarization ----------------------------
-          # tauri-action imports the p12, signs with the identity, then sends
-          # the .app to notarytool with the APPLE_ID / APPLE_PASSWORD pair.
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-
-          # ---- Windows code-signing (NSIS installer) ------------------------
-          # tauri-action's bundler reads these when present; Linux ignores them.
-          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
-          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          # ---- Code-signing secrets ----------------------------------------
+          # IMPORTANT: these env vars are intentionally NOT passed here.
+          # `${{ secrets.X }}` evaluates to an empty string when the secret
+          # isn't configured, and tauri-action interprets "set-but-empty"
+          # APPLE_CERTIFICATE as "try to import this empty p12" — which
+          # blows up with `SecKeychainItemImport: parameters were not valid`
+          # and kills the macOS .dmg build (preview7 hit exactly this).
+          #
+          # We populate them via the "Forward signing secrets" step ABOVE,
+          # which writes only the secrets that are actually populated into
+          # GITHUB_ENV. Result: when no Apple cert is configured, the .dmg
+          # builds unsigned (Gatekeeper warning on first open — right-click
+          # Open works around it). When the user configures APPLE_*
+          # secrets later, this same workflow signs + notarizes without
+          # any other change.
 
           # ---- Updater (minisign) signing -----------------------------------
           # Signs the .sig files the updater plugin downloads alongside each

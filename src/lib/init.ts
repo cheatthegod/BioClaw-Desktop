@@ -6,9 +6,14 @@
  *
  * Note: API keys are NOT loaded here. They live in the OS keychain via
  * `lib/credentials.ts` and are pulled at send-time.
+ *
+ * History: this used to load + persist `mode` / `remoteUrl` / `localUrl`.
+ * Those went away when the remote-iframe path was dropped (see
+ * lib/store.ts). Stray entries in the user's persisted store are
+ * ignored; we don't bother purging because they're cheap and harmless.
  */
 import { Store } from '@tauri-apps/plugin-store';
-import { useAppStore, type AppMode, DEFAULT_MODEL } from './store';
+import { useAppStore, DEFAULT_MODEL } from './store';
 import { loadPermissions } from './permission-state';
 import { useAuthStore } from './auth-state';
 import { loadStoredSession } from './auth';
@@ -16,23 +21,15 @@ import { loadStoredSession } from './auth';
 const STORE_FILE = 'bioclaw-prefs.json';
 
 interface PersistedPrefs {
-  mode?: AppMode;
-  remoteUrl?: string;
-  localUrl?: string;
   selectedModel?: string;
 }
 
 export async function initializeApp(): Promise<void> {
   // tauri-plugin-store v2 API: `Store.load` lazily creates the file.
   const store = await Store.load(STORE_FILE, { autoSave: true, defaults: {} });
-  // Default to 'local' — see store.ts for why the remote-iframe path
-  // breaks under chat.bioclaw.tech's X-Frame-Options: DENY.
-  const mode = (await store.get<AppMode>('mode')) ?? 'local';
-  const remoteUrl = (await store.get<string>('remoteUrl')) ?? 'https://chat.bioclaw.tech';
-  const localUrl = (await store.get<string>('localUrl')) ?? 'http://127.0.0.1:3000';
   const selectedModel = (await store.get<string>('selectedModel')) ?? DEFAULT_MODEL;
 
-  useAppStore.setState({ mode, remoteUrl, localUrl, selectedModel });
+  useAppStore.setState({ selectedModel });
 
   // Load the persisted script-execution permission list. Best-effort —
   // a failure here just means the user re-grants permissions in this

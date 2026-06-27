@@ -4,7 +4,7 @@
  * Phase-2 contents are hard-coded — a richer picker (per-provider grouping,
  * pricing/context-window hints, "favourites") lands once we wire OpenRouter's
  * /models endpoint. Persistence goes through `persistPrefs` so the choice
- * survives reloads, same as `mode` / `remoteUrl`.
+ * survives reloads,.
  */
 import { ChevronDown } from 'lucide-react';
 import { useAppStore } from '../lib/store';

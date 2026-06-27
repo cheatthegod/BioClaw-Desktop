@@ -1,33 +1,18 @@
 /**
- * Right-hand drawer for app settings. Phase-1 controls: mode toggle (cloud
- * vs local), URLs. Phase 2 will add: API key store, sidecar diagnostics,
- * MCP server list. We deliberately keep this minimal — chat-side settings
- * live in the BioClaw web app and are configured from there.
+ * Right-hand drawer for app settings. Account + Logout for now; future
+ * phases will add: Python env extras toggle, sidecar diagnostics, MCP
+ * server list, and a "Repair env" button.
+ *
+ * History: this used to expose a "运行模式" mode switch (云端 vs 本地)
+ * plus remote/local URL inputs. Both went away with the iframe drop in
+ * preview13 — the desktop now only has one mode (local-via-bundled
+ * sidecar) and one upstream (chat.bioclaw.tech, baked in).
  */
-import { useState } from 'react';
 import { useAppStore } from '../lib/store';
 import { useAuthStore } from '../lib/auth-state';
-import { persistPrefs } from '../lib/init';
-import { cn } from '../lib/utils';
-// import { ApiKeysPanel } from './ApiKeysPanel'; // kept for a future BYO-key advanced mode
 
 export function SettingsDrawer() {
-  const mode = useAppStore((s) => s.mode);
-  const remoteUrl = useAppStore((s) => s.remoteUrl);
-  const localUrl = useAppStore((s) => s.localUrl);
-  const setMode = useAppStore((s) => s.setMode);
-  const setRemoteUrl = useAppStore((s) => s.setRemoteUrl);
-  const setLocalUrl = useAppStore((s) => s.setLocalUrl);
   const toggleSettings = useAppStore((s) => s.toggleSettings);
-
-  const [remoteDraft, setRemoteDraft] = useState(remoteUrl);
-  const [localDraft, setLocalDraft] = useState(localUrl);
-
-  async function save() {
-    setRemoteUrl(remoteDraft);
-    setLocalUrl(localDraft);
-    await persistPrefs({ mode, remoteUrl: remoteDraft, localUrl: localDraft });
-  }
 
   return (
     <div className="absolute inset-y-0 right-0 z-20 flex w-80 flex-col border-l border-line/40 bg-surface shadow-xl">
@@ -46,49 +31,6 @@ export function SettingsDrawer() {
         <Section title="账户">
           <AccountRow />
         </Section>
-
-        <Section title="运行模式">
-          <ModeOption
-            active={mode === 'remote'}
-            label="云端模式"
-            desc="连接 chat.bioclaw.tech，无本地依赖。"
-            onClick={() => setMode('remote')}
-          />
-          <ModeOption
-            active={mode === 'local'}
-            label="本地模式"
-            desc="agent-runner 跑在本机；适合敏感数据 / 离线。"
-            onClick={() => setMode('local')}
-          />
-        </Section>
-
-        <Section title="远程地址">
-          <input
-            value={remoteDraft}
-            onChange={(e) => setRemoteDraft(e.target.value)}
-            className="w-full rounded border border-line/60 bg-surface px-2.5 py-1.5 text-[12px] focus:border-line focus:outline-none"
-            placeholder="https://chat.bioclaw.tech"
-          />
-        </Section>
-
-        <Section title="本地地址">
-          <input
-            value={localDraft}
-            onChange={(e) => setLocalDraft(e.target.value)}
-            className="w-full rounded border border-line/60 bg-surface px-2.5 py-1.5 text-[12px] focus:border-line focus:outline-none"
-            placeholder="http://127.0.0.1:3000"
-          />
-        </Section>
-      </div>
-
-      <div className="border-t border-line/40 px-4 py-3">
-        <button
-          type="button"
-          onClick={() => void save()}
-          className="w-full rounded bg-ink px-3 py-2 text-[12px] font-semibold text-white hover:bg-ink"
-        >
-          保存
-        </button>
       </div>
     </div>
   );
@@ -125,37 +67,5 @@ function AccountRow() {
         {busy ? '处理中…' : '登出'}
       </button>
     </div>
-  );
-}
-
-function ModeOption({
-  active,
-  label,
-  desc,
-  onClick,
-  disabled,
-}: {
-  active: boolean;
-  label: string;
-  desc: string;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={disabled ? undefined : onClick}
-      disabled={disabled}
-      className={cn(
-        'w-full rounded border px-3 py-2 text-left transition',
-        active
-          ? 'border-line-strong bg-ink text-white'
-          : 'border-line/40 bg-surface text-ink hover:border-line',
-        disabled && 'cursor-not-allowed opacity-50',
-      )}
-    >
-      <div className="text-[12px] font-semibold">{label}</div>
-      <div className={cn('mt-0.5 text-[11px]', active ? 'text-muted-2' : 'text-muted')}>{desc}</div>
-    </button>
   );
 }

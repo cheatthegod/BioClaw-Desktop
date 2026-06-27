@@ -48,10 +48,13 @@ const EXAMPLE_PROMPTS: ReadonlyArray<string> = [
 marked.setOptions({ gfm: true, breaks: true });
 
 export function LocalChat() {
-  const mode = useAppStore((s) => s.mode);
   const selectedModel = useAppStore((s) => s.selectedModel);
 
-  const sidecar = useSidecar(mode === 'local');
+  // The sidecar is always-on now that we dropped the remote-iframe mode.
+  // The `useSidecar(true)` call is idempotent — Rust-side SidecarState
+  // is a mutex'd singleton, so multiple components polling the same
+  // status is fine (it's the same underlying process).
+  const sidecar = useSidecar(true);
 
   // Auth: chat traffic is gated by the user's email-OTP session token
   // (default provider is `bioclaw-proxy`, which uses the token as a

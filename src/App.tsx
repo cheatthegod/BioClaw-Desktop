@@ -1,20 +1,30 @@
 /**
  * BioClaw Desktop — App root.
  *
- * Phase 1 (thin client): we render an <iframe>-style WebView pointing at
- * chat.bioclaw.tech. The Tauri main window itself loads this React shell;
- * the React shell loads the remote chat URL in a nested webview-like frame
- * so we keep ownership of the menu bar, system tray, settings drawer, and
- * native interop (file dialogs, notifications). Once the local agent
- * sidecar lands in phase 2 we swap the URL based on user mode.
+ * Shell layered top-down:
+ *   * TitleBar          — borderless Tauri window needs our own min/close.
+ *   * EnvInstallBanner  — one-line progress while the bundled Python env
+ *                          unpacks on first launch (silent on subsequent
+ *                          launches once `~/.bioclaw/env/.venv` exists).
+ *   * LocalChat         — the chat surface. Talks to the local Tauri-spawned
+ *                          sidecar over 127.0.0.1; the sidecar then proxies
+ *                          to chat.bioclaw.tech's `/api/desktop/chat/...`
+ *                          using the user's OTP-issued bioclaw_session token.
+ *   * SettingsDrawer    — right-side slide-out for account / model / env.
+ *   * PermissionPrompt  — modal that appears when a skill script wants to
+ *                          run a shell command for the first time.
  *
- * The remote URL is wrapped via the Tauri webview API to bypass the iframe
- * sandbox while still keeping the CSP intact — see `useRemoteWebview`.
+ * History: there used to be a `mode: 'remote' | 'local'` switch — 'remote'
+ * rendered an iframe pointing at chat.bioclaw.tech. We dropped it in
+ * preview13 because the SaaS sets `X-Frame-Options: DENY` (standard
+ * clickjacking protection), so the iframe path was permanently broken —
+ * users saw "已阻止此内容". Desktop is now a self-contained React UI à la
+ * OmicOS; users who want the web SPA's other surfaces (lab / papers / ...)
+ * keep using https://chat.bioclaw.tech in a browser.
  */
 import { useEffect, useState } from 'react';
 import { TitleBar } from './components/TitleBar';
 import { SettingsDrawer } from './components/SettingsDrawer';
-import { ConnectionGuard } from './components/ConnectionGuard';
 import { LocalChat } from './components/LocalChat';
 import { PermissionPrompt } from './components/PermissionPrompt';
 import { LoginGate } from './components/LoginGate';
@@ -27,8 +37,6 @@ import { useSidecar } from './hooks/useSidecar';
 import { initializeApp } from './lib/init';
 
 export function App() {
-  const mode = useAppStore((s) => s.mode);
-  const remoteUrl = useAppStore((s) => s.remoteUrl);
   const isSettingsOpen = useAppStore((s) => s.isSettingsOpen);
   const loginStep = useAuthStore((s) => s.loginStep);
   const [ready, setReady] = useState(false);
@@ -80,25 +88,19 @@ export function App() {
     );
   }
 
-  return <AuthedShell mode={mode} remoteUrl={remoteUrl} isSettingsOpen={isSettingsOpen} />;
+  return <AuthedShell isSettingsOpen={isSettingsOpen} />;
 }
 
 /**
  * Everything below LoginGate: sidecar lifecycle, env state machine,
- * and the actual chat shell. Pulled into its own component because it
- * depends on the sidecar hook (`useSidecar`), which we don't want
- * paying for during the unauthenticated bootstrap.
+ * and the chat shell. Pulled into its own component because it depends
+ * on the sidecar hook (`useSidecar`), which we don't want paying for
+ * during the unauthenticated bootstrap.
  */
-function AuthedShell({
-  mode,
-  remoteUrl,
-  isSettingsOpen,
-}: {
-  mode: 'local' | 'remote';
-  remoteUrl: string;
-  isSettingsOpen: boolean;
-}) {
-  const sidecar = useSidecar(mode === 'local');
+function AuthedShell({ isSettingsOpen }: { isSettingsOpen: boolean }) {
+  // Sidecar is always-on now (we dropped the remote-iframe path) —
+  // LocalChat depends on it for the chat stream + script execution.
+  const sidecar = useSidecar(true);
   const envState = useEnvStore((s) => s.state);
   const refreshEnv = useEnvStore((s) => s.refresh);
   // First poll once the sidecar reports a port, plus a 4-s heartbeat
@@ -114,11 +116,8 @@ function AuthedShell({
   }, [sidecar.port, refreshEnv]);
 
   // Manual SetupWizard — opens for repair / extras only. The
-  // OmicOS-style first-launch flow is now driven entirely by the
-  // sidecar (extract zip + offline sync, ~30-60 s) with an inline
-  // banner. The wizard is wired here purely as a stub for the
-  // Settings-triggered extras / repair surface; that hook lives in
-  // SettingsDrawer (TODO) and isn't user-visible yet.
+  // OmicOS-style first-launch flow is driven entirely by the sidecar
+  // (extract zip + offline sync, ~30-60 s) with an inline banner.
   const [wizardOpen, setWizardOpen] = useState(false);
   void envState;
 
@@ -127,25 +126,7 @@ function AuthedShell({
       <TitleBar />
       <EnvInstallBanner />
       <main className="relative flex-1 overflow-hidden">
-        {mode === 'local' ? (
-          <LocalChat />
-        ) : (
-          <ConnectionGuard url={remoteUrl}>
-            {/*
-              iframe is acceptable here because we control the target host
-              (chat.bioclaw.tech) and the CSP in index.html only whitelists it.
-              For native-equivalent integration we'll move to a Tauri child
-              WebView in phase 1.5.
-            */}
-            <iframe
-              key={`${mode}-${remoteUrl}`}
-              src={remoteUrl}
-              title="BioClaw"
-              className="h-full w-full border-0 bg-surface"
-              allow="clipboard-read; clipboard-write; fullscreen; camera; microphone"
-            />
-          </ConnectionGuard>
-        )}
+        <LocalChat />
       </main>
       {isSettingsOpen ? <SettingsDrawer /> : null}
       <PermissionPrompt />

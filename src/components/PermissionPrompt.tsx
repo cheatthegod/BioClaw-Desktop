@@ -28,9 +28,7 @@ export function PermissionPrompt() {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-6">
       <div className="w-full max-w-lg rounded-xl border border-line bg-surface shadow-lg">
         <div className="border-b border-line/40 px-6 py-4">
-          <h2 className="text-base font-semibold text-ink">
-            Allow this skill to run a script?
-          </h2>
+          <h2 className="text-base font-semibold text-ink">Allow this skill to run a script?</h2>
           <p className="mt-1 text-xs text-muted">
             The AI is asking to execute code on your machine. Review the command, then choose.
           </p>
@@ -77,8 +75,7 @@ function Field({ label, value, mono = false }: { label: string; value: string; m
       <div className="text-xs uppercase tracking-wide text-muted">{label}</div>
       <div
         className={
-          (mono ? 'font-mono text-xs ' : '') +
-          'break-all rounded-md bg-bg px-2 py-1 text-ink'
+          (mono ? 'font-mono text-xs ' : '') + 'break-all rounded-md bg-bg px-2 py-1 text-ink'
         }
       >
         {value}

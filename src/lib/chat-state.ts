@@ -148,11 +148,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
           case 'tool-call-start':
             set((s) => {
               if (!s.streaming) return {};
-              const toolCalls = [...(s.streaming.toolCalls ?? []), {
-                id: ev.toolCallId,
-                name: ev.name,
-                args: ev.args,
-              }];
+              const toolCalls = [
+                ...(s.streaming.toolCalls ?? []),
+                {
+                  id: ev.toolCallId,
+                  name: ev.name,
+                  args: ev.args,
+                },
+              ];
               return { streaming: { ...s.streaming, toolCalls } };
             });
             break;
@@ -167,9 +170,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                   ? (ev as unknown as { output: string }).output
                   : (ev as { result: { output: string } }).result.output;
               const toolCalls = (s.streaming.toolCalls ?? []).map((tc) =>
-                tc.id === ev.toolCallId
-                  ? { ...tc, result, isError: ev.isError }
-                  : tc,
+                tc.id === ev.toolCallId ? { ...tc, result, isError: ev.isError } : tc,
               );
               return { streaming: { ...s.streaming, toolCalls } };
             });
@@ -206,7 +207,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
           case 'error':
             set((s) =>
               s.streaming
-                ? { streaming: { ...s.streaming, isError: true, content: s.streaming.content || `Error: ${ev.error}` } }
+                ? {
+                    streaming: {
+                      ...s.streaming,
+                      isError: true,
+                      content: s.streaming.content || `Error: ${ev.error}`,
+                    },
+                  }
                 : {},
             );
             break;
@@ -282,7 +289,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
   clear: () => {
     abortController?.abort();
     abortController = null;
-    set({ messages: [], streaming: null, status: 'idle', errorText: null, pendingPermission: null });
+    set({
+      messages: [],
+      streaming: null,
+      status: 'idle',
+      errorText: null,
+      pendingPermission: null,
+    });
   },
 
   resolvePermission: async (decision) => {

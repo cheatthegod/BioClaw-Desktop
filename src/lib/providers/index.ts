@@ -27,7 +27,11 @@ export type ProviderEvent =
       readonly arguments: Readonly<Record<string, unknown>>;
     }
   | { readonly type: 'usage'; readonly inputTokens: number; readonly outputTokens: number }
-  | { readonly type: 'finish'; readonly reason: 'stop' | 'tool-use' | 'length' | 'error'; readonly error?: string };
+  | {
+      readonly type: 'finish';
+      readonly reason: 'stop' | 'tool-use' | 'length' | 'error';
+      readonly error?: string;
+    };
 
 export interface ProviderStreamRequest {
   readonly model: ModelSpec;
@@ -58,7 +62,8 @@ class OpenAICompatibleProvider implements Provider {
   }
 
   async *streamMessages(req: ProviderStreamRequest): AsyncIterable<ProviderEvent> {
-    const url = (req.model.endpoint ?? this.defaultBaseUrl).replace(/\/+$/, '') + '/chat/completions';
+    const url =
+      (req.model.endpoint ?? this.defaultBaseUrl).replace(/\/+$/, '') + '/chat/completions';
     const headers = openAiHeaders(req.model);
     const body = openAiBody(req);
     const res = await fetch(url, {
@@ -201,9 +206,11 @@ function openAiBody(req: ProviderStreamRequest): Record<string, unknown> {
     stream: true,
     stream_options: { include_usage: true },
   };
-  if (req.model.params?.temperature !== undefined) body['temperature'] = req.model.params.temperature;
+  if (req.model.params?.temperature !== undefined)
+    body['temperature'] = req.model.params.temperature;
   if (req.model.params?.topP !== undefined) body['top_p'] = req.model.params.topP;
-  if (req.model.params?.maxOutputTokens !== undefined) body['max_tokens'] = req.model.params.maxOutputTokens;
+  if (req.model.params?.maxOutputTokens !== undefined)
+    body['max_tokens'] = req.model.params.maxOutputTokens;
   if (req.tools.length > 0) {
     body['tools'] = req.tools.map((t) => ({
       type: 'function',
@@ -257,7 +264,8 @@ function anthropicBody(req: ProviderStreamRequest): Record<string, unknown> {
     max_tokens: req.model.params?.maxOutputTokens ?? 4096,
   };
   if (systemText) body['system'] = systemText;
-  if (req.model.params?.temperature !== undefined) body['temperature'] = req.model.params.temperature;
+  if (req.model.params?.temperature !== undefined)
+    body['temperature'] = req.model.params.temperature;
   if (req.model.params?.topP !== undefined) body['top_p'] = req.model.params.topP;
   if (req.tools.length > 0) {
     body['tools'] = req.tools.map((t) => ({
@@ -302,7 +310,9 @@ async function* parseOpenAiSse(stream: ReadableStream<Uint8Array>): AsyncIterabl
     } catch {
       continue;
     }
-    const usage = parsed['usage'] as { prompt_tokens?: number; completion_tokens?: number } | undefined;
+    const usage = parsed['usage'] as
+      | { prompt_tokens?: number; completion_tokens?: number }
+      | undefined;
     if (usage) {
       if (typeof usage.prompt_tokens === 'number') inputTokens = usage.prompt_tokens;
       if (typeof usage.completion_tokens === 'number') outputTokens = usage.completion_tokens;
@@ -361,7 +371,9 @@ async function* parseOpenAiSse(stream: ReadableStream<Uint8Array>): AsyncIterabl
  * `content_block_delta`, etc.). We accumulate tool_use blocks across
  * `input_json_delta` chunks the same way opencode does.
  */
-async function* parseAnthropicSse(stream: ReadableStream<Uint8Array>): AsyncIterable<ProviderEvent> {
+async function* parseAnthropicSse(
+  stream: ReadableStream<Uint8Array>,
+): AsyncIterable<ProviderEvent> {
   type ToolBuf = { id: string; name: string; argsBuf: string };
   const toolBlocks = new Map<number, ToolBuf>();
   let inputTokens = 0;
@@ -394,7 +406,11 @@ async function* parseAnthropicSse(stream: ReadableStream<Uint8Array>): AsyncIter
       if (!delta) continue;
       if (delta['type'] === 'text_delta' && typeof delta['text'] === 'string') {
         yield { type: 'text-delta', text: delta['text'] as string };
-      } else if (delta['type'] === 'input_json_delta' && typeof delta['partial_json'] === 'string' && typeof idx === 'number') {
+      } else if (
+        delta['type'] === 'input_json_delta' &&
+        typeof delta['partial_json'] === 'string' &&
+        typeof idx === 'number'
+      ) {
         const buf = toolBlocks.get(idx);
         if (buf) buf.argsBuf += delta['partial_json'] as string;
       }
@@ -450,7 +466,9 @@ async function* iterSseData(stream: ReadableStream<Uint8Array>): AsyncIterable<s
 }
 
 /** Same as iterSseData but emits the `event:` name too — needed for Anthropic. */
-async function* iterAnthropicSse(stream: ReadableStream<Uint8Array>): AsyncIterable<{ event: string; data: string }> {
+async function* iterAnthropicSse(
+  stream: ReadableStream<Uint8Array>,
+): AsyncIterable<{ event: string; data: string }> {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
   let buf = '';

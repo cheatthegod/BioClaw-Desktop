@@ -43,7 +43,8 @@ export function ConnectionGuard({ url, children, intervalMs = 15_000 }: Props) {
     <div className="relative h-full w-full">
       {reachable === false ? (
         <div className="absolute inset-x-0 top-0 z-10 border-b border-warning/30 bg-warning/10 px-4 py-2 text-[12px] text-warning">
-          Cannot reach <code className="font-mono">{url}</code>. Retrying every {Math.round(intervalMs / 1000)}s…
+          Cannot reach <code className="font-mono">{url}</code>. Retrying every{' '}
+          {Math.round(intervalMs / 1000)}s…
         </div>
       ) : null}
       {children}

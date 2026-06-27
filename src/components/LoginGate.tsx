@@ -64,7 +64,10 @@ function EmailStep() {
       className="space-y-4"
     >
       <div>
-        <label htmlFor="email" className="block text-xs font-medium uppercase tracking-wide text-ink-soft">
+        <label
+          htmlFor="email"
+          className="block text-xs font-medium uppercase tracking-wide text-ink-soft"
+        >
           Email
         </label>
         <input
@@ -121,7 +124,10 @@ function CodeStep() {
         We sent a 6-digit code to <span className="font-medium text-ink">{pendingEmail}</span>.
       </p>
       <div>
-        <label htmlFor="otp-code" className="block text-xs font-medium uppercase tracking-wide text-ink-soft">
+        <label
+          htmlFor="otp-code"
+          className="block text-xs font-medium uppercase tracking-wide text-ink-soft"
+        >
           Code
         </label>
         <input

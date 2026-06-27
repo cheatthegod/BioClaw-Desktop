@@ -150,17 +150,40 @@ function WelcomeView(props: {
     <div>
       <h1 className="font-serif text-[32px] leading-tight text-ink">Set up the local kernel</h1>
       <p className="mt-2 text-sm text-muted">
-        BioClaw ships a managed Python that runs the bio-skill scripts locally. We'll download CPython 3.11
-        and pin the dependency lockfile. About 230 MB of wheels for the base set; nothing leaves your
-        machine after install.
+        BioClaw ships a managed Python that runs the bio-skill scripts locally. We'll download
+        CPython 3.11 and pin the dependency lockfile. About 230 MB of wheels for the base set;
+        nothing leaves your machine after install.
       </p>
 
-      <Section title="PyPI mirror" subtitle="Where to fetch the wheels from. Auto probes each option and picks the fastest.">
+      <Section
+        title="PyPI mirror"
+        subtitle="Where to fetch the wheels from. Auto probes each option and picks the fastest."
+      >
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <MirrorChip active={props.mirror === 'auto'} onClick={() => props.setMirror('auto')} label="Auto" hint="Probe + pick" />
-          <MirrorChip active={props.mirror === 'pypi'} onClick={() => props.setMirror('pypi')} label="PyPI" hint="pypi.org" />
-          <MirrorChip active={props.mirror === 'aliyun'} onClick={() => props.setMirror('aliyun')} label="Aliyun" hint="mirrors.aliyun.com" />
-          <MirrorChip active={props.mirror === 'tuna'} onClick={() => props.setMirror('tuna')} label="TUNA" hint="清华源" />
+          <MirrorChip
+            active={props.mirror === 'auto'}
+            onClick={() => props.setMirror('auto')}
+            label="Auto"
+            hint="Probe + pick"
+          />
+          <MirrorChip
+            active={props.mirror === 'pypi'}
+            onClick={() => props.setMirror('pypi')}
+            label="PyPI"
+            hint="pypi.org"
+          />
+          <MirrorChip
+            active={props.mirror === 'aliyun'}
+            onClick={() => props.setMirror('aliyun')}
+            label="Aliyun"
+            hint="mirrors.aliyun.com"
+          />
+          <MirrorChip
+            active={props.mirror === 'tuna'}
+            onClick={() => props.setMirror('tuna')}
+            label="TUNA"
+            hint="清华源"
+          />
         </div>
         <button
           type="button"
@@ -182,7 +205,10 @@ function WelcomeView(props: {
         ) : null}
       </Section>
 
-      <Section title="Optional add-ons" subtitle="Adds extras to the base env. You can install or remove these later via Settings.">
+      <Section
+        title="Optional add-ons"
+        subtitle="Adds extras to the base env. You can install or remove these later via Settings."
+      >
         <div className="space-y-2">
           {EXTRA_OPTIONS.map((opt) => {
             const checked = props.extras.includes(opt.key);
@@ -211,7 +237,8 @@ function WelcomeView(props: {
 
       <div className="mt-6 flex items-center justify-between">
         <p className="text-[11px] text-muted">
-          Installs to <span className="font-mono">{props.envState?.projectDir ?? '~/.bioclaw/env'}</span>
+          Installs to{' '}
+          <span className="font-mono">{props.envState?.projectDir ?? '~/.bioclaw/env'}</span>
         </p>
         <button
           type="button"
@@ -285,8 +312,8 @@ function DoneView({ projectDir, onContinue }: { projectDir: string; onContinue: 
     <div className="text-center">
       <h1 className="font-serif text-[32px] leading-tight text-ink">All set</h1>
       <p className="mt-2 text-sm text-muted">
-        Python kernel ready at <span className="font-mono text-ink-soft">{projectDir}</span>. You can re-run setup
-        from Settings → Account → Repair env at any time.
+        Python kernel ready at <span className="font-mono text-ink-soft">{projectDir}</span>. You
+        can re-run setup from Settings → Account → Repair env at any time.
       </p>
       <button
         type="button"
@@ -353,7 +380,14 @@ function Checkbox({ checked }: { checked: boolean }) {
     >
       {checked ? (
         <svg viewBox="0 0 12 12" className="h-2.5 w-2.5 fill-current" aria-hidden>
-          <path d="M10.5 3.5L4.75 9.25 1.5 6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M10.5 3.5L4.75 9.25 1.5 6"
+            stroke="currentColor"
+            strokeWidth="2"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       ) : null}
     </div>

@@ -209,8 +209,7 @@ function ConfirmDeleteModal({
       <div className="w-72 rounded-lg bg-surface p-4 shadow-xl">
         <h3 className="text-[13px] font-semibold text-ink">删除该密钥?</h3>
         <p className="mt-1 text-[11px] text-ink-soft">
-          将从系统钥匙串中永久移除 <span className="font-mono">{account}</span>，
-          此操作不可撤销。
+          将从系统钥匙串中永久移除 <span className="font-mono">{account}</span>， 此操作不可撤销。
         </p>
         <div className="mt-3 flex justify-end gap-2">
           <button

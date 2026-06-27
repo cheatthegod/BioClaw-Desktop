@@ -26,7 +26,10 @@ const DEFAULT_TIMEOUT_MS = 30_000;
  * To enable: `npm i @modelcontextprotocol/sdk` (peer dep, see package.json).
  */
 type SdkModule = {
-  Client: new (info: { name: string; version: string }, opts?: { capabilities?: object }) => SdkClient;
+  Client: new (
+    info: { name: string; version: string },
+    opts?: { capabilities?: object },
+  ) => SdkClient;
   StdioClientTransport: new (opts: {
     command: string;
     args?: string[];
@@ -105,7 +108,7 @@ async function loadSdk(): Promise<SdkModule> {
   } catch (err) {
     sdkLoadError = new Error(
       '@modelcontextprotocol/sdk is not installed. Run `npm i @modelcontextprotocol/sdk` ' +
-        'before using BioClaw\'s MCP client. Underlying error: ' +
+        "before using BioClaw's MCP client. Underlying error: " +
         (err instanceof Error ? err.message : String(err)),
     );
     throw sdkLoadError;
@@ -156,7 +159,11 @@ function makeClient(
     status: () => state.current,
     async listTools() {
       if (!state.sdkClient) throw new Error(`MCP client "${config.name}" is not connected`);
-      const result = await withTimeout(state.sdkClient.listTools({ timeout }), timeout, 'listTools');
+      const result = await withTimeout(
+        state.sdkClient.listTools({ timeout }),
+        timeout,
+        'listTools',
+      );
       return result.tools.map(normalizeTool);
     },
     async callTool(name, params) {
@@ -190,7 +197,10 @@ function normalizeTool(def: SdkToolDef): McpTool {
   };
 }
 
-function normalizeResult(raw: { content?: ReadonlyArray<RawContent>; isError?: boolean }): McpToolResult {
+function normalizeResult(raw: {
+  content?: ReadonlyArray<RawContent>;
+  isError?: boolean;
+}): McpToolResult {
   const content: McpContentPart[] = [];
   let text = '';
   for (const part of raw.content ?? []) {
@@ -209,7 +219,8 @@ function normalizeResult(raw: { content?: ReadonlyArray<RawContent>; isError?: b
         mimeType: (part as { mimeType: string }).mimeType,
       });
     } else if (part.type === 'resource' && (part as { resource?: unknown }).resource) {
-      const res = (part as { resource: { uri: string; mimeType?: string; text?: string } }).resource;
+      const res = (part as { resource: { uri: string; mimeType?: string; text?: string } })
+        .resource;
       content.push({ type: 'resource', resource: res });
       if (res.text) text += (text ? '\n' : '') + res.text;
     }
@@ -313,7 +324,10 @@ export function connectSse(
   const config: McpClientConfig = { name, transport: 'sse', url, headers, timeout: opts?.timeout };
   return connectWith(config, 'sse', (sdk) => {
     const parsed = new URL(url);
-    return new sdk.SSEClientTransport(parsed, headers ? { requestInit: { headers: { ...headers } } } : undefined);
+    return new sdk.SSEClientTransport(
+      parsed,
+      headers ? { requestInit: { headers: { ...headers } } } : undefined,
+    );
   });
 }
 

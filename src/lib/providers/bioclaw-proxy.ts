@@ -28,7 +28,10 @@ class BioClawProxyProvider implements Provider {
 
   async *streamMessages(req: ProviderStreamRequest): AsyncIterable<ProviderEvent> {
     const explicit = req.model.endpoint;
-    const base = (explicit && explicit.length > 0 ? explicit : DEFAULT_SAAS_BASE_URL).replace(/\/+$/, '');
+    const base = (explicit && explicit.length > 0 ? explicit : DEFAULT_SAAS_BASE_URL).replace(
+      /\/+$/,
+      '',
+    );
     const patched: ProviderStreamRequest = {
       ...req,
       model: {

@@ -60,9 +60,10 @@ export const useEnvStore = create<EnvStore>((set) => ({
   setInstalling: (b) => set({ installing: b }),
   pushLog: (entry) =>
     set((s) => {
-      const next = s.installLog.length >= LOG_CAP
-        ? [...s.installLog.slice(s.installLog.length - LOG_CAP + 1), entry]
-        : [...s.installLog, entry];
+      const next =
+        s.installLog.length >= LOG_CAP
+          ? [...s.installLog.slice(s.installLog.length - LOG_CAP + 1), entry]
+          : [...s.installLog, entry];
       return { installLog: next };
     }),
   setPhase: (label) => set({ installPhase: label }),
@@ -125,7 +126,11 @@ export async function startSetup(
       }
     }
   } finally {
-    try { reader.releaseLock(); } catch { /* already released */ }
+    try {
+      reader.releaseLock();
+    } catch {
+      /* already released */
+    }
     useEnvStore.getState().setInstalling(false);
     if (errMsg) useEnvStore.getState().setError(errMsg);
   }

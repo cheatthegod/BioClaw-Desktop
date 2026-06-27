@@ -93,7 +93,11 @@ export type McpContentPart =
   | { readonly type: 'image'; readonly data: string; readonly mimeType: string }
   | {
       readonly type: 'resource';
-      readonly resource: { readonly uri: string; readonly mimeType?: string; readonly text?: string };
+      readonly resource: {
+        readonly uri: string;
+        readonly mimeType?: string;
+        readonly text?: string;
+      };
     };
 
 /** Status of a single MCP server connection. Mirrors opencode's Status union. */

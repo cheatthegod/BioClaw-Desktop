@@ -20,7 +20,10 @@ export function TitleBar() {
       className="flex h-9 shrink-0 items-center justify-between border-b border-line/40 bg-bg/95 px-2 backdrop-blur"
     >
       <div className="flex items-center gap-2 pl-2" data-tauri-drag-region>
-        <span className="text-[12px] font-semibold tracking-tight text-ink-soft" data-tauri-drag-region>
+        <span
+          className="text-[12px] font-semibold tracking-tight text-ink-soft"
+          data-tauri-drag-region
+        >
           BioClaw
         </span>
         <span

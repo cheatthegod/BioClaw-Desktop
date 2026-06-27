@@ -23,7 +23,7 @@
    * ONE flat tone for the whole page. Resampled from the SaaS
    * references: NOT warm parchment (an earlier pass came out too
    * "earthy") but a cool, near-white sage-tinted gray. */
-  --color-bg: 236 237 232;          /* #ecede8 */
+  --color-bg: 236 237 232; /* #ecede8 */
   --color-surface: 236 237 232;
   --color-surface-2: 236 237 232;
   --color-surface-raised: 236 237 232;
@@ -32,17 +32,17 @@
    * Charcoal — matched to the SaaS 6.png reference. Strong enough
    * that every line reads as a deliberate hairline, not too opaque
    * that adjacent lines look like bars. */
-  --color-border: 93 96 92;          /* #5d605c */
-  --color-border-strong: 42 44 41;   /* #2a2c29 */
+  --color-border: 93 96 92; /* #5d605c */
+  --color-border-strong: 42 44 41; /* #2a2c29 */
 
   /* === Text ================================================
    * Ink reserved for high-contrast headlines; -soft for body
    * paragraphs that need less optical weight; muted for hints,
    * timestamps, captions. */
-  --color-ink: 21 28 26;             /* #151c1a */
-  --color-ink-soft: 56 70 65;        /* #384641 */
-  --color-muted: 107 118 114;        /* #6b7672 */
-  --color-muted-2: 151 160 155;      /* #97a09b */
+  --color-ink: 21 28 26; /* #151c1a */
+  --color-ink-soft: 56 70 65; /* #384641 */
+  --color-muted: 107 118 114; /* #6b7672 */
+  --color-muted-2: 151 160 155; /* #97a09b */
 
   /* === Accent (forest sage) ================================
    * Muted forest-sage rather than emerald — the brighter `#059669`
@@ -52,7 +52,7 @@
    * primary buttons. The `-rgb` triplet is the same color in
    * comma-free form so Tailwind's `rgb(var(--x) / 0.07)`
    * shorthand works for the translucent variants. */
-  --color-accent: 93 126 107;        /* #5d7e6b */
+  --color-accent: 93 126 107; /* #5d7e6b */
   --color-accent-ink: 255 255 255;
   --color-accent-rgb: 93, 126, 107;
 
@@ -60,9 +60,9 @@
    * Forest green / burnt orange / brick red — saturated enough
    * for affordance, dialed down enough that an error toast
    * doesn't look like a fire engine. */
-  --color-success: 22 101 52;        /* #166534 */
-  --color-warning: 154 52 18;        /* #9a3412 */
-  --color-error: 153 27 27;          /* #991b1b */
+  --color-success: 22 101 52; /* #166534 */
+  --color-warning: 154 52 18; /* #9a3412 */
+  --color-error: 153 27 27; /* #991b1b */
 
   color-scheme: light;
 }
@@ -76,15 +76,15 @@
 /* Ocean — cyan-tinted variant. Same neutral chrome, accent moves
  * to teal-cyan. Mirrors SaaS [data-theme='ocean']. */
 [data-theme='ocean'] {
-  --color-bg: 241 247 250;           /* #f1f7fa */
+  --color-bg: 241 247 250; /* #f1f7fa */
   --color-surface: 241 247 250;
   --color-surface-2: 241 247 250;
   --color-surface-raised: 241 247 250;
-  --color-ink: 12 36 54;             /* #0c2436 */
-  --color-ink-soft: 36 69 99;        /* #244563 */
-  --color-muted: 88 112 136;         /* #587088 */
-  --color-muted-2: 139 159 177;      /* #8b9fb1 */
-  --color-accent: 8 145 178;         /* #0891b2 */
+  --color-ink: 12 36 54; /* #0c2436 */
+  --color-ink-soft: 36 69 99; /* #244563 */
+  --color-muted: 88 112 136; /* #587088 */
+  --color-muted-2: 139 159 177; /* #8b9fb1 */
+  --color-accent: 8 145 178; /* #0891b2 */
   --color-accent-rgb: 8, 145, 178;
   color-scheme: light;
 }
@@ -92,15 +92,15 @@
 /* Sakura — pink-tinted variant. Same neutral chrome, accent moves
  * to rose. Mirrors SaaS [data-theme='sakura']. */
 [data-theme='sakura'] {
-  --color-bg: 251 243 245;           /* #fbf3f5 */
+  --color-bg: 251 243 245; /* #fbf3f5 */
   --color-surface: 251 243 245;
   --color-surface-2: 251 243 245;
   --color-surface-raised: 251 243 245;
-  --color-ink: 60 26 32;             /* #3c1a20 */
-  --color-ink-soft: 100 50 60;       /* #64323c */
+  --color-ink: 60 26 32; /* #3c1a20 */
+  --color-ink-soft: 100 50 60; /* #64323c */
   --color-muted: 140 100 110;
   --color-muted-2: 180 145 155;
-  --color-accent: 190 24 93;         /* #be185d */
+  --color-accent: 190 24 93; /* #be185d */
   --color-accent-rgb: 190, 24, 93;
   color-scheme: light;
 }
@@ -119,9 +119,17 @@
     background-color: rgb(var(--color-bg));
     color: rgb(var(--color-ink));
     font-family:
-      'Inter', 'Inter var', -apple-system, 'Segoe UI', 'Helvetica Neue',
-      ui-sans-serif, system-ui, 'Noto Sans SC', 'PingFang SC',
-      'Microsoft YaHei', sans-serif;
+      'Inter',
+      'Inter var',
+      -apple-system,
+      'Segoe UI',
+      'Helvetica Neue',
+      ui-sans-serif,
+      system-ui,
+      'Noto Sans SC',
+      'PingFang SC',
+      'Microsoft YaHei',
+      sans-serif;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;

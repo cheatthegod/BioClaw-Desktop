@@ -179,19 +179,13 @@ function MessageList({
   const isEmpty = messages.length === 0 && !streaming;
 
   return (
-    <div
-      ref={scrollRef}
-      onScroll={onScroll}
-      className="flex-1 overflow-y-auto"
-    >
+    <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-6">
         {isEmpty ? <EmptyState /> : null}
         {messages.map((m) => (
           <MessageBubble key={m.id} message={m} />
         ))}
-        {streaming ? (
-          <MessageBubble message={streaming} isStreaming />
-        ) : null}
+        {streaming ? <MessageBubble message={streaming} isStreaming /> : null}
       </div>
     </div>
   );
@@ -203,12 +197,9 @@ function EmptyState() {
       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-ink text-white">
         <Sparkles className="h-5 w-5" />
       </div>
-      <h2 className="mt-4 text-base font-semibold text-ink">
-        Start chatting with BioClaw locally
-      </h2>
+      <h2 className="mt-4 text-base font-semibold text-ink">Start chatting with BioClaw locally</h2>
       <p className="mt-1 max-w-md text-[12px] text-muted">
-        Your messages are sent to the local agent sidecar — your API key never
-        leaves this machine.
+        Your messages are sent to the local agent sidecar — your API key never leaves this machine.
       </p>
     </div>
   );
@@ -351,11 +342,7 @@ function MarkdownContent({ text }: { text: string }) {
   }, [html]);
 
   return (
-    <div
-      ref={containerRef}
-      className="prose-chat"
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div ref={containerRef} className="prose-chat" dangerouslySetInnerHTML={{ __html: html }} />
   );
 }
 
@@ -528,10 +515,7 @@ function renderMarkdown(src: string): string {
 }
 
 function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function safeStringify(value: unknown): string {
@@ -541,4 +525,3 @@ function safeStringify(value: unknown): string {
     return String(value);
   }
 }
-

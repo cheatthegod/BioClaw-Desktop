@@ -32,7 +32,9 @@ export interface SessionStorage {
   /** Append BEFORE acting on the event — durable replay relies on this. */
   appendEvent(sessionId: string, event: AgentEvent): Promise<void>;
   setStatus(sessionId: string, status: SessionRecord['status']): Promise<void>;
-  list(): Promise<ReadonlyArray<{ id: string; updatedAt: number; status: SessionRecord['status'] }>>;
+  list(): Promise<
+    ReadonlyArray<{ id: string; updatedAt: number; status: SessionRecord['status'] }>
+  >;
   delete(sessionId: string): Promise<void>;
 }
 
@@ -82,7 +84,9 @@ export class MemorySessionStorage implements SessionStorage {
     r.updatedAt = Date.now();
   }
 
-  async list(): Promise<ReadonlyArray<{ id: string; updatedAt: number; status: SessionRecord['status'] }>> {
+  async list(): Promise<
+    ReadonlyArray<{ id: string; updatedAt: number; status: SessionRecord['status'] }>
+  > {
     return Array.from(this.sessions.values())
       .map((r) => ({ id: r.id, updatedAt: r.updatedAt, status: r.status }))
       .sort((a, b) => b.updatedAt - a.updatedAt);

@@ -112,7 +112,8 @@ export class SessionRunner {
     let totalOut = 0;
 
     for (let step = 0; step < stepLimit; step++) {
-      if (this.cancelled) return this.finalize(sessionId, finalText, step, totalIn, totalOut, 'cancelled');
+      if (this.cancelled)
+        return this.finalize(sessionId, finalText, step, totalIn, totalOut, 'cancelled');
 
       const stepResult = await this.runOneStep(sessionId, provider, history);
       if (stepResult.kind === 'cancelled') {
@@ -142,7 +143,9 @@ export class SessionRunner {
       });
       const lastMessage = history[history.length - 1];
       if (!lastMessage) {
-        throw new Error('SessionRunner invariant: history must contain at least one message after step');
+        throw new Error(
+          'SessionRunner invariant: history must contain at least one message after step',
+        );
       }
       await this.opts.storage.appendMessage(sessionId, lastMessage);
 
@@ -229,14 +232,20 @@ export class SessionRunner {
 
     for await (const ev of stream) {
       if (this.cancelled) return { kind: 'cancelled' };
-      await this.handleProviderEvent(sessionId, ev, (text) => {
-        assistantText += text;
-      }, (tc) => {
-        toolCalls.push(tc);
-      }, (usage) => {
-        inputTokens = usage.inputTokens;
-        outputTokens = usage.outputTokens;
-      });
+      await this.handleProviderEvent(
+        sessionId,
+        ev,
+        (text) => {
+          assistantText += text;
+        },
+        (tc) => {
+          toolCalls.push(tc);
+        },
+        (usage) => {
+          inputTokens = usage.inputTokens;
+          outputTokens = usage.outputTokens;
+        },
+      );
       if (ev.type === 'finish') {
         if (ev.reason === 'error') {
           throw new Error(ev.error ?? 'Provider stream finished with error');
@@ -385,7 +394,8 @@ function isTransientError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
   const msg = err.message.toLowerCase();
   if (msg.includes('aborted') || msg.includes('abort')) return false; // user cancel — don't retry
-  if (msg.includes('econnreset') || msg.includes('etimedout') || msg.includes('socket hang up')) return true;
+  if (msg.includes('econnreset') || msg.includes('etimedout') || msg.includes('socket hang up'))
+    return true;
   if (msg.includes('rate limit') || msg.includes('429')) return true;
   if (/\b5\d\d\b/.test(msg)) return true;
   if (msg.includes('fetch failed')) return true;

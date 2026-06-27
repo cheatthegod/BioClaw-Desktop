@@ -84,7 +84,8 @@ export async function verifyOtp(
     } satisfies AuthError;
   }
   const setCookie =
-    res.headers.get('set-cookie') ?? (res.headers as unknown as { getSetCookie?: () => string[] }).getSetCookie?.()?.join('\n');
+    res.headers.get('set-cookie') ??
+    (res.headers as unknown as { getSetCookie?: () => string[] }).getSetCookie?.()?.join('\n');
   const token = parseCookieValue(setCookie ?? '', COOKIE_NAME);
   if (!token) {
     throw {

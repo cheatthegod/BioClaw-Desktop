@@ -14,4 +14,5 @@
 
 pub mod provider;
 pub mod runner;
+pub mod tools;
 pub mod types;

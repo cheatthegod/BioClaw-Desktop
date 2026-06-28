@@ -25,6 +25,7 @@ use tracing::warn;
 
 use crate::chat::{
     runner::{run_chat_loop, ChatLoopInput},
+    tools::{registry, system_prompt},
     types::{
         AgentEvent, AgentMessage, Auth, ChatRequestBody, FinishReason, InboundRole, ModelSpec,
     },
@@ -32,7 +33,7 @@ use crate::chat::{
 use crate::server::AppState;
 
 pub async fn post_chat(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Json(body): Json<ChatRequestBody>,
 ) -> Result<
     Sse<impl Stream<Item = Result<Event, std::convert::Infallible>>>,
@@ -92,16 +93,42 @@ pub async fn post_chat(
         params: body.params.clone().unwrap_or_default(),
     };
 
+    // Tools + skill-ranked system-prompt addendum. Skipped when the
+    // caller opts out via `skillsEnabled: false` or when the catalog
+    // is empty.
+    let skills_enabled = body.skills_enabled.unwrap_or(true);
+    let (tools, system_addendum) = if skills_enabled && !state.skills.is_empty() {
+        let last_user = turn_messages
+            .iter()
+            .rev()
+            .find_map(|m| match m {
+                AgentMessage::User { content } => Some(content.as_str()),
+                _ => None,
+            })
+            .unwrap_or("");
+        (
+            registry::build_definitions(),
+            system_prompt::compose(&state.skills, last_user),
+        )
+    } else {
+        (Vec::new(), String::new())
+    };
+    let mut system_prompt_parts: Vec<String> = system_parts;
+    if !system_addendum.is_empty() {
+        system_prompt_parts.push(system_addendum);
+    }
+
     let abort = CancellationToken::new();
     let abort_for_task = abort.clone();
     let (tx, rx) = mpsc::channel::<AgentEvent>(64);
     let tx_for_watcher = tx.clone();
 
     let input = ChatLoopInput {
+        state: state.clone(),
         provider_id,
         model: model_spec,
-        system_prompt: system_parts.join("\n\n"),
-        tools: Vec::new(), // L.4: no tools; L.6 injects invoke_skill + run_skill_script
+        system_prompt: system_prompt_parts.join("\n\n"),
+        tools,
         turn_messages,
         abort: abort_for_task,
     };

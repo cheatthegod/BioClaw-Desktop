@@ -2,6 +2,7 @@
 //! `bioclaw-sidecar` binary uses, so `cargo test` can reach them via
 //! the library target. The binary entry point lives in `main.rs`.
 
+pub mod chat;
 pub mod cli;
 pub mod env;
 pub mod logging;

@@ -8,6 +8,7 @@
 //!   * `permissions`   — POST /permissions/decide, /preload
 //!   * `auth`          — POST /auth/device-code, /poll (device-code OAuth)
 
+pub mod chat;
 pub mod env;
 pub mod health;
 pub mod skills;

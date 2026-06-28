@@ -93,6 +93,7 @@ thiserror = "2"       # typed errors for endpoint handlers
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 dashmap = "6"         # concurrent map for pending permission requests
+bytes = "1"           # used by the OpenAI SSE byte-stream splitter
 
 # ── Platform-specific ────────────────────────────────────────────────
 [target.'cfg(unix)'.dependencies]

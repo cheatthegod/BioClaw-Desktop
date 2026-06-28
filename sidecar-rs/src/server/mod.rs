@@ -75,6 +75,7 @@ fn build_router(state: Arc<AppState>) -> Router {
         .route("/skills", get(routes::skills::list_skills))
         .route("/env/state", get(routes::env::get_state))
         .route("/env/setup", post(routes::env::post_setup))
+        .route("/chat", post(routes::chat::post_chat))
         .with_state(state)
         .layer(TraceLayer::new_for_http())
 }

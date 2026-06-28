@@ -48,6 +48,9 @@ hyper = { version = "1", features = ["server"] }
 # tokio with `full` because we use it everywhere — file IO, child procs,
 # signals, sync primitives. The dep weight is mostly compile-time.
 tokio = { version = "1", features = ["full"] }
+# CancellationToken — used to abort in-flight uv subprocesses when the
+# /env/setup SSE client disconnects mid-install.
+tokio-util = { version = "0.7", features = ["rt"] }
 futures = "0.3"
 
 # ── Serialisation ────────────────────────────────────────────────────

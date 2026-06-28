@@ -3,6 +3,7 @@
 //! the library target. The binary entry point lives in `main.rs`.
 
 pub mod cli;
+pub mod env;
 pub mod logging;
 pub mod server;
 pub mod skills;

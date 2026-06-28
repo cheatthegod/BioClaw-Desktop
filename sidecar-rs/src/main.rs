@@ -46,10 +46,27 @@ async fn main() -> anyhow::Result<()> {
     // BIOCLAW_LOG_FILTER.
     logging::init(args.log_filter.as_deref());
 
-    let result = match args
-        .command
-        .unwrap_or(cli::Command::Serve(Default::default()))
-    {
+    // Default to `serve` when no subcommand is provided — that's how
+    // Tauri invokes the binary. We can't reach for
+    // `ServeOptions::default()` here because Default bypasses clap's
+    // env-var bindings (BIOCLAW_HOST / BIOCLAW_PORT / BIOCLAW_WORKSPACE
+    // would all stay empty), so re-parse argv with `serve` injected
+    // after the program name. Cheap; only happens once at startup.
+    let command = match args.command {
+        Some(c) => c,
+        None => {
+            let mut argv: Vec<std::ffi::OsString> = std::env::args_os().collect();
+            // Inject `serve` right after argv[0] so any flags (e.g.
+            // `--log-filter`) the user already supplied still attach
+            // to the top-level Cli, not to serve.
+            argv.insert(1, "serve".into());
+            cli::Cli::parse_from(argv)
+                .command
+                .expect("serve injected above")
+        }
+    };
+
+    let result = match command {
         cli::Command::Serve(opts) => server::serve(opts).await,
         cli::Command::Version => {
             println!("{}", env!("CARGO_PKG_VERSION"));

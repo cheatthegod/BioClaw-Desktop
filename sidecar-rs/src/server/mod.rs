@@ -13,7 +13,10 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use axum::{routing::get, Router};
+use axum::{
+    routing::{get, post},
+    Router,
+};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing::{info, warn};
@@ -30,6 +33,15 @@ pub async fn serve(opts: ServeOptions) -> anyhow::Result<()> {
     let lock = WorkspaceLock::acquire(&opts.workspace)?;
 
     let state = Arc::new(AppState::new(&opts)?);
+
+    // Fire-and-forget background install if (a) we have a bundled
+    // env zip and (b) the user's venv isn't ready. Mirrors the
+    // Node sidecar's auto-setup behaviour: by the time the
+    // frontend hits /env/state, the install is already in
+    // progress and reports `installing` status. Skipped when no
+    // resource_dir is configured (dev mode without a bundle).
+    maybe_auto_install(state.clone());
+
     let app = build_router(state.clone());
 
     let addr: SocketAddr = format!("{}:{}", opts.host, opts.port).parse()?;
@@ -61,8 +73,73 @@ fn build_router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/health", get(routes::health::health))
         .route("/skills", get(routes::skills::list_skills))
+        .route("/env/state", get(routes::env::get_state))
+        .route("/env/setup", post(routes::env::post_setup))
         .with_state(state)
         .layer(TraceLayer::new_for_http())
+}
+
+/// Spawn a background install task when the bundled zip is present
+/// and the user's venv doesn't yet exist. Idempotent — bails if the
+/// venv is already populated or no resource_dir is configured.
+fn maybe_auto_install(state: Arc<AppState>) {
+    let Some(resource_dir) = state.resource_dir.clone() else {
+        return;
+    };
+    let zip = resource_dir.join("bioclaw-env.zip");
+    if !zip.exists() {
+        return;
+    }
+    let disk = crate::env::state::read_disk_state(&state.project_dir, Some(&resource_dir));
+    if disk.venv_ok {
+        info!("auto-install skipped — venv already ready");
+        return;
+    }
+    info!(
+        zip = %zip.display(),
+        project_dir = %state.project_dir.display(),
+        "auto-installing bundled env in background"
+    );
+
+    let project_dir = state.project_dir.clone();
+    let resource_dir_clone = resource_dir.clone();
+    let uv = crate::env::setup::resolve_uv_path(Some(&resource_dir));
+    crate::env::state::begin_install("Preparing local Python kernel…");
+
+    tokio::spawn(async move {
+        let (tx, mut rx) = tokio::sync::mpsc::channel(32);
+        let drain = tokio::spawn(async move {
+            while let Some(ev) = rx.recv().await {
+                if let crate::env::setup::SetupEvent::Phase { label } = ev {
+                    crate::env::state::set_install_phase(&label);
+                }
+            }
+        });
+        let opts = crate::env::setup::SetupOptions {
+            project_dir,
+            resource_dir: Some(resource_dir_clone),
+            extras: &[],
+            index_url: None,
+            uv_path: uv,
+            abort: tokio_util::sync::CancellationToken::new(),
+        };
+        let result = crate::env::setup::run_setup(opts, tx).await;
+        let _ = drain.await;
+        match result {
+            Ok(()) => {
+                info!("background env install completed");
+                crate::env::state::complete_install();
+                tokio::spawn(async {
+                    tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+                    crate::env::state::clear_install();
+                });
+            }
+            Err(e) => {
+                warn!("background env install failed: {e:#}");
+                crate::env::state::fail_install(&format!("{e:#}"));
+            }
+        }
+    });
 }
 
 /// Wait for any of: SIGTERM (unix), ctrl-C, or stdin EOF. Returns

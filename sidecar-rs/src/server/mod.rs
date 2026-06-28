@@ -84,6 +84,8 @@ fn build_router(state: Arc<AppState>) -> Router {
             "/permissions/preload",
             post(crate::permissions::routes::preload),
         )
+        .route("/auth/device-code/start", post(crate::auth::routes::start))
+        .route("/auth/device-code/poll", post(crate::auth::routes::poll))
         .with_state(state)
         .layer(TraceLayer::new_for_http())
 }

@@ -6,6 +6,7 @@ pub mod chat;
 pub mod cli;
 pub mod env;
 pub mod logging;
+pub mod permissions;
 pub mod server;
 pub mod skills;
 pub mod workspace;

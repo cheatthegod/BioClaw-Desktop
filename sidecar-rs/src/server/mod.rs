@@ -76,6 +76,14 @@ fn build_router(state: Arc<AppState>) -> Router {
         .route("/env/state", get(routes::env::get_state))
         .route("/env/setup", post(routes::env::post_setup))
         .route("/chat", post(routes::chat::post_chat))
+        .route(
+            "/permissions/decide",
+            post(crate::permissions::routes::decide),
+        )
+        .route(
+            "/permissions/preload",
+            post(crate::permissions::routes::preload),
+        )
         .with_state(state)
         .layer(TraceLayer::new_for_http())
 }

@@ -13,21 +13,23 @@ use anyhow::Result;
 use directories::ProjectDirs;
 use tracing::info;
 
+use std::sync::Arc;
+
 use crate::cli::ServeOptions;
+use crate::permissions::PermissionStore;
 use crate::skills::{self, SkillCatalog};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AppState {
     pub version: &'static str,
     pub workspace: String,
-    /// Populated for later sub-stages (env routes, run_skill_script).
-    /// Suppress dead-code warning until those routes land.
-    #[allow(dead_code)]
     pub project_dir: PathBuf,
-    #[allow(dead_code)]
     pub resource_dir: Option<PathBuf>,
     /// Loaded once at boot, then served as an Arc-shared snapshot.
     pub skills: SkillCatalog,
+    /// Pending + persistent permission decisions for the script-runner
+    /// tool. Wrapped in Arc so handlers can clone it cheaply.
+    pub permissions: Arc<PermissionStore>,
 }
 
 impl AppState {
@@ -46,12 +48,16 @@ impl AppState {
             .or_else(skills::resolve_skills_dir);
         let catalog = skills::load(skills_dir.as_deref());
         info!(count = catalog.len(), "skill catalog loaded");
+
+        let permissions = Arc::new(PermissionStore::from_project_dir(&project_dir));
+
         Ok(AppState {
             version: env!("CARGO_PKG_VERSION"),
             workspace: opts.workspace.clone(),
             project_dir,
             resource_dir: opts.resource_dir.clone(),
             skills: catalog,
+            permissions,
         })
     }
 }

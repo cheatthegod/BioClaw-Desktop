@@ -1,0 +1,92 @@
+[package]
+name = "bioclaw-sidecar"
+version = "0.2.0"
+edition = "2021"
+rust-version = "1.77"
+description = "BioClaw Desktop sidecar — local HTTP server that the Tauri shell talks to."
+license = "MIT"
+publish = false
+
+# Aggressive size cuts in release builds. This binary ships per-platform
+# alongside the .deb / .dmg / .exe; every MB counts. The settings below
+# trade compile time for ~30% smaller final binary, mirroring what
+# tauri-cli uses for the desktop shell itself.
+[profile.release]
+opt-level = "s"        # optimise for size, not speed
+lto = "fat"            # whole-program LTO
+codegen-units = 1      # one CGU = better inlining + smaller output
+strip = "symbols"      # drop debug symbols (we have separate .pdb in CI)
+panic = "abort"        # smaller, faster — we don't unwind across FFI
+
+# Profile the dev path with -O0 so iteration stays fast.
+[profile.dev]
+opt-level = 0
+debug = true
+
+[[bin]]
+name = "bioclaw-sidecar"
+path = "src/main.rs"
+
+[dependencies]
+# ── HTTP server ──────────────────────────────────────────────────────
+# axum: same stack OmicOS uses (axum 0.7+ on hyper 1). Built atop
+# tokio + tower so we get streaming SSE, request extractors, and
+# middleware (CORS, tracing) for free.
+axum = { version = "0.7", features = ["macros", "json"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+hyper = { version = "1", features = ["server"] }
+
+# ── Async runtime ────────────────────────────────────────────────────
+# tokio with `full` because we use it everywhere — file IO, child procs,
+# signals, sync primitives. The dep weight is mostly compile-time.
+tokio = { version = "1", features = ["full"] }
+futures = "0.3"
+
+# ── Serialisation ────────────────────────────────────────────────────
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# ── Logging ──────────────────────────────────────────────────────────
+# Matches OmicOS exactly: tracing + tracing-subscriber with env-filter
+# so users can crank verbosity via RUST_LOG or BIOCLAW_LOG_FILTER.
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# ── CLI ──────────────────────────────────────────────────────────────
+# clap derives keep the subcommand surface declarative and produce
+# `--help` that mirrors OmicOS's UX (subcommands + flags + env-var
+# overrides on each option).
+clap = { version = "4", features = ["derive", "env"] }
+
+# ── Cross-platform paths ─────────────────────────────────────────────
+# `directories` returns the right per-OS app dir without us hardcoding
+# `~/.bioclaw` (which would be wrong on Windows where AppData is
+# canonical) or `%LOCALAPPDATA%\BioClaw` (which would be wrong on Linux).
+directories = "5"
+
+# ── File locking (workspace daemon enforcement) ─────────────────────
+# fs2 gives us flock() on unix + LockFileEx on win. We use it to
+# prevent two `bioclaw serve` invocations from racing for the same
+# workspace state. Matches OmicOS's `.omicos/serve.pid` lock pattern.
+fs2 = "0.4"
+
+# ── HTTP client (upstream proxy + updater) ───────────────────────────
+# Used by the chat proxy path (forward to chat.bioclaw.tech) and the
+# eventual updater. rustls because some platforms (notably musl
+# Linux) don't ship OpenSSL.
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+
+# ── Misc utilities ───────────────────────────────────────────────────
+anyhow = "1"          # error wrapping in CLI / startup paths
+thiserror = "2"       # typed errors for endpoint handlers
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+dashmap = "6"         # concurrent map for pending permission requests
+
+# ── Platform-specific ────────────────────────────────────────────────
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_System_Console"] }

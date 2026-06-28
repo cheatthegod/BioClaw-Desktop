@@ -39,9 +39,8 @@ impl WorkspaceLock {
     pub fn acquire(workspace: &str) -> Result<Self> {
         let lock_path = lock_path(workspace)?;
         if let Some(parent) = lock_path.parent() {
-            std::fs::create_dir_all(parent).with_context(|| {
-                format!("failed to create lock dir {}", parent.display())
-            })?;
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("failed to create lock dir {}", parent.display()))?;
         }
 
         let file = OpenOptions::new()
@@ -50,9 +49,7 @@ impl WorkspaceLock {
             .create(true)
             .truncate(false)
             .open(&lock_path)
-            .with_context(|| {
-                format!("failed to open lock file {}", lock_path.display())
-            })?;
+            .with_context(|| format!("failed to open lock file {}", lock_path.display()))?;
 
         match file.try_lock_exclusive() {
             Ok(_) => {
@@ -120,7 +117,13 @@ fn lock_path(workspace: &str) -> Result<PathBuf> {
     // traversal.
     let safe: String = workspace
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect();
     p.push(format!("workspace-{safe}.lock"));
     Ok(p)

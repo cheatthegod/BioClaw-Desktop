@@ -11,8 +11,10 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use directories::ProjectDirs;
+use tracing::info;
 
 use crate::cli::ServeOptions;
+use crate::skills::{self, SkillCatalog};
 
 #[derive(Debug, Clone)]
 pub struct AppState {
@@ -24,6 +26,8 @@ pub struct AppState {
     pub project_dir: PathBuf,
     #[allow(dead_code)]
     pub resource_dir: Option<PathBuf>,
+    /// Loaded once at boot, then served as an Arc-shared snapshot.
+    pub skills: SkillCatalog,
 }
 
 impl AppState {
@@ -32,11 +36,22 @@ impl AppState {
             Some(p) => p.clone(),
             None => default_project_dir()?,
         };
+        // Resolve skills dir: BIOCLAW_SKILLS_DIR env (set by Tauri),
+        // else <resource_dir>/skills, else ./skills relative to cwd.
+        let skills_dir = std::env::var("BIOCLAW_SKILLS_DIR")
+            .ok()
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .or_else(|| opts.resource_dir.as_ref().map(|p| p.join("skills")))
+            .or_else(skills::resolve_skills_dir);
+        let catalog = skills::load(skills_dir.as_deref());
+        info!(count = catalog.len(), "skill catalog loaded");
         Ok(AppState {
             version: env!("CARGO_PKG_VERSION"),
             workspace: opts.workspace.clone(),
             project_dir,
             resource_dir: opts.resource_dir.clone(),
+            skills: catalog,
         })
     }
 }
@@ -61,8 +76,7 @@ fn default_project_dir() -> Result<PathBuf> {
             .ok_or_else(|| anyhow::anyhow!("no per-user data dir"))?;
         Ok(dirs.data_local_dir().join("env"))
     } else {
-        let home =
-            std::env::var_os("HOME").ok_or_else(|| anyhow::anyhow!("HOME unset"))?;
+        let home = std::env::var_os("HOME").ok_or_else(|| anyhow::anyhow!("HOME unset"))?;
         let mut p = PathBuf::from(home);
         p.push(".bioclaw");
         p.push("env");

@@ -9,3 +9,4 @@
 //!   * `auth`          — POST /auth/device-code, /poll (device-code OAuth)
 
 pub mod health;
+pub mod skills;

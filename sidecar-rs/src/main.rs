@@ -32,10 +32,9 @@
 use clap::Parser;
 use tracing::error;
 
-mod cli;
-mod logging;
-mod server;
-mod workspace;
+// Modules are owned by the library target (src/lib.rs) so unit tests
+// can reach them; the binary just re-imports through the crate root.
+use bioclaw_sidecar::{cli, logging, server};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -47,7 +46,10 @@ async fn main() -> anyhow::Result<()> {
     // BIOCLAW_LOG_FILTER.
     logging::init(args.log_filter.as_deref());
 
-    let result = match args.command.unwrap_or(cli::Command::Serve(Default::default())) {
+    let result = match args
+        .command
+        .unwrap_or(cli::Command::Serve(Default::default()))
+    {
         cli::Command::Serve(opts) => server::serve(opts).await,
         cli::Command::Version => {
             println!("{}", env!("CARGO_PKG_VERSION"));

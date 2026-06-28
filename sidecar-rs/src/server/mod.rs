@@ -44,8 +44,8 @@ pub async fn serve(opts: ServeOptions) -> anyhow::Result<()> {
 
     info!(addr = %bound, "sidecar listening");
 
-    let server = axum::serve(listener, app.into_make_service())
-        .with_graceful_shutdown(shutdown_signal());
+    let server =
+        axum::serve(listener, app.into_make_service()).with_graceful_shutdown(shutdown_signal());
 
     if let Err(e) = server.await {
         warn!(error = %e, "axum server exited with error");
@@ -60,6 +60,7 @@ pub async fn serve(opts: ServeOptions) -> anyhow::Result<()> {
 fn build_router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/health", get(routes::health::health))
+        .route("/skills", get(routes::skills::list_skills))
         .with_state(state)
         .layer(TraceLayer::new_for_http())
 }
@@ -73,9 +74,9 @@ async fn shutdown_signal() {
 
     #[cfg(unix)]
     let terminate = async {
-        if let Ok(mut sig) = tokio::signal::unix::signal(
-            tokio::signal::unix::SignalKind::terminate(),
-        ) {
+        if let Ok(mut sig) =
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+        {
             let _ = sig.recv().await;
         }
     };
@@ -90,8 +91,8 @@ async fn shutdown_signal() {
         let mut stdin = tokio::io::stdin();
         loop {
             match stdin.read(&mut buf).await {
-                Ok(0) => return,           // EOF
-                Ok(_) => continue,          // drain
+                Ok(0) => return,   // EOF
+                Ok(_) => continue, // drain
                 Err(_) => return,
             }
         }

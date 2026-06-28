@@ -16,6 +16,7 @@ pub struct HealthResponse {
     pub ok: bool,
     pub version: &'static str,
     pub workspace: String,
+    pub skills: usize,
 }
 
 pub async fn health(State(state): State<Arc<AppState>>) -> Json<HealthResponse> {
@@ -23,5 +24,6 @@ pub async fn health(State(state): State<Arc<AppState>>) -> Json<HealthResponse> 
         ok: true,
         version: state.version,
         workspace: state.workspace.clone(),
+        skills: state.skills.len(),
     })
 }

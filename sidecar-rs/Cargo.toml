@@ -27,6 +27,13 @@ debug = true
 name = "bioclaw-sidecar"
 path = "src/main.rs"
 
+# Expose the modules as a library too so `cargo test` can hit the
+# loader / frontmatter / heuristics tests in `skills::tests` without
+# needing to spin up the binary entry point.
+[lib]
+name = "bioclaw_sidecar"
+path = "src/lib.rs"
+
 [dependencies]
 # ── HTTP server ──────────────────────────────────────────────────────
 # axum: same stack OmicOS uses (axum 0.7+ on hyper 1). Built atop

@@ -16,6 +16,7 @@ use tracing::info;
 use std::sync::Arc;
 
 use crate::cli::ServeOptions;
+use crate::memory::MemoryStore;
 use crate::permissions::PermissionStore;
 use crate::saas::SaasClient;
 use crate::skills::{self, SkillCatalog};
@@ -33,6 +34,8 @@ pub struct AppState {
     pub permissions: Arc<PermissionStore>,
     /// Authenticated client to the BioClaw SaaS (session token + proxy).
     pub saas: Arc<SaasClient>,
+    /// Persistent agent memory (SQLite under the project dir).
+    pub memory: Arc<MemoryStore>,
 }
 
 impl AppState {
@@ -55,6 +58,7 @@ impl AppState {
         let permissions = Arc::new(PermissionStore::from_project_dir(&project_dir));
         let saas = Arc::new(SaasClient::new());
         info!(base = saas.base(), "SaaS client initialized");
+        let memory = Arc::new(MemoryStore::open(&project_dir));
 
         Ok(AppState {
             version: env!("CARGO_PKG_VERSION"),
@@ -64,6 +68,7 @@ impl AppState {
             skills: catalog,
             permissions,
             saas,
+            memory,
         })
     }
 }

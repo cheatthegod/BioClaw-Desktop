@@ -94,6 +94,9 @@ uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 dashmap = "6"         # concurrent map for pending permission requests
 bytes = "1"           # used by the OpenAI SSE byte-stream splitter
+# SQLite-backed persistent memory tools. `bundled` compiles SQLite from
+# source so there's no system libsqlite3 dependency on any platform.
+rusqlite = { version = "0.31", features = ["bundled"] }
 
 # ── Platform-specific ────────────────────────────────────────────────
 [target.'cfg(unix)'.dependencies]

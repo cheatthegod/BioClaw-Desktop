@@ -16,7 +16,7 @@ Status: not-started / in-progress / done / N-A (with reason).
 | M0.1 device session token → keychain | done | keychain persist/restore already existed (auth.ts); added the bridge in AuthedShell pushing the token to the sidecar on boot/login (setSaasSession) + clearing on logout, so the /saas/* proxy is authenticated. tsc+eslint+vite green. |
 | M0.2 MCP client + JSON-RPC framing | not-started | |
 | M0.3 ship Rust sidecar as Tauri externalBin (drop Node) | not-started | needs per-target build + bundle config |
-| M0.4 SQLite memory tools | not-started | |
+| M0.4 SQLite memory tools | done | memory module (rusqlite bundled) + memory_write/read/search chat tools; 4 unit tests incl persist-across-reopen; clippy+test+release green. |
 | M0.5 CI 3-platform matrix | not-started | needs CI runners (mac/win) — not doable from this box |
 
 ## Phase 1 — keystone

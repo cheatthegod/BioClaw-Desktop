@@ -7,6 +7,7 @@ pub mod chat;
 pub mod cli;
 pub mod env;
 pub mod logging;
+pub mod memory;
 pub mod permissions;
 pub mod saas;
 pub mod server;

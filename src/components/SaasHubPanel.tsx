@@ -17,13 +17,27 @@ import { useState } from 'react';
 import { useSaasQuery } from '../hooks/useSaasQuery';
 import { saasPost } from '../lib/api/saas';
 
-type TabId = 'account' | 'quota' | 'kb' | 'skills';
+type TabId =
+  | 'account'
+  | 'quota'
+  | 'kb'
+  | 'skills'
+  | 'projects'
+  | 'papers'
+  | 'lab'
+  | 'manage'
+  | 'admin';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'account', label: '账户' },
   { id: 'quota', label: '配额' },
   { id: 'kb', label: '知识库' },
   { id: 'skills', label: '技能' },
+  { id: 'projects', label: '项目与数据' },
+  { id: 'papers', label: '论文摘要' },
+  { id: 'lab', label: '实验室' },
+  { id: 'manage', label: '管理' },
+  { id: 'admin', label: '管理员' },
 ];
 
 export function SaasHubPanel({ port, onClose }: { port: number | null; onClose: () => void }) {
@@ -56,6 +70,23 @@ export function SaasHubPanel({ port, onClose }: { port: number | null; onClose: 
           {tab === 'quota' && <QuotaTab port={port} />}
           {tab === 'kb' && <KbTab port={port} />}
           {tab === 'skills' && <SkillsTab port={port} />}
+          {tab === 'projects' && (
+            <div className="max-w-2xl space-y-6">
+              <ListSection port={port} title="项目" path="/projects" />
+              <ListSection port={port} title="数据集" path="/datasets" />
+            </div>
+          )}
+          {tab === 'papers' && (
+            <ListSection port={port} title="论文摘要" path="/paper-digest/list" />
+          )}
+          {tab === 'lab' && <ListSection port={port} title="实验室动态" path="/lab/feed" />}
+          {tab === 'manage' && (
+            <div className="max-w-2xl space-y-6">
+              <ObjectSection port={port} title="概览" path="/manage/overview" />
+              <ObjectSection port={port} title="状态" path="/manage/status" />
+            </div>
+          )}
+          {tab === 'admin' && <AdminTab port={port} />}
         </section>
       </div>
     </div>
@@ -317,6 +348,95 @@ function SkillsTab({ port }: { port: number | null }) {
           )}
         </ul>
       )}
+    </div>
+  );
+}
+
+// ── generic sections (breadth features: projects, datasets, papers, lab, …) ──
+
+function extractItems(data: unknown): Record<string, unknown>[] {
+  if (Array.isArray(data)) return data as Record<string, unknown>[];
+  if (data && typeof data === 'object') {
+    for (const v of Object.values(data as Record<string, unknown>)) {
+      if (Array.isArray(v)) return v as Record<string, unknown>[];
+    }
+  }
+  return [];
+}
+
+function itemTitle(it: Record<string, unknown>): string {
+  for (const k of ['name', 'title', 'displayName', 'label', 'subject', 'id', 'email']) {
+    const v = it[k];
+    if (typeof v === 'string' && v) return v;
+  }
+  return JSON.stringify(it).slice(0, 80);
+}
+
+function itemSubtitle(it: Record<string, unknown>): string {
+  for (const k of ['description', 'summary', 'text', 'status', 'createdAt', 'updatedAt']) {
+    const v = it[k];
+    if (typeof v === 'string' && v) return v;
+  }
+  return '';
+}
+
+/** Fetch a SaaS endpoint and render whatever array it returns as a card list. */
+function ListSection({ port, title, path }: { port: number | null; title: string; path: string }) {
+  const q = useSaasQuery<unknown>(port, path);
+  const items = extractItems(q.data);
+  return (
+    <div>
+      <h3 className="text-[14px] font-semibold text-ink">{title}</h3>
+      <Loading q={q} />
+      {!q.loading && !q.error && !q.needsAuth && (
+        <ul className="mt-2 space-y-1">
+          {items.length === 0 ? (
+            <p className="text-[12px] text-muted">暂无内容。</p>
+          ) : (
+            items.slice(0, 100).map((it, i) => (
+              <li key={(it.id as string) ?? i} className="rounded border border-line/30 px-3 py-2">
+                <div className="text-[12px] font-medium text-ink">{itemTitle(it)}</div>
+                {itemSubtitle(it) && (
+                  <p className="mt-0.5 text-[11px] text-muted line-clamp-2">{itemSubtitle(it)}</p>
+                )}
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** Fetch a SaaS endpoint and render the returned object as key/value rows. */
+function ObjectSection({ port, title, path }: { port: number | null; title: string; path: string }) {
+  const q = useSaasQuery<Record<string, unknown>>(port, path);
+  return (
+    <div>
+      <h3 className="text-[14px] font-semibold text-ink">{title}</h3>
+      <Loading q={q} />
+      {q.data && (
+        <pre className="mt-2 max-h-56 overflow-auto rounded bg-surface-alt/60 p-2 font-mono text-[11px] text-ink-soft">
+          {JSON.stringify(redactSecrets(q.data), null, 2)}
+        </pre>
+      )}
+    </div>
+  );
+}
+
+/** Admin tab — only shows data if the session is an admin (else 403 → hidden). */
+function AdminTab({ port }: { port: number | null }) {
+  const overview = useSaasQuery<Record<string, unknown>>(port, '/admin/overview');
+  // Admins get 200; everyone else gets 403/404 — treat any failure (or
+  // missing auth) as "not an admin" and hide the surface.
+  if (overview.needsAuth || overview.error != null) {
+    return <p className="text-[12px] text-muted">此账户没有管理员权限。</p>;
+  }
+  if (overview.loading) return <p className="text-[12px] text-muted">加载中…</p>;
+  return (
+    <div className="max-w-2xl space-y-6">
+      <ObjectSection port={port} title="管理概览" path="/admin/overview" />
+      <ListSection port={port} title="用户" path="/admin/users" />
     </div>
   );
 }

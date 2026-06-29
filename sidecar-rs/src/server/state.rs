@@ -17,6 +17,7 @@ use std::sync::Arc;
 
 use crate::cli::ServeOptions;
 use crate::permissions::PermissionStore;
+use crate::saas::SaasClient;
 use crate::skills::{self, SkillCatalog};
 
 #[derive(Debug)]
@@ -30,6 +31,8 @@ pub struct AppState {
     /// Pending + persistent permission decisions for the script-runner
     /// tool. Wrapped in Arc so handlers can clone it cheaply.
     pub permissions: Arc<PermissionStore>,
+    /// Authenticated client to the BioClaw SaaS (session token + proxy).
+    pub saas: Arc<SaasClient>,
 }
 
 impl AppState {
@@ -50,6 +53,8 @@ impl AppState {
         info!(count = catalog.len(), "skill catalog loaded");
 
         let permissions = Arc::new(PermissionStore::from_project_dir(&project_dir));
+        let saas = Arc::new(SaasClient::new());
+        info!(base = saas.base(), "SaaS client initialized");
 
         Ok(AppState {
             version: env!("CARGO_PKG_VERSION"),
@@ -58,6 +63,7 @@ impl AppState {
             resource_dir: opts.resource_dir.clone(),
             skills: catalog,
             permissions,
+            saas,
         })
     }
 }

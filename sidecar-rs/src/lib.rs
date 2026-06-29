@@ -8,6 +8,7 @@ pub mod cli;
 pub mod env;
 pub mod logging;
 pub mod permissions;
+pub mod saas;
 pub mod server;
 pub mod skills;
 pub mod workspace;

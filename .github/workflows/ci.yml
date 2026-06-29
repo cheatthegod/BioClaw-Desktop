@@ -194,6 +194,10 @@ jobs:
           npm ci
           npm run build
 
+      - name: Build Rust sidecar (externalBin)
+        shell: bash
+        run: bash scripts/build-sidecar-rs.sh ${{ matrix.platform.rust-target }}
+
       - name: Vendor uv binary
         env:
           UV_VERSION: '0.11.25'

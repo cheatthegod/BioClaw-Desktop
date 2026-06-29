@@ -111,6 +111,15 @@ jobs:
           npm run build
 
       # --------------------------------------------------------------------
+      # Build the Rust sidecar and place it at the externalBin path,
+      # overwriting the Node bundle so the shipped binary is the
+      # self-contained Rust one (no Node runtime dependency).
+      # --------------------------------------------------------------------
+      - name: Build Rust sidecar (externalBin)
+        shell: bash
+        run: bash scripts/build-sidecar-rs.sh ${{ matrix.platform.rust-target }}
+
+      # --------------------------------------------------------------------
       # Vendor uv per platform — Astral's prebuilt binary. tauri-bundler
       # picks it up via the externalBin entry in tauri.conf.json.
       # --------------------------------------------------------------------

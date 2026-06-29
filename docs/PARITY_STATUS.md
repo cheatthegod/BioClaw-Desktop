@@ -14,7 +14,7 @@ Status: not-started / in-progress / done / N-A (with reason).
 | Milestone | Status | Notes |
 |---|---|---|
 | M0.1 device session token → keychain | done | keychain persist/restore already existed (auth.ts); added the bridge in AuthedShell pushing the token to the sidecar on boot/login (setSaasSession) + clearing on logout, so the /saas/* proxy is authenticated. tsc+eslint+vite green. |
-| M0.2 MCP client + JSON-RPC framing | not-started | |
+| M0.2 MCP client + JSON-RPC framing | done (client) | mcp module: stdio line-framed JSON-RPC 2.0 client (initialize→tools/list→tools/call) + adapter (McpTool→namespaced ToolSchema mcp__server__tool). 3 tests incl integration vs a real Python mock server (echo round-trip). Spawning configured servers into the live chat loop is the remaining wiring. |
 | M0.3 ship Rust sidecar as externalBin | done (CI) | scripts/build-sidecar-rs.sh builds sidecar-rs per target → src-tauri/binaries/bioclaw-sidecar-<triple>; wired into ci.yml + release.yml so the bundled binary is the Rust one (tauri.conf externalBin already points there). Script verified locally (4.7MB linux binary placed). Full Node-dir removal + GUI spawn check deferred to a desktop session. |
 | M0.4 SQLite memory tools | done | memory module (rusqlite bundled) + memory_write/read/search chat tools; 4 unit tests incl persist-across-reopen; clippy+test+release green. |
 | M0.5 CI 3-platform matrix | done (authored) | ci.yml build-matrix (linux/macos-14/windows) + release.yml build&sign; now also build the Rust sidecar per target. YAML validated. Actually RUNNING it needs the repo on GitHub Actions (mac/win runners) — that is the user trigger, not codeable here. |

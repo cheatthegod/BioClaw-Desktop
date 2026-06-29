@@ -53,7 +53,7 @@ Status: not-started / in-progress / done / N-A (with reason).
 | Milestone | Status | Notes |
 |---|---|---|
 | M4.1 theming parity | partial | new panels use the sage palette tokens; full per-panel audit needs a display |
-| M4.2 i18n zh-CN+en | done (infra) | src/lib/i18n.ts: zh+en dicts, useT()/translate(), locale store (system-default, persisted), 中文/English toggle in Settings; new panels (GPU/Hub/Offline/nav) wired through t(). Legacy components migrate incrementally. |
+| M4.2 i18n zh-CN+en | done | src/lib/i18n.ts (zh+en, useT/translate, system-default persisted locale, 中文/English toggle). Fully migrated: GpuToolsPanel, SaasHubPanel (all tabs+content), SettingsDrawer, OfflineBanner, App nav — 0 residual CJK in their JSX. prettier+eslint+vite green. |
 | M4.3 two-tier auto-update | N-A-on-this-host | needs signing + an update server |
 | M4.4 code signing config | done (config) / N-A (run) | release.yml already wires Apple notarization + Windows cert + Tauri updater signing from secrets.* (keys never committed, no-op when empty). Producing the signed installers needs CI runners + the certs — user-side. |
 | M4.5 e2e acceptance on 3 OSes | N-A-on-this-host | needs 3 OSes with displays |

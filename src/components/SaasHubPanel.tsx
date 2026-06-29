@@ -78,20 +78,34 @@ export function SaasHubPanel({ port, onClose }: { port: number | null; onClose: 
           {tab === 'skills' && <SkillsTab port={port} />}
           {tab === 'projects' && (
             <div className="max-w-2xl space-y-6">
-              <ListSection port={port} title="项目" path="/projects" />
-              <ListSection port={port} title="数据集" path="/datasets" />
+              <ListSection port={port} title={t('hub.section.projects')} path="/projects" />
+              <ListSection port={port} title={t('hub.section.datasets')} path="/datasets" />
             </div>
           )}
           {tab === 'papers' && (
-            <ListSection port={port} title="论文摘要" path="/paper-digest/list" />
+            <ListSection port={port} title={t('hub.section.papers')} path="/paper-digest/list" />
           )}
-          {tab === 'shares' && <ListSection port={port} title="我的分享" path="/share/my" />}
-          {tab === 'contacts' && <ListSection port={port} title="联系人" path="/contacts" />}
-          {tab === 'lab' && <ListSection port={port} title="实验室动态" path="/lab/feed" />}
+          {tab === 'shares' && (
+            <ListSection port={port} title={t('hub.section.shares')} path="/share/my" />
+          )}
+          {tab === 'contacts' && (
+            <ListSection port={port} title={t('hub.section.contacts')} path="/contacts" />
+          )}
+          {tab === 'lab' && (
+            <ListSection port={port} title={t('hub.section.lab')} path="/lab/feed" />
+          )}
           {tab === 'manage' && (
             <div className="max-w-2xl space-y-6">
-              <ObjectSection port={port} title="概览" path="/manage/overview" />
-              <ObjectSection port={port} title="状态" path="/manage/status" />
+              <ObjectSection
+                port={port}
+                title={t('hub.section.manageOverview')}
+                path="/manage/overview"
+              />
+              <ObjectSection
+                port={port}
+                title={t('hub.section.manageStatus')}
+                path="/manage/status"
+              />
             </div>
           )}
           {tab === 'admin' && <AdminTab port={port} />}
@@ -102,15 +116,20 @@ export function SaasHubPanel({ port, onClose }: { port: number | null; onClose: 
 }
 
 function Loading({ q }: { q: { loading: boolean; needsAuth: boolean; error: Error | null } }) {
-  if (q.needsAuth) return <p className="text-[12px] text-danger">未登录，请在设置中重新登录。</p>;
-  if (q.loading) return <p className="text-[12px] text-muted">加载中…</p>;
-  if (q.error) return <p className="text-[12px] text-danger">加载失败：{q.error.message}</p>;
+  const t = useT();
+  if (q.needsAuth) return <p className="text-[12px] text-danger">{t('common.noAuth')}</p>;
+  if (q.loading) return <p className="text-[12px] text-muted">{t('common.loading')}</p>;
+  if (q.error)
+    return (
+      <p className="text-[12px] text-danger">{t('hub.loadFailed', { msg: q.error.message })}</p>
+    );
   return null;
 }
 
 // ── Account ──────────────────────────────────────────────────────────
 
 function AccountTab({ port }: { port: number | null }) {
+  const t = useT();
   const profileQ = useSaasQuery<{ profile: Record<string, unknown> }>(port, '/profile');
   const configQ = useSaasQuery<Record<string, unknown>>(port, '/config');
   const [feedback, setFeedback] = useState('');
@@ -131,12 +150,12 @@ function AccountTab({ port }: { port: number | null }) {
   return (
     <div className="max-w-2xl space-y-5">
       <div>
-        <h3 className="text-[14px] font-semibold text-ink">账户</h3>
+        <h3 className="text-[14px] font-semibold text-ink">{t('hub.account')}</h3>
         <Loading q={profileQ} />
         {!profileQ.loading && (
           <dl className="mt-2 space-y-1 text-[12px]">
             {Object.entries(profile).length === 0 ? (
-              <p className="text-[12px] text-muted">暂无资料。</p>
+              <p className="text-[12px] text-muted">{t('hub.noProfile')}</p>
             ) : (
               Object.entries(profile).map(([k, v]) => (
                 <div key={k} className="flex gap-2">
@@ -150,7 +169,7 @@ function AccountTab({ port }: { port: number | null }) {
       </div>
 
       <div>
-        <h3 className="text-[14px] font-semibold text-ink">服务器配置</h3>
+        <h3 className="text-[14px] font-semibold text-ink">{t('hub.serverConfig')}</h3>
         <Loading q={configQ} />
         {configQ.data && (
           <pre className="mt-2 max-h-40 overflow-auto rounded bg-surface-alt/60 p-2 font-mono text-[11px] text-ink-soft">
@@ -160,7 +179,7 @@ function AccountTab({ port }: { port: number | null }) {
       </div>
 
       <div>
-        <h3 className="text-[14px] font-semibold text-ink">反馈</h3>
+        <h3 className="text-[14px] font-semibold text-ink">{t('hub.feedback')}</h3>
         <textarea
           value={feedback}
           onChange={(e) => {
@@ -168,7 +187,7 @@ function AccountTab({ port }: { port: number | null }) {
             setSent(false);
           }}
           rows={3}
-          placeholder="告诉我们哪里可以做得更好…"
+          placeholder={t('hub.feedbackPlaceholder')}
           className="mt-2 w-full rounded border border-line/50 bg-surface px-2 py-1 text-[12px] text-ink"
         />
         <div className="mt-2 flex items-center gap-3">
@@ -178,9 +197,9 @@ function AccountTab({ port }: { port: number | null }) {
             onClick={() => void sendFeedback()}
             className="rounded bg-accent px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-50"
           >
-            发送
+            {t('common.send')}
           </button>
-          {sent && <span className="text-[12px] text-success">已发送，谢谢！</span>}
+          {sent && <span className="text-[12px] text-success">{t('hub.feedbackSent')}</span>}
         </div>
       </div>
     </div>
@@ -198,6 +217,7 @@ interface QuotaRequest {
 }
 
 function QuotaTab({ port }: { port: number | null }) {
+  const t = useT();
   const q = useSaasQuery<{ requests: QuotaRequest[] }>(port, '/quota/my-requests');
   const [reason, setReason] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -217,12 +237,12 @@ function QuotaTab({ port }: { port: number | null }) {
   const requests = q.data?.requests ?? [];
   return (
     <div className="max-w-2xl space-y-4">
-      <h3 className="text-[14px] font-semibold text-ink">配额请求</h3>
+      <h3 className="text-[14px] font-semibold text-ink">{t('hub.quotaTitle')}</h3>
       <Loading q={q} />
       {!q.loading && (
         <ul className="space-y-1">
           {requests.length === 0 ? (
-            <p className="text-[12px] text-muted">暂无配额请求记录。</p>
+            <p className="text-[12px] text-muted">{t('hub.noQuota')}</p>
           ) : (
             requests.map((r, i) => (
               <li key={r.id ?? i} className="flex items-center gap-3 text-[12px]">
@@ -243,7 +263,7 @@ function QuotaTab({ port }: { port: number | null }) {
             setReason(e.target.value);
             setSubmitted(false);
           }}
-          placeholder="申请更多额度的理由"
+          placeholder={t('hub.quotaReasonPlaceholder')}
           className="w-full rounded border border-line/50 bg-surface px-2 py-1 text-[12px] text-ink"
         />
         <div className="mt-2 flex items-center gap-3">
@@ -253,9 +273,9 @@ function QuotaTab({ port }: { port: number | null }) {
             onClick={() => void request()}
             className="rounded bg-accent px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-50"
           >
-            申请额度
+            {t('hub.requestQuota')}
           </button>
-          {submitted && <span className="text-[12px] text-success">已提交。</span>}
+          {submitted && <span className="text-[12px] text-success">{t('hub.submitted')}</span>}
         </div>
       </div>
     </div>
@@ -273,6 +293,7 @@ interface KbHit {
 }
 
 function KbTab({ port }: { port: number | null }) {
+  const t = useT();
   const [query, setQuery] = useState('');
   const [active, setActive] = useState('');
   const q = useSaasQuery<{ ok: boolean; hits: KbHit[] }>(
@@ -283,7 +304,7 @@ function KbTab({ port }: { port: number | null }) {
   const hits = q.data?.hits ?? [];
   return (
     <div className="max-w-2xl space-y-3">
-      <h3 className="text-[14px] font-semibold text-ink">知识库搜索</h3>
+      <h3 className="text-[14px] font-semibold text-ink">{t('hub.kbTitle')}</h3>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -295,22 +316,27 @@ function KbTab({ port }: { port: number | null }) {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="搜索你工作区里的文件 / 笔记…"
+          placeholder={t('hub.kbPlaceholder')}
           className="flex-1 rounded border border-line/50 bg-surface px-2 py-1 text-[12px] text-ink"
         />
-        <button type="submit" className="rounded bg-accent px-3 py-1.5 text-[12px] font-medium text-white">
-          搜索
+        <button
+          type="submit"
+          className="rounded bg-accent px-3 py-1.5 text-[12px] font-medium text-white"
+        >
+          {t('common.search')}
         </button>
       </form>
       {active && <Loading q={q} />}
       {active && !q.loading && (
         <ul className="space-y-2">
           {hits.length === 0 ? (
-            <p className="text-[12px] text-muted">没有命中。</p>
+            <p className="text-[12px] text-muted">{t('hub.noHits')}</p>
           ) : (
             hits.map((h, i) => (
               <li key={h.path ?? i} className="rounded border border-line/30 px-3 py-2">
-                <div className="text-[12px] font-medium text-ink">{h.title ?? h.path ?? '结果'}</div>
+                <div className="text-[12px] font-medium text-ink">
+                  {h.title ?? h.path ?? t('hub.result')}
+                </div>
                 {h.text && <p className="mt-0.5 text-[11px] text-muted line-clamp-3">{h.text}</p>}
               </li>
             ))
@@ -333,16 +359,17 @@ interface SaasSkill {
 }
 
 function SkillsTab({ port }: { port: number | null }) {
+  const t = useT();
   const q = useSaasQuery<{ skills?: SaasSkill[] } | SaasSkill[]>(port, '/skills');
   const skills: SaasSkill[] = Array.isArray(q.data) ? q.data : (q.data?.skills ?? []);
   return (
     <div className="max-w-2xl space-y-3">
-      <h3 className="text-[14px] font-semibold text-ink">技能库（云端）</h3>
+      <h3 className="text-[14px] font-semibold text-ink">{t('hub.skillsTitle')}</h3>
       <Loading q={q} />
       {!q.loading && (
         <ul className="space-y-1">
           {skills.length === 0 ? (
-            <p className="text-[12px] text-muted">暂无云端技能。</p>
+            <p className="text-[12px] text-muted">{t('hub.noCloudSkills')}</p>
           ) : (
             skills.map((s, i) => (
               <li key={s.id ?? i} className="rounded px-2 py-1 text-[12px] hover:bg-line/20">
@@ -390,6 +417,7 @@ function itemSubtitle(it: Record<string, unknown>): string {
 
 /** Fetch a SaaS endpoint and render whatever array it returns as a card list. */
 function ListSection({ port, title, path }: { port: number | null; title: string; path: string }) {
+  const t = useT();
   const q = useSaasQuery<unknown>(port, path);
   const items = extractItems(q.data);
   return (
@@ -399,7 +427,7 @@ function ListSection({ port, title, path }: { port: number | null; title: string
       {!q.loading && !q.error && !q.needsAuth && (
         <ul className="mt-2 space-y-1">
           {items.length === 0 ? (
-            <p className="text-[12px] text-muted">暂无内容。</p>
+            <p className="text-[12px] text-muted">{t('hub.empty')}</p>
           ) : (
             items.slice(0, 100).map((it, i) => (
               <li key={(it.id as string) ?? i} className="rounded border border-line/30 px-3 py-2">
@@ -417,7 +445,15 @@ function ListSection({ port, title, path }: { port: number | null; title: string
 }
 
 /** Fetch a SaaS endpoint and render the returned object as key/value rows. */
-function ObjectSection({ port, title, path }: { port: number | null; title: string; path: string }) {
+function ObjectSection({
+  port,
+  title,
+  path,
+}: {
+  port: number | null;
+  title: string;
+  path: string;
+}) {
   const q = useSaasQuery<Record<string, unknown>>(port, path);
   return (
     <div>
@@ -434,17 +470,18 @@ function ObjectSection({ port, title, path }: { port: number | null; title: stri
 
 /** Admin tab — only shows data if the session is an admin (else 403 → hidden). */
 function AdminTab({ port }: { port: number | null }) {
+  const t = useT();
   const overview = useSaasQuery<Record<string, unknown>>(port, '/admin/overview');
   // Admins get 200; everyone else gets 403/404 — treat any failure (or
   // missing auth) as "not an admin" and hide the surface.
   if (overview.needsAuth || overview.error != null) {
-    return <p className="text-[12px] text-muted">此账户没有管理员权限。</p>;
+    return <p className="text-[12px] text-muted">{t('hub.noAdmin')}</p>;
   }
-  if (overview.loading) return <p className="text-[12px] text-muted">加载中…</p>;
+  if (overview.loading) return <p className="text-[12px] text-muted">{t('common.loading')}</p>;
   return (
     <div className="max-w-2xl space-y-6">
-      <ObjectSection port={port} title="管理概览" path="/admin/overview" />
-      <ListSection port={port} title="用户" path="/admin/users" />
+      <ObjectSection port={port} title={t('hub.section.adminOverview')} path="/admin/overview" />
+      <ListSection port={port} title={t('hub.section.users')} path="/admin/users" />
     </div>
   );
 }

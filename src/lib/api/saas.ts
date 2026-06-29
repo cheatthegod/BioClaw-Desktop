@@ -63,7 +63,10 @@ async function handle(res: Response): Promise<Response> {
       const body = await res.clone().json();
       detail = typeof body?.detail === 'string' ? body.detail : JSON.stringify(body);
     } catch {
-      detail = await res.clone().text().catch(() => undefined);
+      detail = await res
+        .clone()
+        .text()
+        .catch(() => undefined);
     }
     throw new SaasError(res.status, `SaaS request failed (${res.status})`, detail);
   }

@@ -30,7 +30,7 @@ export function SettingsDrawer() {
       </div>
 
       <div className="flex-1 space-y-5 overflow-y-auto px-4 py-4">
-        <Section title="账户">
+        <Section title={t('settings.account')}>
           <AccountRow />
         </Section>
         <Section title={t('settings.language')}>
@@ -56,7 +56,9 @@ function LanguageRow() {
           type="button"
           onClick={() => setLocale(o.id)}
           className={`rounded px-3 py-1 text-[12px] ${
-            locale === o.id ? 'bg-accent text-white' : 'border border-line/50 text-ink-soft hover:text-ink'
+            locale === o.id
+              ? 'bg-accent text-white'
+              : 'border border-line/50 text-ink-soft hover:text-ink'
           }`}
         >
           {o.label}
@@ -76,16 +78,19 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function AccountRow() {
+  const t = useT();
   const email = useAuthStore((s) => s.email);
   const logout = useAuthStore((s) => s.logout);
   const busy = useAuthStore((s) => s.busy);
   if (!email) {
-    return <div className="text-[12px] text-muted">未登录</div>;
+    return <div className="text-[12px] text-muted">{t('account.notSignedIn')}</div>;
   }
   return (
     <div className="space-y-2">
       <div className="rounded border border-line/40 bg-bg px-2.5 py-2 text-[12px] text-ink">
-        <div className="text-[10px] uppercase tracking-wider text-muted">已登录</div>
+        <div className="text-[10px] uppercase tracking-wider text-muted">
+          {t('account.signedIn')}
+        </div>
         <div className="mt-0.5 truncate font-mono">{email}</div>
       </div>
       <button
@@ -94,7 +99,7 @@ function AccountRow() {
         disabled={busy}
         className="w-full rounded border border-line/60 bg-surface px-2.5 py-1.5 text-[12px] text-ink-soft hover:bg-bg disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {busy ? '处理中…' : '登出'}
+        {busy ? t('account.processing') : t('account.logout')}
       </button>
     </div>
   );

@@ -22,10 +22,13 @@ interface AppState {
   isSettingsOpen: boolean;
   /** GPU tools panel (RNAGenesis / FoldMark / Boltz / … via the SaaS). */
   isGpuOpen: boolean;
+  /** SaaS hub panel (account / quota / KB / skills / … via the SaaS). */
+  isHubOpen: boolean;
   sidecarRunning: boolean;
   selectedModel: string;
   toggleSettings: () => void;
   toggleGpu: () => void;
+  toggleHub: () => void;
   setSidecarRunning: (running: boolean) => void;
   setSelectedModel: (id: string) => void;
 }
@@ -35,10 +38,12 @@ export const DEFAULT_MODEL = 'openai/gpt-4o-mini';
 export const useAppStore = create<AppState>((set) => ({
   isSettingsOpen: false,
   isGpuOpen: false,
+  isHubOpen: false,
   sidecarRunning: false,
   selectedModel: DEFAULT_MODEL,
   toggleSettings: () => set((s) => ({ isSettingsOpen: !s.isSettingsOpen })),
   toggleGpu: () => set((s) => ({ isGpuOpen: !s.isGpuOpen })),
+  toggleHub: () => set((s) => ({ isHubOpen: !s.isHubOpen })),
   setSidecarRunning: (sidecarRunning) => set({ sidecarRunning }),
   setSelectedModel: (selectedModel) => set({ selectedModel }),
 }));

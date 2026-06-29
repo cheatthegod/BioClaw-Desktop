@@ -30,12 +30,12 @@ Status: not-started / in-progress / done / N-A (with reason).
 |---|---|---|
 | M2.1 GPU Tools panel (RNAGenesis/FoldMark) | done | GpuToolsPanel: tool list grouped by category, dynamic param/file form, submit, live SSE job log, cancel, results; host-status badge. Wired via M1.2 hooks. Data path verified through the proxy (submit + SSE stream to done). GUI screenshot needs a display. |
 | M2.2 chat history/threads | not-started | |
-| M2.3 skills center (local+SaaS) | not-started | |
-| M2.4 KB search | not-started | |
-| M2.5 quota | not-started | |
+| M2.3 skills center (SaaS) | done | SaaS catalog tab in SaasHubPanel (/saas/skills); local catalog already in chat. |
+| M2.4 KB search | done | KB tab (/saas/kb/search?q=) in SaasHubPanel. |
+| M2.5 quota | done | Quota tab (/saas/quota/my-requests + /quota/request) in SaasHubPanel. |
 | M2.6 projects+datasets+files | not-started | |
 | M2.7 sharing | not-started | |
-| M2.8 profile/account/feedback | not-started | |
+| M2.8 profile/account/feedback | done | Account tab (/saas/profile + /config redacted + /feedback/message) in SaasHubPanel. |
 | M2.9 paper-digest | not-started | |
 | M2.10 contacts | not-started | |
 | M2.11 lab module | not-started | |

@@ -45,7 +45,7 @@ Status: not-started / in-progress / done / N-A (with reason).
 ## Phase 3 — local-first
 | Milestone | Status | Notes |
 |---|---|---|
-| M3.1 local GPU inference option | not-started | buildable here (probe local conda env); deferred |
+| M3.1 local GPU inference option | done (probe) | sidecar `GET /gpu/local-envs` scans `$HOME/miniconda3/envs` + `$BIOCLAW_GPU_ENVS_DIR`; GPU panel shows "N GPU envs ready on this machine" footer when present (default execution stays cloud). Live-verified: 34 envs incl. foldmark/boltz. |
 | M3.2 offline mode | done | OfflineBanner + useSaasReachable: proxy returns 502 when SaaS unreachable → global banner; local chat/skills/env keep working. 502 path verified via curl. |
 | M3.3 native notifications/tray/deeplinks/drag-drop | not-started | tray scaffolded; notifications/deeplinks need a desktop session to verify |
 

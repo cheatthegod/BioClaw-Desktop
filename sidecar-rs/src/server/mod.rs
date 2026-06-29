@@ -76,6 +76,8 @@ fn build_router(state: Arc<AppState>) -> Router {
         .route("/env/state", get(routes::env::get_state))
         .route("/env/setup", post(routes::env::post_setup))
         .route("/chat", post(routes::chat::post_chat))
+        // Local GPU env probe (M3.1): which GPU conda envs exist on this box.
+        .route("/gpu/local-envs", get(routes::gpu_local::local_envs))
         .route(
             "/permissions/decide",
             post(crate::permissions::routes::decide),

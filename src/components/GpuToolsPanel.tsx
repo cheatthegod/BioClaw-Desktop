@@ -12,6 +12,7 @@
 import { useMemo, useState } from 'react';
 
 import { useSaasQuery } from '../hooks/useSaasQuery';
+import { useLocalEnvs } from '../hooks/useLocalEnvs';
 import { useSaasStream } from '../hooks/useSaasStream';
 import { saasPost } from '../lib/api/saas';
 import { uploadToWorkspace } from '../lib/api/saas-upload';
@@ -79,6 +80,7 @@ type ParamValue = string | number | boolean;
 export function GpuToolsPanel({ port, onClose }: { port: number | null; onClose: () => void }) {
   const toolsQ = useSaasQuery<{ tools: GpuTool[] }>(port, '/gpu/tools');
   const hostQ = useSaasQuery<HostStatus>(port, '/gpu/host/status', { refetchIntervalMs: 15000 });
+  const localEnvs = useLocalEnvs(port);
 
   const t = useT();
   const tools = useMemo(() => toolsQ.data?.tools ?? [], [toolsQ.data]);
@@ -136,6 +138,15 @@ export function GpuToolsPanel({ port, onClose }: { port: number | null; onClose:
               ))}
             </div>
           ))}
+          {localEnvs.localAvailable && (
+            <div
+              className="mt-2 border-t border-line/30 px-2 pt-2 text-[10px] text-muted"
+              title={localEnvs.envs.join(', ')}
+            >
+              <span className="font-semibold text-success">●</span>{' '}
+              {t('gpu.localEnvs', { n: localEnvs.envs.length })}
+            </div>
+          )}
         </aside>
 
         {/* detail / form / job */}

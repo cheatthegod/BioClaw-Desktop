@@ -36,6 +36,7 @@ import { useAuthStore } from './lib/auth-state';
 import { useEnvStore } from './lib/env-state';
 import { useSidecar } from './hooks/useSidecar';
 import { initializeApp } from './lib/init';
+import { setSaasSession, clearSaasSession } from './lib/api/saas';
 
 export function App() {
   const isSettingsOpen = useAppStore((s) => s.isSettingsOpen);
@@ -115,6 +116,21 @@ function AuthedShell({ isSettingsOpen }: { isSettingsOpen: boolean }) {
     }, 4000);
     return () => clearInterval(id);
   }, [sidecar.port, refreshEnv]);
+
+  // Bridge the device-code/OTP session token (held in the auth store +
+  // OS keychain) into the sidecar so the authenticated SaaS proxy
+  // (/saas/*) can attach it. Covers boot (token hydrated from keychain),
+  // fresh login (token set), and logout (token → null → clear). Without
+  // this the GPU / chat-history / … panels would all 401.
+  const authToken = useAuthStore((s) => s.token);
+  useEffect(() => {
+    if (sidecar.port == null) return;
+    if (authToken) {
+      void setSaasSession(sidecar.port, authToken).catch(() => undefined);
+    } else {
+      void clearSaasSession(sidecar.port);
+    }
+  }, [sidecar.port, authToken]);
 
   // Manual SetupWizard — opens for repair / extras only. The
   // OmicOS-style first-launch flow is driven entirely by the sidecar

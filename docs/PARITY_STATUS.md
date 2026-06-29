@@ -13,7 +13,7 @@ Status: not-started / in-progress / done / N-A (with reason).
 ## Phase 0 — foundation
 | Milestone | Status | Notes |
 |---|---|---|
-| M0.1 device session token → keychain | in-progress | sidecar half done (POST/GET/DELETE /auth/session, in-mem token); frontend keychain persist+restore pairs with M1.2 |
+| M0.1 device session token → keychain | done | keychain persist/restore already existed (auth.ts); added the bridge in AuthedShell pushing the token to the sidecar on boot/login (setSaasSession) + clearing on logout, so the /saas/* proxy is authenticated. tsc+eslint+vite green. |
 | M0.2 MCP client + JSON-RPC framing | not-started | |
 | M0.3 ship Rust sidecar as Tauri externalBin (drop Node) | not-started | needs per-target build + bundle config |
 | M0.4 SQLite memory tools | not-started | |

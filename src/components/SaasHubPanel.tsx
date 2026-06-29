@@ -25,6 +25,8 @@ type TabId =
   | 'projects'
   | 'papers'
   | 'lab'
+  | 'shares'
+  | 'contacts'
   | 'manage'
   | 'admin';
 
@@ -35,6 +37,8 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'skills', label: '技能' },
   { id: 'projects', label: '项目与数据' },
   { id: 'papers', label: '论文摘要' },
+  { id: 'shares', label: '分享' },
+  { id: 'contacts', label: '联系人' },
   { id: 'lab', label: '实验室' },
   { id: 'manage', label: '管理' },
   { id: 'admin', label: '管理员' },
@@ -79,6 +83,8 @@ export function SaasHubPanel({ port, onClose }: { port: number | null; onClose: 
           {tab === 'papers' && (
             <ListSection port={port} title="论文摘要" path="/paper-digest/list" />
           )}
+          {tab === 'shares' && <ListSection port={port} title="我的分享" path="/share/my" />}
+          {tab === 'contacts' && <ListSection port={port} title="联系人" path="/contacts" />}
           {tab === 'lab' && <ListSection port={port} title="实验室动态" path="/lab/feed" />}
           {tab === 'manage' && (
             <div className="max-w-2xl space-y-6">

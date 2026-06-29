@@ -34,10 +34,10 @@ Status: not-started / in-progress / done / N-A (with reason).
 | M2.4 KB search | done | KB tab (/saas/kb/search?q=) in SaasHubPanel. |
 | M2.5 quota | done | Quota tab (/saas/quota/my-requests + /quota/request) in SaasHubPanel. |
 | M2.6 projects+datasets (+files) | done (lists) | 项目与数据 hub tab (/saas/projects + /saas/datasets); GPU panel does file upload; full file browser/download deferred. |
-| M2.7 sharing | not-started | |
+| M2.7 sharing | done (read) | 分享 hub tab (/saas/share/my); create-share action deferred. |
 | M2.8 profile/account/feedback | done | Account tab (/saas/profile + /config redacted + /feedback/message) in SaasHubPanel. |
 | M2.9 paper-digest | done | 论文摘要 hub tab (/saas/paper-digest/list). |
-| M2.10 contacts | not-started | |
+| M2.10 contacts | done | 联系人 hub tab (/saas/contacts → contacts+invites). |
 | M2.11 lab module | done (read) | 实验室 hub tab (/saas/lab/feed, read-only). |
 | M2.12 manage | done | 管理 hub tab (/saas/manage/overview + status; server-gated, 403 handled). |
 | M2.13 admin (gated) | done | 管理员 hub tab — hidden unless /saas/admin/overview returns 200 (non-admins get 403/404 → "无管理员权限"). |

@@ -55,7 +55,10 @@ Status: not-started / in-progress / done / N-A (with reason).
 | M4.1 theming parity | partial | new panels use sage palette tokens + match existing patterns; full pixel audit needs a display |
 | M4.2 i18n zh-CN+en | done | src/lib/i18n.ts (zh+en, useT/translate, system-default persisted locale, 中文/English toggle). Fully migrated: GpuToolsPanel, SaasHubPanel (all tabs+content), SettingsDrawer, OfflineBanner, App nav — 0 residual CJK in their JSX. prettier+eslint+vite green. |
 | M4.3 two-tier auto-update | N-A-on-this-host | needs signing + an update server |
-| M4.4 code signing config | done (config) / N-A (run) | release.yml already wires Apple notarization + Windows cert + Tauri updater signing from secrets.* (keys never committed, no-op when empty). Producing the signed installers needs CI runners + the certs — user-side. |
+| M4.4 code signing config | done (config) / N-A (run) | release.yml already wires Apple notarization + Windows cert + Tauri updater signing from secrets.* (keys never committed, no-op when empty). Producing the *signed* mac/win installers needs CI runners + the certs — user-side. |
+| M4.4b Linux installer (built here) | done | `npm run tauri build --bundles deb` produces `BioClaw_0.2.0_amd64.deb` (294MB) bundling the real 4.7MB **Rust** sidecar (`usr/bin/bioclaw-sidecar`) + `uv` + the app. Linux pkgs need no signing cert. Unblocked by the Cargo.lock fix below. |
 | M4.5 e2e acceptance on 3 OSes | N-A-on-this-host | needs 3 OSes with displays |
+
+> **Build-system fix (also unblocks CI on all 3 platforms):** the lockfile had resolved `proc-macro-crate v3.5.0`, which forces the broken `toml_edit v0.25.12+spec-1.1.0` (TOML-1.1 preview crate that fails to compile — "can't find crate for toml_parser/toml_datetime/indexmap"). Pinned `proc-macro-crate` to `3.4.0` (uses the stable `toml_edit 0.23.10+spec-1.0.0`); kept `zbus`/`zbus_macros` matched at 5.16.0. Without this, `cargo build` of the Tauri app fails identically on every OS, so CI would have been red. Verified: full release build + .deb bundle succeed locally.
 
 > Note: ApiKeysPanel.tsx is dead code (unused since device-code auth dropped the API-key UI, Stage D) — its residual zh strings are not rendered. SetupWizard remains zh-first; "清华源" is a proper noun (Tsinghua PyPI mirror).

@@ -25,6 +25,7 @@
 import { useEffect, useState } from 'react';
 import { TitleBar } from './components/TitleBar';
 import { SettingsDrawer } from './components/SettingsDrawer';
+import { GpuToolsPanel } from './components/GpuToolsPanel';
 import { LocalChat } from './components/LocalChat';
 import { PermissionPrompt } from './components/PermissionPrompt';
 import { LoginGate } from './components/LoginGate';
@@ -120,6 +121,8 @@ function AuthedShell({ isSettingsOpen }: { isSettingsOpen: boolean }) {
   // (extract zip + offline sync, ~30-60 s) with an inline banner.
   const [wizardOpen, setWizardOpen] = useState(false);
   void envState;
+  const isGpuOpen = useAppStore((s) => s.isGpuOpen);
+  const toggleGpu = useAppStore((s) => s.toggleGpu);
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-bg">
@@ -127,6 +130,16 @@ function AuthedShell({ isSettingsOpen }: { isSettingsOpen: boolean }) {
       <EnvInstallBanner />
       <main className="relative flex-1 overflow-hidden">
         <LocalChat />
+        {/* GPU tools launcher — opens the RNAGenesis / FoldMark / Boltz / … panel */}
+        <button
+          type="button"
+          onClick={toggleGpu}
+          title="GPU 工具"
+          className="absolute bottom-4 left-4 z-10 rounded-full border border-line/40 bg-surface px-3 py-1.5 text-[12px] text-ink-soft shadow hover:text-ink"
+        >
+          GPU 工具
+        </button>
+        {isGpuOpen && <GpuToolsPanel port={sidecar.port} onClose={toggleGpu} />}
       </main>
       {isSettingsOpen ? <SettingsDrawer /> : null}
       <PermissionPrompt />

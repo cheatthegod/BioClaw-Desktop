@@ -28,7 +28,7 @@ Status: not-started / in-progress / done / N-A (with reason).
 ## Phase 2 — panels
 | Milestone | Status | Notes |
 |---|---|---|
-| M2.1 GPU Tools panel (RNAGenesis/FoldMark) | not-started | user's priority |
+| M2.1 GPU Tools panel (RNAGenesis/FoldMark) | done | GpuToolsPanel: tool list grouped by category, dynamic param/file form, submit, live SSE job log, cancel, results; host-status badge. Wired via M1.2 hooks. Data path verified through the proxy (submit + SSE stream to done). GUI screenshot needs a display. |
 | M2.2 chat history/threads | not-started | |
 | M2.3 skills center (local+SaaS) | not-started | |
 | M2.4 KB search | not-started | |

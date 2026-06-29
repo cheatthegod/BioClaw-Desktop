@@ -16,6 +16,7 @@ import { useState } from 'react';
 
 import { useSaasQuery } from '../hooks/useSaasQuery';
 import { saasPost } from '../lib/api/saas';
+import { useT } from '../lib/i18n';
 
 type TabId =
   | 'account'
@@ -30,42 +31,43 @@ type TabId =
   | 'manage'
   | 'admin';
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: 'account', label: '账户' },
-  { id: 'quota', label: '配额' },
-  { id: 'kb', label: '知识库' },
-  { id: 'skills', label: '技能' },
-  { id: 'projects', label: '项目与数据' },
-  { id: 'papers', label: '论文摘要' },
-  { id: 'shares', label: '分享' },
-  { id: 'contacts', label: '联系人' },
-  { id: 'lab', label: '实验室' },
-  { id: 'manage', label: '管理' },
-  { id: 'admin', label: '管理员' },
+const TAB_IDS: TabId[] = [
+  'account',
+  'quota',
+  'kb',
+  'skills',
+  'projects',
+  'papers',
+  'shares',
+  'contacts',
+  'lab',
+  'manage',
+  'admin',
 ];
 
 export function SaasHubPanel({ port, onClose }: { port: number | null; onClose: () => void }) {
   const [tab, setTab] = useState<TabId>('account');
+  const t = useT();
   return (
     <div className="absolute inset-0 z-30 flex flex-col bg-bg">
       <header className="flex items-center justify-between border-b border-line/40 px-4 py-3">
-        <h2 className="text-[13px] font-semibold text-ink">BioClaw 工作台</h2>
+        <h2 className="text-[13px] font-semibold text-ink">{t('hub.title')}</h2>
         <button type="button" onClick={onClose} className="text-[12px] text-muted hover:text-ink">
-          关闭
+          {t('common.close')}
         </button>
       </header>
       <div className="flex min-h-0 flex-1">
         <aside className="w-40 shrink-0 border-r border-line/40 px-2 py-3">
-          {TABS.map((t) => (
+          {TAB_IDS.map((id) => (
             <button
-              key={t.id}
+              key={id}
               type="button"
-              onClick={() => setTab(t.id)}
+              onClick={() => setTab(id)}
               className={`block w-full rounded px-3 py-1.5 text-left text-[12px] ${
-                tab === t.id ? 'bg-accent/15 text-ink' : 'text-ink-soft hover:bg-line/20'
+                tab === id ? 'bg-accent/15 text-ink' : 'text-ink-soft hover:bg-line/20'
               }`}
             >
-              {t.label}
+              {t(`hub.tab.${id}`)}
             </button>
           ))}
         </aside>

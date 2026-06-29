@@ -39,6 +39,7 @@ import { useEnvStore } from './lib/env-state';
 import { useSidecar } from './hooks/useSidecar';
 import { initializeApp } from './lib/init';
 import { setSaasSession, clearSaasSession } from './lib/api/saas';
+import { useT } from './lib/i18n';
 
 export function App() {
   const isSettingsOpen = useAppStore((s) => s.isSettingsOpen);
@@ -143,6 +144,7 @@ function AuthedShell({ isSettingsOpen }: { isSettingsOpen: boolean }) {
   const toggleGpu = useAppStore((s) => s.toggleGpu);
   const isHubOpen = useAppStore((s) => s.isHubOpen);
   const toggleHub = useAppStore((s) => s.toggleHub);
+  const t = useT();
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-bg">
@@ -156,18 +158,18 @@ function AuthedShell({ isSettingsOpen }: { isSettingsOpen: boolean }) {
           <button
             type="button"
             onClick={toggleGpu}
-            title="GPU 工具"
+            title={t('nav.gpu')}
             className="rounded-full border border-line/40 bg-surface px-3 py-1.5 text-[12px] text-ink-soft shadow hover:text-ink"
           >
-            GPU 工具
+            {t('nav.gpu')}
           </button>
           <button
             type="button"
             onClick={toggleHub}
-            title="BioClaw 工作台"
+            title={t('nav.hub')}
             className="rounded-full border border-line/40 bg-surface px-3 py-1.5 text-[12px] text-ink-soft shadow hover:text-ink"
           >
-            工作台
+            {t('nav.hub')}
           </button>
         </div>
         {isGpuOpen && <GpuToolsPanel port={sidecar.port} onClose={toggleGpu} />}

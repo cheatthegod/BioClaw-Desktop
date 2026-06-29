@@ -15,6 +15,7 @@ import { useSaasQuery } from '../hooks/useSaasQuery';
 import { useSaasStream } from '../hooks/useSaasStream';
 import { saasPost } from '../lib/api/saas';
 import { uploadToWorkspace } from '../lib/api/saas-upload';
+import { useT } from '../lib/i18n';
 
 // ── SaaS wire types (mirror BioClaw-SaaS/src/gpu/tools.ts) ───────────
 
@@ -79,6 +80,7 @@ export function GpuToolsPanel({ port, onClose }: { port: number | null; onClose:
   const toolsQ = useSaasQuery<{ tools: GpuTool[] }>(port, '/gpu/tools');
   const hostQ = useSaasQuery<HostStatus>(port, '/gpu/host/status', { refetchIntervalMs: 15000 });
 
+  const t = useT();
   const tools = useMemo(() => toolsQ.data?.tools ?? [], [toolsQ.data]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = tools.find((t) => t.id === selectedId) ?? null;
@@ -97,11 +99,11 @@ export function GpuToolsPanel({ port, onClose }: { port: number | null; onClose:
     <div className="absolute inset-0 z-30 flex flex-col bg-bg">
       <header className="flex items-center justify-between border-b border-line/40 px-4 py-3">
         <div className="flex items-center gap-3">
-          <h2 className="text-[13px] font-semibold text-ink">GPU 工具</h2>
+          <h2 className="text-[13px] font-semibold text-ink">{t('gpu.title')}</h2>
           <HostBadge host={hostQ.data} needsAuth={hostQ.needsAuth} />
         </div>
         <button type="button" onClick={onClose} className="text-[12px] text-muted hover:text-ink">
-          关闭
+          {t('common.close')}
         </button>
       </header>
 
@@ -139,7 +141,7 @@ export function GpuToolsPanel({ port, onClose }: { port: number | null; onClose:
         {/* detail / form / job */}
         <section className="min-w-0 flex-1 overflow-y-auto px-5 py-4">
           {!selected ? (
-            <p className="text-[13px] text-muted">从左侧选择一个 GPU 工具。</p>
+            <p className="text-[13px] text-muted">{t('gpu.pickTool')}</p>
           ) : (
             <ToolRunner key={selected.id} port={port} tool={selected} />
           )}

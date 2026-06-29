@@ -10,20 +10,22 @@
  */
 import { useAppStore } from '../lib/store';
 import { useAuthStore } from '../lib/auth-state';
+import { useI18nStore, useT, type Locale } from '../lib/i18n';
 
 export function SettingsDrawer() {
   const toggleSettings = useAppStore((s) => s.toggleSettings);
+  const t = useT();
 
   return (
     <div className="absolute inset-y-0 right-0 z-20 flex w-80 flex-col border-l border-line/40 bg-surface shadow-xl">
       <div className="flex items-center justify-between border-b border-line/40 px-4 py-3">
-        <h2 className="text-[13px] font-semibold text-ink">设置</h2>
+        <h2 className="text-[13px] font-semibold text-ink">设置 · Settings</h2>
         <button
           type="button"
           onClick={toggleSettings}
           className="text-[12px] text-muted hover:text-ink"
         >
-          关闭
+          {t('common.close')}
         </button>
       </div>
 
@@ -31,7 +33,35 @@ export function SettingsDrawer() {
         <Section title="账户">
           <AccountRow />
         </Section>
+        <Section title={t('settings.language')}>
+          <LanguageRow />
+        </Section>
       </div>
+    </div>
+  );
+}
+
+function LanguageRow() {
+  const locale = useI18nStore((s) => s.locale);
+  const setLocale = useI18nStore((s) => s.setLocale);
+  const opts: { id: Locale; label: string }[] = [
+    { id: 'zh', label: '中文' },
+    { id: 'en', label: 'English' },
+  ];
+  return (
+    <div className="flex gap-2">
+      {opts.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          onClick={() => setLocale(o.id)}
+          className={`rounded px-3 py-1 text-[12px] ${
+            locale === o.id ? 'bg-accent text-white' : 'border border-line/50 text-ink-soft hover:text-ink'
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
     </div>
   );
 }

@@ -53,7 +53,7 @@ Status: not-started / in-progress / done / N-A (with reason).
 | Milestone | Status | Notes |
 |---|---|---|
 | M4.1 theming parity | partial | new panels use the sage palette tokens; full per-panel audit needs a display |
-| M4.2 i18n zh-CN+en | partial | new UI is zh-CN; a formal i18n bundle + en + toggle is not yet built |
+| M4.2 i18n zh-CN+en | done (infra) | src/lib/i18n.ts: zh+en dicts, useT()/translate(), locale store (system-default, persisted), 中文/English toggle in Settings; new panels (GPU/Hub/Offline/nav) wired through t(). Legacy components migrate incrementally. |
 | M4.3 two-tier auto-update | N-A-on-this-host | needs signing + an update server |
 | M4.4 code signing + per-platform installers | N-A-on-this-host | no macOS/Windows machines, no signing certs |
 | M4.5 e2e acceptance on 3 OSes | N-A-on-this-host | needs 3 OSes with displays |

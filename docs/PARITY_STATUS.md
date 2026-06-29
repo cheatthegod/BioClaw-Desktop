@@ -23,7 +23,7 @@ Status: not-started / in-progress / done / N-A (with reason).
 | Milestone | Status | Notes |
 |---|---|---|
 | M1.1 generic authed streaming SaaS proxy | done | sidecar `/saas/*` + `/auth/session`; 3 integration tests + live-SaaS curl (16 GPU tools incl RNAGenesis/FoldMark, 401→typed auth, logout) |
-| M1.2 typed frontend client + hooks | not-started | `src/lib/api/saas.ts` |
+| M1.2 typed frontend client + hooks | done | `src/lib/api/saas.ts` (saasGet/Post/Delete/Stream + iterateSse + session) + `useSaasQuery`/`useSaasStream`; tsc+eslint+vite green. Exercised by M2.1. |
 
 ## Phase 2 — panels
 | Milestone | Status | Notes |

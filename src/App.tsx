@@ -25,20 +25,26 @@
 import { useEffect, useState } from 'react';
 import { TitleBar } from './components/TitleBar';
 import { SettingsDrawer } from './components/SettingsDrawer';
+import { GpuToolsPanel } from './components/GpuToolsPanel';
+import { SaasHubPanel } from './components/SaasHubPanel';
 import { LocalChat } from './components/LocalChat';
 import { PermissionPrompt } from './components/PermissionPrompt';
 import { LoginGate } from './components/LoginGate';
 import { SetupWizard } from './components/SetupWizard';
 import { EnvInstallBanner } from './components/EnvInstallBanner';
+import { OfflineBanner } from './components/OfflineBanner';
 import { useAppStore } from './lib/store';
 import { useAuthStore } from './lib/auth-state';
 import { useEnvStore } from './lib/env-state';
 import { useSidecar } from './hooks/useSidecar';
 import { initializeApp } from './lib/init';
+import { setSaasSession, clearSaasSession } from './lib/api/saas';
+import { useT } from './lib/i18n';
 
 export function App() {
   const isSettingsOpen = useAppStore((s) => s.isSettingsOpen);
   const loginStep = useAuthStore((s) => s.loginStep);
+  const t = useT();
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,7 +62,7 @@ export function App() {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-bg p-8 text-center text-ink-soft">
         <div>
-          <div className="text-lg font-semibold text-danger">启动失败</div>
+          <div className="text-lg font-semibold text-danger">{t('app.startupFailed')}</div>
           <pre className="mt-4 max-w-xl whitespace-pre-wrap text-sm">{error}</pre>
         </div>
       </div>
@@ -66,7 +72,7 @@ export function App() {
   if (!ready) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-bg text-sm text-muted">
-        Initializing BioClaw…
+        {t('app.initializing')}
       </div>
     );
   }
@@ -115,18 +121,60 @@ function AuthedShell({ isSettingsOpen }: { isSettingsOpen: boolean }) {
     return () => clearInterval(id);
   }, [sidecar.port, refreshEnv]);
 
+  // Bridge the device-code/OTP session token (held in the auth store +
+  // OS keychain) into the sidecar so the authenticated SaaS proxy
+  // (/saas/*) can attach it. Covers boot (token hydrated from keychain),
+  // fresh login (token set), and logout (token → null → clear). Without
+  // this the GPU / chat-history / … panels would all 401.
+  const authToken = useAuthStore((s) => s.token);
+  useEffect(() => {
+    if (sidecar.port == null) return;
+    if (authToken) {
+      void setSaasSession(sidecar.port, authToken).catch(() => undefined);
+    } else {
+      void clearSaasSession(sidecar.port);
+    }
+  }, [sidecar.port, authToken]);
+
   // Manual SetupWizard — opens for repair / extras only. The
   // OmicOS-style first-launch flow is driven entirely by the sidecar
   // (extract zip + offline sync, ~30-60 s) with an inline banner.
   const [wizardOpen, setWizardOpen] = useState(false);
   void envState;
+  const isGpuOpen = useAppStore((s) => s.isGpuOpen);
+  const toggleGpu = useAppStore((s) => s.toggleGpu);
+  const isHubOpen = useAppStore((s) => s.isHubOpen);
+  const toggleHub = useAppStore((s) => s.toggleHub);
+  const t = useT();
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-bg">
       <TitleBar />
       <EnvInstallBanner />
+      <OfflineBanner port={sidecar.port} />
       <main className="relative flex-1 overflow-hidden">
         <LocalChat />
+        {/* GPU tools launcher — opens the RNAGenesis / FoldMark / Boltz / … panel */}
+        <div className="absolute bottom-4 left-4 z-10 flex gap-2">
+          <button
+            type="button"
+            onClick={toggleGpu}
+            title={t('nav.gpu')}
+            className="rounded-full border border-line/40 bg-surface px-3 py-1.5 text-[12px] text-ink-soft shadow hover:text-ink"
+          >
+            {t('nav.gpu')}
+          </button>
+          <button
+            type="button"
+            onClick={toggleHub}
+            title={t('nav.hub')}
+            className="rounded-full border border-line/40 bg-surface px-3 py-1.5 text-[12px] text-ink-soft shadow hover:text-ink"
+          >
+            {t('nav.hub')}
+          </button>
+        </div>
+        {isGpuOpen && <GpuToolsPanel port={sidecar.port} onClose={toggleGpu} />}
+        {isHubOpen && <SaasHubPanel port={sidecar.port} onClose={toggleHub} />}
       </main>
       {isSettingsOpen ? <SettingsDrawer /> : null}
       <PermissionPrompt />

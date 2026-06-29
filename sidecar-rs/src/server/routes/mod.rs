@@ -10,5 +10,6 @@
 
 pub mod chat;
 pub mod env;
+pub mod gpu_local;
 pub mod health;
 pub mod skills;

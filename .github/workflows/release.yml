@@ -98,17 +98,15 @@ jobs:
         run: npm ci
 
       # --------------------------------------------------------------------
-      # Build the sidecar JS bundle for the current platform.
-      # esbuild produces all 4 target bundles in one run; we keep just the
-      # one matching this matrix entry so tauri.conf.json's externalBin
-      # picks it up. The Tauri build will fail with "sidecar binary not
-      # found" if this step is skipped.
+      # Build the self-contained Rust sidecar (sidecar-rs) and place it at
+      # the externalBin path. This is the ONLY sidecar now (M0.3 dropped the
+      # Node bundle + the Windows node-launcher). build-sidecar-rs.sh emits
+      # the right per-platform binary, including the `.exe` for Windows, so
+      # no separate Node build or launcher step is needed.
       # --------------------------------------------------------------------
-      - name: Build sidecar bundle
-        working-directory: sidecar
-        run: |
-          npm ci
-          npm run build
+      - name: Build Rust sidecar (externalBin)
+        shell: bash
+        run: bash scripts/build-sidecar-rs.sh ${{ matrix.platform.rust-target }}
 
       # --------------------------------------------------------------------
       # Vendor uv per platform — Astral's prebuilt binary. tauri-bundler
@@ -145,22 +143,6 @@ jobs:
           BIOCLAW_ENV_TARGET: ${{ matrix.platform.rust-target }}
         shell: bash
         run: bash scripts/vendor-env.sh
-
-      # --------------------------------------------------------------------
-      # Windows-only: build the tiny native launcher.exe that locates
-      # node.exe and execs the sidecar JS bundle. Without this, Windows
-      # users would download an installer whose sidecar is just a
-      # mislabelled .js file the OS can't execute.
-      # --------------------------------------------------------------------
-      - name: Build Windows sidecar launcher.exe
-        if: matrix.platform.os == 'windows-latest'
-        working-directory: sidecar/launcher-win
-        shell: pwsh
-        run: |
-          cargo build --release --target x86_64-pc-windows-msvc
-          Copy-Item -Force `
-            target/x86_64-pc-windows-msvc/release/bioclaw-sidecar-launcher.exe `
-            ../../src-tauri/binaries/bioclaw-sidecar-x86_64-pc-windows-msvc.exe
 
       # --------------------------------------------------------------------
       # Forward code-signing secrets to the bundler ONLY if they're actually

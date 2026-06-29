@@ -16,6 +16,7 @@
 //! writer + abort on client disconnect.
 
 pub mod invoke_skill;
+pub mod memory;
 pub mod registry;
 pub mod run_skill_script;
 pub mod system_prompt;

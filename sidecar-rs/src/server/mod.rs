@@ -14,7 +14,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum::{
-    routing::{get, post},
+    routing::{any, get, post},
     Router,
 };
 use tokio::net::TcpListener;
@@ -76,6 +76,8 @@ fn build_router(state: Arc<AppState>) -> Router {
         .route("/env/state", get(routes::env::get_state))
         .route("/env/setup", post(routes::env::post_setup))
         .route("/chat", post(routes::chat::post_chat))
+        // Local GPU env probe (M3.1): which GPU conda envs exist on this box.
+        .route("/gpu/local-envs", get(routes::gpu_local::local_envs))
         .route(
             "/permissions/decide",
             post(crate::permissions::routes::decide),
@@ -86,6 +88,16 @@ fn build_router(state: Arc<AppState>) -> Router {
         )
         .route("/auth/device-code/start", post(crate::auth::routes::start))
         .route("/auth/device-code/poll", post(crate::auth::routes::poll))
+        // Session token handoff (renderer pushes the keychain token here).
+        .route(
+            "/auth/session",
+            get(crate::saas::routes::get_session)
+                .post(crate::saas::routes::set_session)
+                .delete(crate::saas::routes::clear_session),
+        )
+        // Generic authenticated SaaS proxy — the keystone for every
+        // SaaS-backed desktop feature. Streams responses (SSE-safe).
+        .route("/saas/*path", any(crate::saas::routes::proxy))
         .with_state(state)
         .layer(TraceLayer::new_for_http())
 }

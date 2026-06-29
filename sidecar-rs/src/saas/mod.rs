@@ -43,9 +43,15 @@ impl SaasClient {
         let base = std::env::var("BIOCLAW_SAAS_BASE")
             .ok()
             .filter(|v| !v.is_empty())
-            .unwrap_or_else(|| DEFAULT_SAAS_BASE.to_string())
-            .trim_end_matches('/')
-            .to_string();
+            .unwrap_or_else(|| DEFAULT_SAAS_BASE.to_string());
+        Self::with_base(&base)
+    }
+
+    /// Construct against an explicit base URL (trailing slashes trimmed).
+    /// Bypasses the env var — used by tests so they don't race on the shared
+    /// process environment.
+    pub fn with_base(base: &str) -> Self {
+        let base = base.trim_end_matches('/').to_string();
         let http = reqwest::Client::builder()
             // No global timeout — SSE endpoints stream indefinitely. Per-request
             // timeouts are applied where appropriate by callers.

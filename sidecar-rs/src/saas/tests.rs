@@ -17,9 +17,18 @@ use crate::saas::SaasClient;
 /// given SaaS base, with a fresh AppState-like wrapper. We can't easily build
 /// the full AppState in a unit test (it touches the filesystem), so the proxy
 /// handler reads `state.saas` — we construct an `AppState` with a temp dir.
+// Serialize the env-var dance: AppState::new reads BIOCLAW_SAAS_BASE, and
+// several tests set it to different values — without this they race.
+static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 fn test_state(base: &str) -> Arc<crate::server::AppState> {
+    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     std::env::set_var("BIOCLAW_SAAS_BASE", base);
-    let tmp = std::env::temp_dir().join(format!("bioclaw-saas-test-{}", std::process::id()));
+    let tmp = std::env::temp_dir().join(format!(
+        "bioclaw-saas-test-{}-{:?}",
+        std::process::id(),
+        std::thread::current().id()
+    ));
     std::fs::create_dir_all(&tmp).unwrap();
     let opts = crate::cli::ServeOptions {
         host: "127.0.0.1".into(),
@@ -121,8 +130,9 @@ async fn session_set_get_clear_roundtrip() {
 
 #[test]
 fn saas_client_cookie_and_base() {
-    std::env::set_var("BIOCLAW_SAAS_BASE", "http://example.test:3000/");
-    let c = SaasClient::new();
+    // Use with_base() (not new()) so this doesn't race other tests on the
+    // shared process env var BIOCLAW_SAAS_BASE.
+    let c = SaasClient::with_base("http://example.test:3000/");
     assert_eq!(c.base(), "http://example.test:3000"); // trailing slash trimmed
     assert!(c.cookie_header().is_none());
     c.set_token("tok".into());

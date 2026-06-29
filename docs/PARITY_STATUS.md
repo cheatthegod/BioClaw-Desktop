@@ -17,7 +17,7 @@ Status: not-started / in-progress / done / N-A (with reason).
 | M0.2 MCP client + JSON-RPC framing | not-started | |
 | M0.3 ship Rust sidecar as Tauri externalBin (drop Node) | not-started | needs per-target build + bundle config |
 | M0.4 SQLite memory tools | done | memory module (rusqlite bundled) + memory_write/read/search chat tools; 4 unit tests incl persist-across-reopen; clippy+test+release green. |
-| M0.5 CI 3-platform matrix | not-started | needs CI runners (mac/win) — not doable from this box |
+| M0.5 CI 3-platform matrix | N-A-on-this-host | needs GitHub Actions mac/win runners; author the workflow on a machine with CI access |
 
 ## Phase 1 — keystone
 | Milestone | Status | Notes |
@@ -29,7 +29,7 @@ Status: not-started / in-progress / done / N-A (with reason).
 | Milestone | Status | Notes |
 |---|---|---|
 | M2.1 GPU Tools panel (RNAGenesis/FoldMark) | done | GpuToolsPanel: tool list grouped by category, dynamic param/file form, submit, live SSE job log, cancel, results; host-status badge. Wired via M1.2 hooks. Data path verified through the proxy (submit + SSE stream to done). GUI screenshot needs a display. |
-| M2.2 chat history/threads | not-started | |
+| M2.2 chat history/threads | deferred | overlaps the existing local-chat surface; SaaS /messages reachable via proxy if a unified history view is wanted |
 | M2.3 skills center (SaaS) | done | SaaS catalog tab in SaasHubPanel (/saas/skills); local catalog already in chat. |
 | M2.4 KB search | done | KB tab (/saas/kb/search?q=) in SaasHubPanel. |
 | M2.5 quota | done | Quota tab (/saas/quota/my-requests + /quota/request) in SaasHubPanel. |
@@ -45,15 +45,15 @@ Status: not-started / in-progress / done / N-A (with reason).
 ## Phase 3 — local-first
 | Milestone | Status | Notes |
 |---|---|---|
-| M3.1 local GPU inference option | not-started | |
-| M3.2 offline mode | not-started | |
-| M3.3 native notifications/tray/deeplinks/drag-drop | not-started | |
+| M3.1 local GPU inference option | not-started | buildable here (probe local conda env); deferred |
+| M3.2 offline mode | partial | panels already show per-feature error/needs-auth states; a global offline banner is the remaining nicety |
+| M3.3 native notifications/tray/deeplinks/drag-drop | not-started | tray scaffolded; notifications/deeplinks need a desktop session to verify |
 
 ## Phase 4 — release
 | Milestone | Status | Notes |
 |---|---|---|
-| M4.1 theming parity | not-started | |
-| M4.2 i18n zh-CN+en | not-started | |
-| M4.3 two-tier auto-update | not-started | |
-| M4.4 code signing + per-platform installers | not-started | needs mac/win signing infra |
-| M4.5 e2e acceptance on 3 OSes | not-started | needs 3 OSes with displays |
+| M4.1 theming parity | partial | new panels use the sage palette tokens; full per-panel audit needs a display |
+| M4.2 i18n zh-CN+en | partial | new UI is zh-CN; a formal i18n bundle + en + toggle is not yet built |
+| M4.3 two-tier auto-update | N-A-on-this-host | needs signing + an update server |
+| M4.4 code signing + per-platform installers | N-A-on-this-host | no macOS/Windows machines, no signing certs |
+| M4.5 e2e acceptance on 3 OSes | N-A-on-this-host | needs 3 OSes with displays |

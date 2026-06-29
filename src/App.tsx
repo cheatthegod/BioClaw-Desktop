@@ -44,6 +44,7 @@ import { useT } from './lib/i18n';
 export function App() {
   const isSettingsOpen = useAppStore((s) => s.isSettingsOpen);
   const loginStep = useAuthStore((s) => s.loginStep);
+  const t = useT();
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,7 +62,7 @@ export function App() {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-bg p-8 text-center text-ink-soft">
         <div>
-          <div className="text-lg font-semibold text-danger">启动失败</div>
+          <div className="text-lg font-semibold text-danger">{t('app.startupFailed')}</div>
           <pre className="mt-4 max-w-xl whitespace-pre-wrap text-sm">{error}</pre>
         </div>
       </div>
@@ -71,7 +72,7 @@ export function App() {
   if (!ready) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-bg text-sm text-muted">
-        Initializing BioClaw…
+        {t('app.initializing')}
       </div>
     );
   }

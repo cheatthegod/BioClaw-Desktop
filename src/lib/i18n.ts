@@ -87,6 +87,8 @@ const dict: Record<Locale, Record<string, string>> = {
     'hub.noCloudSkills': '暂无云端技能。',
     'offline.banner':
       '离线 — 云端功能（GPU 工具、工作台）暂不可用。本地聊天、技能与 Python 环境仍可使用。',
+    'app.startupFailed': '启动失败',
+    'app.initializing': '正在初始化 BioClaw…',
     'settings.language': '语言',
     'settings.account': '账户',
     'account.notSignedIn': '未登录',
@@ -165,6 +167,8 @@ const dict: Record<Locale, Record<string, string>> = {
     'hub.noCloudSkills': 'No cloud skills yet.',
     'offline.banner':
       'Offline — cloud features (GPU Tools, Workspace) are unavailable. Local chat, skills and the Python env still work.',
+    'app.startupFailed': 'Startup failed',
+    'app.initializing': 'Initializing BioClaw…',
     'settings.language': 'Language',
     'settings.account': 'Account',
     'account.notSignedIn': 'Not signed in',

@@ -26,7 +26,7 @@ export async function uploadToWorkspace(port: number, file: File): Promise<strin
     },
     body: await file.arrayBuffer(),
   });
-  if (res.status === 401) throw new Error('未登录');
+  if (res.status === 401) throw new Error('unauthorized');
   if (!res.ok) {
     let detail = `${res.status}`;
     try {
@@ -38,6 +38,6 @@ export async function uploadToWorkspace(port: number, file: File): Promise<strin
     throw new Error(detail);
   }
   const body = (await res.json()) as UploadResponse;
-  if (!body.workspacePath) throw new Error('上传响应缺少 workspacePath');
+  if (!body.workspacePath) throw new Error('upload response missing workspacePath');
   return body.workspacePath;
 }

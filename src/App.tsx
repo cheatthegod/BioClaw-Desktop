@@ -32,6 +32,7 @@ import { PermissionPrompt } from './components/PermissionPrompt';
 import { LoginGate } from './components/LoginGate';
 import { SetupWizard } from './components/SetupWizard';
 import { EnvInstallBanner } from './components/EnvInstallBanner';
+import { OfflineBanner } from './components/OfflineBanner';
 import { useAppStore } from './lib/store';
 import { useAuthStore } from './lib/auth-state';
 import { useEnvStore } from './lib/env-state';
@@ -147,6 +148,7 @@ function AuthedShell({ isSettingsOpen }: { isSettingsOpen: boolean }) {
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-bg">
       <TitleBar />
       <EnvInstallBanner />
+      <OfflineBanner port={sidecar.port} />
       <main className="relative flex-1 overflow-hidden">
         <LocalChat />
         {/* GPU tools launcher — opens the RNAGenesis / FoldMark / Boltz / … panel */}

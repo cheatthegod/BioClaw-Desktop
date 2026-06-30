@@ -17,6 +17,7 @@
     "core:event:default",
     "core:webview:default",
     "core:tray:default",
+    "deep-link:default",
     "log:default",
     "dialog:default",
     "notification:default",

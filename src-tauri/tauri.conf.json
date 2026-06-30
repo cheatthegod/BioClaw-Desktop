@@ -27,7 +27,8 @@
         "shadow": true,
         "acceptFirstMouse": true,
         "titleBarStyle": "Overlay",
-        "hiddenTitle": true
+        "hiddenTitle": true,
+        "dragDropEnabled": false
       }
     ],
     "security": {
@@ -93,6 +94,11 @@
     }
   },
   "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["bioclaw"]
+      }
+    },
     "updater": {
       "active": true,
       "endpoints": [

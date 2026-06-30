@@ -8,7 +8,7 @@
 // secure-store backed credential commands. We keep the surface area small
 // here so the security review for v0.1 is short.
 
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 mod commands;
 mod credentials;
@@ -26,6 +26,7 @@ pub fn run() {
     #[allow(unused_mut)]
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::new().build())
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())
@@ -66,6 +67,7 @@ pub fn run() {
             // to grab from app.state(). Do NOT spawn the child here.
             app.manage(SidecarState::new());
             tray::setup_tray(app.handle())?;
+            setup_deep_links(app.handle());
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Regular);
             Ok(())
@@ -87,4 +89,32 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running BioClaw Desktop");
+}
+
+/// M3.3 deep links: handle `bioclaw://…` URLs (e.g. an auth callback or a
+/// share link). On Linux/Windows the runtime registration makes the dev build
+/// resolvable; the production scheme is registered by the bundler from
+/// tauri.conf.json `plugins.deep-link`. When a URL arrives we focus the main
+/// window and forward it to the webview as a `deep-link` event so the React
+/// side can route it. Best-effort: failures are logged, never fatal.
+fn setup_deep_links(app: &tauri::AppHandle) {
+    use tauri_plugin_deep_link::DeepLinkExt;
+
+    // Register schemes at runtime so dev builds resolve `bioclaw://` without a
+    // reinstall (no-op / harmless error if the OS lacks per-user registration).
+    if let Err(e) = app.deep_link().register_all() {
+        log::warn!("deep-link register_all failed (non-fatal): {e}");
+    }
+
+    let handle = app.clone();
+    app.deep_link().on_open_url(move |event| {
+        let urls: Vec<String> = event.urls().iter().map(|u| u.to_string()).collect();
+        log::info!("deep link opened: {urls:?}");
+        if let Some(win) = handle.get_webview_window("main") {
+            let _ = win.show();
+            let _ = win.unminimize();
+            let _ = win.set_focus();
+            let _ = win.emit("deep-link", urls);
+        }
+    });
 }

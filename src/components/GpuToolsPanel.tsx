@@ -9,13 +9,14 @@
  * Flow: pick a tool → fill the dynamic param form (+ upload any file inputs to
  * the workspace) → submit → watch the job stream live → download results.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useSaasQuery } from '../hooks/useSaasQuery';
 import { useLocalEnvs } from '../hooks/useLocalEnvs';
 import { useSaasStream } from '../hooks/useSaasStream';
 import { saasPost } from '../lib/api/saas';
 import { uploadToWorkspace } from '../lib/api/saas-upload';
+import { notify } from '../lib/notify';
 import { useT } from '../lib/i18n';
 
 // ── SaaS wire types (mirror BioClaw-SaaS/src/gpu/tools.ts) ───────────
@@ -190,6 +191,7 @@ function ToolRunner({ port, tool }: { port: number | null; tool: GpuTool }) {
   const [uploadingName, setUploadingName] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [dragSpec, setDragSpec] = useState<string | null>(null);
 
   const missingRequired =
     tool.inputs.some((i) => i.required && !inputs[i.name]) ||
@@ -248,7 +250,23 @@ function ToolRunner({ port, tool }: { port: number | null; tool: GpuTool }) {
       {tool.inputs.length > 0 && (
         <div className="mt-4 space-y-3">
           {tool.inputs.map((spec) => (
-            <div key={spec.name}>
+            <div
+              key={spec.name}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragSpec(spec.name);
+              }}
+              onDragLeave={() => setDragSpec((cur) => (cur === spec.name ? null : cur))}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragSpec(null);
+                const f = e.dataTransfer.files?.[0];
+                if (f) void handleFile(spec, f);
+              }}
+              className={
+                dragSpec === spec.name ? 'rounded border border-dashed border-accent/70 p-1' : ''
+              }
+            >
               <label className="block text-[12px] font-medium text-ink-soft">
                 {spec.name}
                 {spec.required && <span className="text-danger"> *</span>}
@@ -263,6 +281,9 @@ function ToolRunner({ port, tool }: { port: number | null; tool: GpuTool }) {
                 }}
                 className="mt-1 block w-full text-[12px] text-ink-soft file:mr-3 file:rounded file:border-0 file:bg-line/30 file:px-3 file:py-1 file:text-[12px]"
               />
+              {dragSpec === spec.name && (
+                <p className="text-[11px] text-accent">{t('gpu.dropHere')}</p>
+              )}
               {uploadingName === spec.name && (
                 <p className="text-[11px] text-muted">{t('gpu.uploading')}</p>
               )}
@@ -393,6 +414,21 @@ function JobView({
   const outputs = (job?.outputFiles ?? []).filter((f) =>
     /\.(cif|pdb|fasta|fa|csv|tsv|sdf|json|txt)$/i.test(f),
   );
+
+  // M3.3: fire a native OS notification once the job reaches a terminal state,
+  // so the user can leave the panel and still be told when it finishes.
+  const notifiedRef = useRef(false);
+  useEffect(() => {
+    if (!terminal || notifiedRef.current) return;
+    notifiedRef.current = true;
+    const body =
+      status === 'done'
+        ? t('gpu.notifyDone', { tool: toolName })
+        : status === 'failed'
+          ? t('gpu.notifyFailed', { tool: toolName })
+          : t('gpu.notifyCancelled', { tool: toolName });
+    void notify(t('gpu.title'), body);
+  }, [terminal, status, toolName, t]);
 
   async function cancel() {
     if (port == null) return;

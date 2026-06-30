@@ -20,6 +20,7 @@ import { useT } from '../lib/i18n';
 
 type TabId =
   | 'account'
+  | 'history'
   | 'quota'
   | 'kb'
   | 'skills'
@@ -33,6 +34,7 @@ type TabId =
 
 const TAB_IDS: TabId[] = [
   'account',
+  'history',
   'quota',
   'kb',
   'skills',
@@ -73,6 +75,7 @@ export function SaasHubPanel({ port, onClose }: { port: number | null; onClose: 
         </aside>
         <section className="min-w-0 flex-1 overflow-y-auto px-5 py-4">
           {tab === 'account' && <AccountTab port={port} />}
+          {tab === 'history' && <HistoryTab port={port} />}
           {tab === 'quota' && <QuotaTab port={port} />}
           {tab === 'kb' && <KbTab port={port} />}
           {tab === 'skills' && <SkillsTab port={port} />}
@@ -414,6 +417,93 @@ function itemSubtitle(it: Record<string, unknown>): string {
 }
 
 /** Fetch a SaaS endpoint and render whatever array it returns as a card list. */
+/**
+ * Chat history tab (goal M2.2): list the user's conversation threads
+ * (/threads) and, on selecting one, show its recent messages read-only
+ * (/messages?chatJid=…). The live local-chat surface only shows the current
+ * conversation; this gives access to past threads from the SaaS.
+ */
+interface Thread {
+  chatJid: string;
+  title?: string;
+  addedAt?: string;
+}
+interface HistMsg {
+  id?: string | number;
+  sender?: string;
+  sender_name?: string | null;
+  content?: string;
+  timestamp?: string;
+  is_from_me?: boolean | number;
+}
+
+function HistoryTab({ port }: { port: number | null }) {
+  const t = useT();
+  const threadsQ = useSaasQuery<{ threads: Thread[] }>(port, '/threads');
+  const [sel, setSel] = useState<string | null>(null);
+  const msgsQ = useSaasQuery<{ messages: HistMsg[] }>(
+    port,
+    sel ? `/messages?chatJid=${encodeURIComponent(sel)}` : '/messages',
+    { enabled: sel != null },
+  );
+  const threads = threadsQ.data?.threads ?? [];
+  const messages = msgsQ.data?.messages ?? [];
+
+  return (
+    <div className="flex max-w-4xl gap-4">
+      <div className="w-56 shrink-0">
+        <h3 className="text-[14px] font-semibold text-ink">{t('hub.section.history')}</h3>
+        <Loading q={threadsQ} />
+        <ul className="mt-2 space-y-1">
+          {threads.map((th) => (
+            <li key={th.chatJid}>
+              <button
+                type="button"
+                onClick={() => setSel(th.chatJid)}
+                className={`block w-full truncate rounded px-2 py-1 text-left text-[12px] ${
+                  sel === th.chatJid ? 'bg-accent/15 text-ink' : 'text-ink-soft hover:bg-line/20'
+                }`}
+                title={th.chatJid}
+              >
+                {th.title || th.chatJid}
+              </button>
+            </li>
+          ))}
+          {!threadsQ.loading && threads.length === 0 && (
+            <p className="text-[12px] text-muted">{t('hub.empty')}</p>
+          )}
+        </ul>
+      </div>
+      <div className="min-w-0 flex-1">
+        {sel == null ? (
+          <p className="text-[12px] text-muted">{t('hub.history.pickThread')}</p>
+        ) : (
+          <>
+            <Loading q={msgsQ} />
+            <ul className="space-y-2">
+              {messages.map((m, i) => (
+                <li
+                  key={(m.id as string) ?? i}
+                  className="rounded border border-line/30 px-3 py-2 text-[12px]"
+                >
+                  <div className="mb-0.5 text-[10px] text-muted">
+                    {(m.is_from_me ? t('hub.history.assistant') : m.sender_name || m.sender) ?? ''}
+                    {m.timestamp ? ` · ${m.timestamp}` : ''}
+                  </div>
+                  <div className="whitespace-pre-wrap text-ink-soft">{m.content}</div>
+                </li>
+              ))}
+              {!msgsQ.loading && messages.length === 0 && (
+                <p className="text-[12px] text-muted">{t('hub.empty')}</p>
+              )}
+            </ul>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /**
  * Sharing tab (goal M2.7): list shares I've created (/share/my) PLUS the
  * primary actions — create a new share of the current chat (POST /share/chat,

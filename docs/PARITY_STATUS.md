@@ -29,7 +29,7 @@ Status: not-started / in-progress / done / N-A (with reason).
 | Milestone | Status | Notes |
 |---|---|---|
 | M2.1 GPU Tools panel (RNAGenesis/FoldMark) | done | GpuToolsPanel: tool list grouped by category, dynamic param/file form, submit, live SSE job log, cancel, results; host-status badge. Wired via M1.2 hooks. Data path verified through the proxy (submit + SSE stream to done). GUI screenshot needs a display. |
-| M2.2 chat history/threads | deferred | overlaps the existing local-chat surface; SaaS /messages reachable via proxy if a unified history view is wanted |
+| M2.2 chat history/threads | done | Hub "历史/History" tab: lists the user's threads (/threads) and, on selecting one, shows its recent messages read-only (/messages?chatJid=…, `enabled`-gated). Complements the live local-chat surface (which only shows the current conversation) with access to past threads. Response shapes read from channel.ts (`{threads:[{chatJid,title}]}`, `{messages:[{sender,content,timestamp,is_from_me}]}`). Verified: npm build green, eslint clean; rides the unit+live-tested /saas proxy. |
 | M2.3 skills center (SaaS) | done | SaaS catalog tab in SaasHubPanel (/saas/skills); local catalog already in chat. |
 | M2.4 KB search | done | KB tab (/saas/kb/search?q=) in SaasHubPanel. |
 | M2.5 quota | done | Quota tab (/saas/quota/my-requests + /quota/request) in SaasHubPanel. |

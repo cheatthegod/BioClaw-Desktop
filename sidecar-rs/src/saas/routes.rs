@@ -66,19 +66,50 @@ fn is_hop_by_hop(name: &str) -> bool {
     )
 }
 
+/// `ANY /saas/{*path}` → `<base>/api/{path}` (the keystone proxy).
 pub async fn proxy(
+    state: State<Arc<AppState>>,
+    method: Method,
+    uri: OriginalUri,
+    headers: HeaderMap,
+    body: Body,
+) -> Response {
+    proxy_with_prefix(state, method, uri, headers, body, "/saas", "/api").await
+}
+
+/// `GET /saas-files/{*path}` → `<base>/files/{path}`.
+///
+/// GPU job outputs (and other workspace files) are served by the SaaS at the
+/// top-level `/files/…` route, NOT under `/api/…`, so the keystone proxy above
+/// can't reach them. This sibling forwards to `/files/` with the same
+/// cookie-attach + streaming behaviour, letting the desktop download FASTA/CIF
+/// results in-app. `outputFiles` paths are workspace-root-relative, so the
+/// renderer requests `/saas-files/chat/<chatJid>/<path>`.
+pub async fn proxy_files(
+    state: State<Arc<AppState>>,
+    method: Method,
+    uri: OriginalUri,
+    headers: HeaderMap,
+    body: Body,
+) -> Response {
+    proxy_with_prefix(state, method, uri, headers, body, "/saas-files", "/files").await
+}
+
+async fn proxy_with_prefix(
     State(state): State<Arc<AppState>>,
     method: Method,
     OriginalUri(uri): OriginalUri,
     headers: HeaderMap,
     body: Body,
+    strip: &str,
+    upstream_prefix: &str,
 ) -> Response {
-    // Strip the `/saas` prefix; everything after maps onto `<base>/api/...`.
+    // Strip our local prefix; everything after maps onto `<base><upstream_prefix>/...`.
     let full_path = uri.path();
-    let rest = full_path.strip_prefix("/saas").unwrap_or(full_path);
+    let rest = full_path.strip_prefix(strip).unwrap_or(full_path);
     let rest = if rest.is_empty() { "/" } else { rest };
     let query = uri.query().map(|q| format!("?{q}")).unwrap_or_default();
-    let target = format!("{}/api{}{}", state.saas.base(), rest, query);
+    let target = format!("{}{}{}{}", state.saas.base(), upstream_prefix, rest, query);
 
     // Collect the request body (request payloads are small — uploads go
     // through dedicated endpoints). Streaming the request body is possible

@@ -49,6 +49,7 @@ fn router(state: Arc<crate::server::AppState>) -> Router {
                 .delete(crate::saas::routes::clear_session),
         )
         .route("/saas/*path", any(crate::saas::routes::proxy))
+        .route("/saas-files/*path", any(crate::saas::routes::proxy_files))
         .with_state(state)
 }
 
@@ -212,4 +213,56 @@ async fn proxy_forwards_attaches_cookie_and_maps_401() {
     let (status, body) = body_string(r).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
     assert!(body.contains("\"error\":\"auth\""), "got {body}");
+}
+
+// The `/saas-files` sibling forwards to the top-level `/files/…` route (NOT
+// `/api/…`) with the cookie attached — the path GPU output downloads take.
+#[tokio::test]
+async fn files_proxy_forwards_to_files_prefix_with_cookie() {
+    use std::sync::Mutex;
+
+    let seen: Arc<Mutex<(Option<String>, Option<String>)>> = Arc::new(Mutex::new((None, None)));
+    let seen_c = seen.clone();
+    let upstream = Router::new().route(
+        "/files/chat/jid/uploads/gpu-1/output/x.fasta",
+        get(move |headers: axum::http::HeaderMap| {
+            let seen = seen_c.clone();
+            async move {
+                let mut g = seen.lock().unwrap();
+                g.0 = Some("/files/chat/jid/uploads/gpu-1/output/x.fasta".into());
+                g.1 = headers
+                    .get("cookie")
+                    .and_then(|v| v.to_str().ok())
+                    .map(String::from);
+                ">seq\nACGU\n"
+            }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base = format!("http://{}", listener.local_addr().unwrap());
+    tokio::spawn(async move {
+        axum::serve(listener, upstream).await.unwrap();
+    });
+
+    let state = test_state(&base);
+    state.saas.set_token("filetok".into());
+    let app = router(state);
+
+    let r = app
+        .oneshot(
+            Request::get("/saas-files/chat/jid/uploads/gpu-1/output/x.fasta")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let (status, body) = body_string(r).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(body.contains("ACGU"), "got {body}");
+    let g = seen.lock().unwrap();
+    assert_eq!(
+        g.0.as_deref(),
+        Some("/files/chat/jid/uploads/gpu-1/output/x.fasta")
+    );
+    assert_eq!(g.1.as_deref(), Some("bioclaw_session=filetok"));
 }

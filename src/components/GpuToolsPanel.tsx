@@ -16,6 +16,7 @@ import { useLocalEnvs } from '../hooks/useLocalEnvs';
 import { useSaasStream } from '../hooks/useSaasStream';
 import { saasPost } from '../lib/api/saas';
 import { uploadToWorkspace } from '../lib/api/saas-upload';
+import { downloadWorkspaceFile } from '../lib/api/saas-download';
 import { notify } from '../lib/notify';
 import { useT } from '../lib/i18n';
 
@@ -61,6 +62,9 @@ interface GpuJob {
   outputFiles?: string[];
   stdoutTail?: string | null;
   stderrTail?: string | null;
+  // The SaaS includes the owning chat JID on every job snapshot; needed to
+  // build the `/saas-files/chat/<chatJid>/<path>` download URL.
+  chatJid?: string;
 }
 
 interface HostGpu {
@@ -397,6 +401,7 @@ function JobView({
 }) {
   const t = useT();
   const [job, setJob] = useState<GpuJob | null>(null);
+  const [dlError, setDlError] = useState<string | null>(null);
 
   useSaasStream(port, `/gpu/jobs/${jobId}/log`, {
     onEvent: (ev) => {
@@ -472,12 +477,32 @@ function JobView({
           ) : (
             <ul className="mt-1 space-y-1">
               {outputs.map((f) => (
-                <li key={f} className="font-mono text-[11px] text-ink-soft">
-                  {f.split('/').pop()}
-                  <span className="ml-2 text-muted">（{f}）</span>
+                <li key={f} className="flex items-center gap-2 font-mono text-[11px] text-ink-soft">
+                  {port != null && job?.chatJid ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDlError(null);
+                        void downloadWorkspaceFile(port, job.chatJid as string, f).catch((e) =>
+                          setDlError(e instanceof Error ? e.message : String(e)),
+                        );
+                      }}
+                      className="text-accent hover:underline"
+                      title={f}
+                    >
+                      ↓ {f.split('/').pop()}
+                    </button>
+                  ) : (
+                    <span title={f}>{f.split('/').pop()}</span>
+                  )}
                 </li>
               ))}
             </ul>
+          )}
+          {dlError && (
+            <p className="mt-1 text-[11px] text-danger">
+              {t('gpu.downloadFailed', { msg: dlError })}
+            </p>
           )}
         </div>
       )}

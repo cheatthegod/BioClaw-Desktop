@@ -33,7 +33,7 @@ Status: not-started / in-progress / done / N-A (with reason).
 | M2.3 skills center (SaaS) | done | SaaS catalog tab in SaasHubPanel (/saas/skills); local catalog already in chat. |
 | M2.4 KB search | done | KB tab (/saas/kb/search?q=) in SaasHubPanel. |
 | M2.5 quota | done | Quota tab (/saas/quota/my-requests + /quota/request) in SaasHubPanel. |
-| M2.6 projects+datasets (+files) | done (lists) | 项目与数据 hub tab (/saas/projects + /saas/datasets); GPU panel does file upload; full file browser/download deferred. |
+| M2.6 projects+datasets (+files) | done (+download) | 项目与数据 hub tab (/saas/projects + /saas/datasets); GPU panel does file upload AND now download. Workspace-file download wired: sidecar `/saas-files/*` proxies to the SaaS top-level `/files/chat/<chatJid>/<relPath>` route (outputs live outside `/api/`), cookie-attached + streaming; GPU JobView renders each output as a ↓ download button (blob+anchor save). Verified: unit test (mock upstream, cookie attach + `/files` path mapping), live smoke (real SaaS → typed 401), npm build green. Full multi-folder file browser still deferred. |
 | M2.7 sharing | done (read) | 分享 hub tab (/saas/share/my); create-share action deferred. |
 | M2.8 profile/account/feedback | done | Account tab (/saas/profile + /config redacted + /feedback/message) in SaasHubPanel. |
 | M2.9 paper-digest | done | 论文摘要 hub tab (/saas/paper-digest/list). |

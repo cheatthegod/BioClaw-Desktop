@@ -98,6 +98,9 @@ fn build_router(state: Arc<AppState>) -> Router {
         // Generic authenticated SaaS proxy — the keystone for every
         // SaaS-backed desktop feature. Streams responses (SSE-safe).
         .route("/saas/*path", any(crate::saas::routes::proxy))
+        // Sibling proxy to the top-level `/files/…` route (GPU outputs,
+        // workspace file downloads) which lives outside `/api/…`.
+        .route("/saas-files/*path", any(crate::saas::routes::proxy_files))
         .with_state(state)
         .layer(TraceLayer::new_for_http())
 }

@@ -15,7 +15,7 @@
 import { useState } from 'react';
 
 import { useSaasQuery } from '../hooks/useSaasQuery';
-import { saasPost } from '../lib/api/saas';
+import { saasPost, saasDelete } from '../lib/api/saas';
 import { useT } from '../lib/i18n';
 
 type TabId =
@@ -85,9 +85,7 @@ export function SaasHubPanel({ port, onClose }: { port: number | null; onClose: 
           {tab === 'papers' && (
             <ListSection port={port} title={t('hub.section.papers')} path="/paper-digest/list" />
           )}
-          {tab === 'shares' && (
-            <ListSection port={port} title={t('hub.section.shares')} path="/share/my" />
-          )}
+          {tab === 'shares' && <SharesTab port={port} />}
           {tab === 'contacts' && (
             <ListSection port={port} title={t('hub.section.contacts')} path="/contacts" />
           )}
@@ -416,6 +414,106 @@ function itemSubtitle(it: Record<string, unknown>): string {
 }
 
 /** Fetch a SaaS endpoint and render whatever array it returns as a card list. */
+/**
+ * Sharing tab (goal M2.7): list shares I've created (/share/my) PLUS the
+ * primary actions — create a new share of the current chat (POST /share/chat,
+ * default `unlisted` mode → a `/share/<id>` link) and revoke one (DELETE
+ * /share/<id>). All ride the keystone /saas proxy.
+ */
+function SharesTab({ port }: { port: number | null }) {
+  const t = useT();
+  const q = useSaasQuery<unknown>(port, '/share/my');
+  const items = extractItems(q.data);
+  const [busy, setBusy] = useState(false);
+  const [createdUrl, setCreatedUrl] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function create() {
+    if (port == null) return;
+    setBusy(true);
+    setErr(null);
+    setCreatedUrl(null);
+    try {
+      const r = await saasPost<{ ok?: boolean; url?: string; error?: string }>(
+        port,
+        '/share/chat',
+        { mode: 'unlisted' },
+      );
+      if (r.url) setCreatedUrl(r.url);
+      else setErr(r.error ?? t('hub.share.createFailed'));
+      q.refetch();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function revoke(id: string) {
+    if (port == null) return;
+    setErr(null);
+    try {
+      await saasDelete(port, `/share/${encodeURIComponent(id)}`);
+      q.refetch();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  return (
+    <div className="max-w-2xl">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[14px] font-semibold text-ink">{t('hub.section.shares')}</h3>
+        <button
+          type="button"
+          disabled={busy || port == null}
+          onClick={() => void create()}
+          className="rounded bg-accent px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-50"
+        >
+          {busy ? t('hub.share.creating') : t('hub.share.create')}
+        </button>
+      </div>
+      {createdUrl && (
+        <p className="mt-2 text-[12px] text-success">
+          {t('hub.share.created', { url: createdUrl })}
+        </p>
+      )}
+      {err && <p className="mt-2 text-[12px] text-danger">{err}</p>}
+      <Loading q={q} />
+      {!q.loading && !q.error && !q.needsAuth && (
+        <ul className="mt-2 space-y-1">
+          {items.length === 0 ? (
+            <p className="text-[12px] text-muted">{t('hub.empty')}</p>
+          ) : (
+            items.slice(0, 100).map((it, i) => (
+              <li
+                key={(it.id as string) ?? i}
+                className="flex items-start justify-between gap-3 rounded border border-line/30 px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <div className="text-[12px] font-medium text-ink">{itemTitle(it)}</div>
+                  {itemSubtitle(it) && (
+                    <p className="mt-0.5 text-[11px] text-muted line-clamp-2">{itemSubtitle(it)}</p>
+                  )}
+                </div>
+                {typeof it.id === 'string' && (
+                  <button
+                    type="button"
+                    onClick={() => void revoke(it.id as string)}
+                    className="shrink-0 text-[11px] text-danger hover:underline"
+                  >
+                    {t('hub.share.revoke')}
+                  </button>
+                )}
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function ListSection({ port, title, path }: { port: number | null; title: string; path: string }) {
   const t = useT();
   const q = useSaasQuery<unknown>(port, path);

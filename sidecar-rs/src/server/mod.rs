@@ -108,7 +108,12 @@ fn build_router(state: Arc<AppState>) -> Router {
         // browser fetch fails with "Failed to fetch". `very_permissive` mirrors
         // the request origin + allows any method/header/credentials — safe here
         // because the listener is bound to 127.0.0.1 only (not exposed).
-        .layer(CorsLayer::very_permissive())
+        // very_permissive mirrors the request Origin (not `*`), which is
+        // required for allow_private_network. The PNA header is what unblocks
+        // the Tauri webview (public/unknown address space) → 127.0.0.1 (local)
+        // fetch on Chromium/WebView2 — without it the preflight is rejected
+        // and the frontend sees "Failed to fetch".
+        .layer(CorsLayer::very_permissive().allow_private_network(true))
         .layer(TraceLayer::new_for_http())
 }
 

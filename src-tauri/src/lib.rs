@@ -68,6 +68,12 @@ pub fn run() {
             app.manage(SidecarState::new());
             tray::setup_tray(app.handle())?;
             setup_deep_links(app.handle());
+            // Temporary: auto-open the WebView2 console in this preview so the
+            // sidecar-connectivity error (CSP / PNA / mixed-content) is visible
+            // without needing a debug build. Remove once confirmed fixed.
+            if let Some(w) = app.get_webview_window("main") {
+                w.open_devtools();
+            }
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Regular);
             Ok(())

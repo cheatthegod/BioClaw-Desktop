@@ -18,6 +18,7 @@ use axum::{
     Router,
 };
 use tokio::net::TcpListener;
+use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing::{info, warn};
 
@@ -102,6 +103,12 @@ fn build_router(state: Arc<AppState>) -> Router {
         // workspace file downloads) which lives outside `/api/…`.
         .route("/saas-files/*path", any(crate::saas::routes::proxy_files))
         .with_state(state)
+        // The Tauri webview (origin tauri://localhost / http(s)://tauri.localhost)
+        // fetches this sidecar cross-origin, so without CORS headers every
+        // browser fetch fails with "Failed to fetch". `very_permissive` mirrors
+        // the request origin + allows any method/header/credentials — safe here
+        // because the listener is bound to 127.0.0.1 only (not exposed).
+        .layer(CorsLayer::very_permissive())
         .layer(TraceLayer::new_for_http())
 }
 

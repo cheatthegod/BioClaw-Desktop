@@ -35,7 +35,6 @@ import {
 } from '../lib/chat-state';
 import { useSidecar } from '../hooks/useSidecar';
 import { useAuthStore } from '../lib/auth-state';
-import { ModelPicker } from './ModelPicker';
 import { cn } from '../lib/utils';
 
 const EXAMPLE_PROMPTS: ReadonlyArray<string> = [
@@ -136,7 +135,10 @@ function ChatHeader({
   return (
     <div className="flex items-center justify-between border-b border-line/40 bg-surface px-4 py-2">
       <div className="flex items-center gap-3">
-        <ModelPicker />
+        {/* Fixed model — no picker. */}
+        <span className="rounded-md border border-line/40 bg-surface px-2.5 py-1 text-[12px] font-medium text-ink-soft">
+          DeepSeek V4 Pro
+        </span>
         <div className="flex items-center gap-1.5 text-[11px] text-muted">
           <span className={cn('h-1.5 w-1.5 rounded-full', pipColor)} />
           {pipLabel}

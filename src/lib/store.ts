@@ -33,7 +33,9 @@ interface AppState {
   setSelectedModel: (id: string) => void;
 }
 
-export const DEFAULT_MODEL = 'openai/gpt-4o-mini';
+// The desktop app ships a single fixed model (no picker) — always DeepSeek
+// V4 Pro, served via the bioclaw-proxy provider.
+export const DEFAULT_MODEL = 'deepseek/deepseek-v4-pro';
 
 export const useAppStore = create<AppState>((set) => ({
   isSettingsOpen: false,

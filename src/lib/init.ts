@@ -25,11 +25,9 @@ interface PersistedPrefs {
 }
 
 export async function initializeApp(): Promise<void> {
-  // tauri-plugin-store v2 API: `Store.load` lazily creates the file.
-  const store = await Store.load(STORE_FILE, { autoSave: true, defaults: {} });
-  const selectedModel = (await store.get<string>('selectedModel')) ?? DEFAULT_MODEL;
-
-  useAppStore.setState({ selectedModel });
+  // Model is fixed to DEFAULT_MODEL (no picker) — ignore any stale persisted
+  // choice from an older build so everyone lands on DeepSeek V4 Pro.
+  useAppStore.setState({ selectedModel: DEFAULT_MODEL });
 
   // Load the persisted script-execution permission list. Best-effort —
   // a failure here just means the user re-grants permissions in this

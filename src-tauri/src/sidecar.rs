@@ -36,7 +36,14 @@ use tokio::time::{sleep, timeout};
 
 /// Name of the bundled sidecar binary, sans target-triple suffix. Tauri
 /// resolves this against `tauri.conf.json`'s `bundle.externalBin` entry.
-const SIDECAR_NAME: &str = "binaries/bioclaw-sidecar";
+// Basename only — tauri-plugin-shell resolves this as `<exe_dir>/<name>[.exe]`
+// (relative_command_path joins it to the executable's directory). The bundler
+// installs externalBins NEXT TO the main exe, so the runtime name must NOT
+// include the `binaries/` source-dir prefix (that prefix is only for
+// tauri.conf.json's externalBin, the build-time source path). Using
+// "binaries/bioclaw-sidecar" here made it look in <exe_dir>/binaries/ which
+// doesn't exist on an installed app → sidecar never spawned.
+const SIDECAR_NAME: &str = "bioclaw-sidecar";
 
 /// Max time we wait for the sidecar to print `PORT=...` after spawn. If the
 /// process doesn't announce a port within this window we kill it and surface
@@ -65,6 +72,14 @@ pub struct SidecarStatus {
 #[derive(Default)]
 pub struct SidecarState {
     inner: Arc<Mutex<Inner>>,
+    /// Serializes concurrent `start()` calls. Two `useSidecar(true)` hooks
+    /// (App shell + LocalChat) each invoke `start_sidecar`, so start() can be
+    /// called twice near-simultaneously. Without this, both pass the
+    /// `port.is_none()` guard and spawn a second sidecar, which fails to grab
+    /// the workspace lock ("already running") and tears the good one down.
+    /// Held across the whole start() so the 2nd caller waits, then returns the
+    /// port the 1st caller set.
+    start_lock: Arc<Mutex<()>>,
 }
 
 #[derive(Default)]
@@ -99,6 +114,10 @@ impl SidecarState {
 
     /// Spawn the sidecar if not already running. Returns the bound port.
     pub async fn start<R: Runtime>(&self, app: &AppHandle<R>) -> Result<u16, String> {
+        // Serialize concurrent starts (see `start_lock` docs). The 2nd caller
+        // blocks here until the 1st finishes, then the re-check below returns
+        // the already-bound port instead of spawning a duplicate sidecar.
+        let _start_guard = self.start_lock.lock().await;
         {
             let g = self.inner.lock().await;
             if let Some(p) = g.port {
@@ -186,11 +205,16 @@ impl SidecarState {
                             )));
                         }
                         // Clear the running-state once the child is gone so
-                        // sidecar_status reflects reality.
+                        // sidecar_status reflects reality — but ONLY if the
+                        // dead child is the one we currently track. Otherwise a
+                        // losing duplicate-spawn's death would drop the healthy
+                        // child (closing its stdin → cascade shutdown).
                         let mut g = inner_handle.lock().await;
-                        g.child = None;
-                        g.port = None;
-                        g.pid = None;
+                        if g.pid == Some(pid) {
+                            g.child = None;
+                            g.port = None;
+                            g.pid = None;
+                        }
                         break;
                     }
                     _ => {}

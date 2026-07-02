@@ -33,10 +33,20 @@ thiserror = "2"
 log = "0.4"
 tokio = { version = "1", features = ["full"] }
 
-# Cross-platform secure credential storage. Default features auto-select the
-# right backend: Keychain (macOS), Credential Manager (Windows), Secret
-# Service / gnome-keyring / kwallet (Linux). See src/credentials.rs.
-keyring = { version = "3", default-features = true }
+# Cross-platform secure credential storage. keyring v3 has NO default backend
+# — without an explicit platform feature it silently falls back to an in-memory
+# **mock** store (every Entry::new() is a fresh empty MockCredential), so saved
+# tokens/API keys can never be read back. That broke device-code login
+# persistence AND local LLM API-key storage on the shipped app. Enable the real
+# per-OS backends (each dep is target-gated, so all three build cross-platform):
+#   Keychain (macOS), Credential Manager (Windows), Secret Service (Linux,
+#   dbus-secret-service v4 = pure-Rust zbus, no system libdbus needed).
+keyring = { version = "3", features = [
+    "apple-native",
+    "windows-native",
+    "sync-secret-service",
+    "crypto-rust",
+] }
 dirs = "5"
 
 [lib]

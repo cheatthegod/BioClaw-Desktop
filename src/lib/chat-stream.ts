@@ -126,7 +126,15 @@ async function* parseSseStream(stream: ReadableStream<Uint8Array>): AsyncIterabl
       }
     }
   } finally {
-    reader.releaseLock();
+    // cancel() (not just releaseLock) so plugin-http tears down the underlying
+    // stream resource. When we break the read loop early on the terminal event,
+    // a bare releaseLock leaves a dangling native read that surfaces as
+    // 'The resource id N is invalid' uncaught rejections in the console.
+    try {
+      await reader.cancel();
+    } catch {
+      /* stream already closed */
+    }
   }
 }
 

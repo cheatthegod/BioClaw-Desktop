@@ -106,7 +106,20 @@ pub async fn run_chat_loop(input: ChatLoopInput, events: mpsc::Sender<AgentEvent
                             tool_order.push(id);
                         }
                         ProviderEvent::ToolCallArgumentsDelta { id, delta } => {
-                            if let Some(buf) = tool_buf.get_mut(&id) {
+                            // OpenAI/DeepSeek only send the tool-call `id` on
+                            // the opening chunk; subsequent argument-fragment
+                            // chunks omit it, so `id` arrives empty here. If it
+                            // doesn't match a buffered call, fall back to the
+                            // most recently opened one. Without this the
+                            // fragments are dropped and tools dispatch with
+                            // empty `{}` args (e.g. invoke_skill: missing
+                            // required argument `skill_id`).
+                            let key = if tool_buf.contains_key(&id) {
+                                Some(id)
+                            } else {
+                                tool_order.last().cloned()
+                            };
+                            if let Some(buf) = key.and_then(|k| tool_buf.get_mut(&k)) {
                                 // First-stream chunks come in as
                                 // `{"foo":"ba` style fragments. The
                                 // matching ToolCallStart already seeded

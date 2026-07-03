@@ -1,3 +1,4 @@
+import { fetch } from '@tauri-apps/plugin-http'; // native fetch: bypasses webview CSP for local sidecar
 /**
  * Typed client for the SaaS proxy exposed by the local sidecar (M1.1).
  *

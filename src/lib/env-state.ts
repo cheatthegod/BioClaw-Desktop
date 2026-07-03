@@ -7,6 +7,7 @@
  * don't want to retry-storm the sidecar's status poll just because
  * a `uv sync` is in flight.
  */
+import { fetch } from '@tauri-apps/plugin-http'; // native fetch: bypasses webview CSP for local sidecar
 import { create } from 'zustand';
 
 export type EnvStatus = 'unknown' | 'needs-setup' | 'installing' | 'ready' | 'broken';

@@ -1,3 +1,4 @@
+import { fetch } from '@tauri-apps/plugin-http'; // native fetch: bypasses webview CSP for local sidecar
 /**
  * Upload a file into the user's SaaS workspace through the sidecar proxy and
  * return its workspace-relative path (the value GPU jobs reference in their

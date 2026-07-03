@@ -1,3 +1,4 @@
+import { fetch } from '@tauri-apps/plugin-http'; // native fetch: bypasses webview CSP for local sidecar
 /**
  * Download a workspace file (e.g. a GPU job's FASTA/CIF output) through the
  * sidecar's `/saas-files` proxy, which forwards to the SaaS top-level

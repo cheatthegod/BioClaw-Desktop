@@ -11,6 +11,7 @@
  * On app startup, `loadPermissions()` is called once and replays the full
  * list to the sidecar.
  */
+import { fetch } from '@tauri-apps/plugin-http'; // native fetch: bypasses webview CSP for local sidecar
 import { create } from 'zustand';
 import { Store } from '@tauri-apps/plugin-store';
 

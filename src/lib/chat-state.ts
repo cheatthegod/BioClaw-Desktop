@@ -17,6 +17,7 @@
  * the user sees their half-finished answer rather than it vanishing. This
  * mirrors how ChatGPT, Claude.ai and most chat UIs behave on stop.
  */
+import { fetch } from '@tauri-apps/plugin-http'; // native fetch: bypasses webview CSP for local sidecar
 import { create } from 'zustand';
 import { streamChat, type ChatMessage } from './chat-stream';
 import { usePermissionStore } from './permission-state';

@@ -6,6 +6,7 @@
  * can signal a "run locally" option is possible (goal M3.1). Default execution
  * stays cloud; most desktops have no GPU and this returns an empty list.
  */
+import { fetch } from '@tauri-apps/plugin-http'; // native fetch: bypasses webview CSP for local sidecar
 import { useEffect, useState } from 'react';
 
 const SIDECAR_HOST = '127.0.0.1';

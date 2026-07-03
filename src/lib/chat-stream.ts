@@ -14,6 +14,7 @@
  * so the chat UI can reuse the same discriminator it would use for an
  * in-process SessionRunner.
  */
+import { fetch } from '@tauri-apps/plugin-http'; // native fetch: bypasses webview CSP for local sidecar
 import type { AgentEvent } from './agent/types';
 
 /** Message shape accepted by the sidecar — flat role/content pairs only. */

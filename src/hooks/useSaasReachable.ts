@@ -11,6 +11,7 @@
  * Local-first features (chat, skills, Python env) keep working offline; only
  * the cloud panels degrade, so we surface a non-blocking banner.
  */
+import { fetch } from '@tauri-apps/plugin-http'; // native fetch: bypasses webview CSP for local sidecar
 import { useEffect, useState } from 'react';
 
 export type Reachability = 'online' | 'offline' | 'unknown';

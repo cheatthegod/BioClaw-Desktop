@@ -54,7 +54,11 @@ fn scan_local_envs() -> Vec<String> {
         };
         for entry in entries.flatten() {
             // Only directories (conda envs are dirs; ignore the dotfile probe).
-            if entry.file_type().map(|t| t.is_dir() || t.is_symlink()).unwrap_or(false) {
+            if entry
+                .file_type()
+                .map(|t| t.is_dir() || t.is_symlink())
+                .unwrap_or(false)
+            {
                 if let Some(name) = entry.file_name().to_str() {
                     if !name.starts_with('.') {
                         names.insert(name.to_string());

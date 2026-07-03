@@ -34,20 +34,12 @@ type TabId =
   | 'manage'
   | 'admin';
 
-const TAB_IDS: TabId[] = [
-  'account',
-  'history',
-  'quota',
-  'kb',
-  'skills',
-  'projects',
-  'papers',
-  'shares',
-  'contacts',
-  'lab',
-  'manage',
-  'admin',
-];
+// Desktop shows only the tabs that make sense for a focused desktop chat app.
+// The rest (projects / papers / shares / contacts / lab / manage / admin) are
+// web-oriented collaboration surfaces that felt half-baked on desktop — their
+// tab components are kept below (nothing deleted) but simply not listed here,
+// so restoring one is a one-line change. Full set lives on chat.bioclaw.tech.
+const TAB_IDS: TabId[] = ['account', 'history', 'quota', 'kb', 'skills'];
 
 export function SaasHubPanel({ port, onClose }: { port: number | null; onClose: () => void }) {
   const [tab, setTab] = useState<TabId>('account');

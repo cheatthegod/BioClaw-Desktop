@@ -135,9 +135,9 @@ function ChatHeader({
   return (
     <div className="flex items-center justify-between border-b border-line/40 bg-surface px-4 py-2">
       <div className="flex items-center gap-3">
-        {/* Fixed model — no picker. */}
+        {/* Branded label — never expose the underlying model name to users. */}
         <span className="rounded-md border border-line/40 bg-surface px-2.5 py-1 text-[12px] font-medium text-ink-soft">
-          DeepSeek V4 Pro
+          BioClaw
         </span>
         <div className="flex items-center gap-1.5 text-[11px] text-muted">
           <span className={cn('h-1.5 w-1.5 rounded-full', pipColor)} />

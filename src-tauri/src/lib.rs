@@ -72,6 +72,13 @@ pub fn run() {
             // sidecar-connectivity error (CSP / PNA / mixed-content) is visible
             // without needing a debug build. Remove once confirmed fixed.
             if let Some(w) = app.get_webview_window("main") {
+                // We load the remote web UI, which has no custom titlebar, so
+                // force the native OS window frame (min / max / close) and make
+                // sure the window is shown — belt-and-suspenders over the config
+                // in case a restored window-state or the remote-URL window path
+                // drops the decorations.
+                let _ = w.set_decorations(true);
+                let _ = w.show();
                 w.open_devtools();
             }
             #[cfg(target_os = "macos")]

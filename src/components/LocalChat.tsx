@@ -26,7 +26,6 @@ import {
   Sparkles,
   Wrench,
 } from 'lucide-react';
-import { useAppStore } from '../lib/store';
 import {
   useChatStore,
   type AssistantMessage,
@@ -47,8 +46,6 @@ const EXAMPLE_PROMPTS: ReadonlyArray<string> = [
 marked.setOptions({ gfm: true, breaks: true });
 
 export function LocalChat() {
-  const selectedModel = useAppStore((s) => s.selectedModel);
-
   // The sidecar is always-on now that we dropped the remote-iframe mode.
   // The `useSidecar(true)` call is idempotent — Rust-side SidecarState
   // is a mutex'd singleton, so multiple components polling the same
@@ -74,13 +71,11 @@ export function LocalChat() {
   const canSend = ready && hasSession && !isStreaming;
 
   const onSubmit = async (text: string) => {
-    if (!canSend || !sidecar.port || !sessionToken) return;
-    void send(text, {
-      port: sidecar.port,
-      apiKey: sessionToken,
-      model: selectedModel,
-      provider: 'bioclaw-proxy',
-    });
+    if (!canSend || !sidecar.port) return;
+    // Chat now runs through the SaaS server-side agent, reached via the
+    // sidecar's authenticated /saas proxy — no model/key is passed from here;
+    // auth is the session cookie the proxy attaches.
+    void send(text, { port: sidecar.port });
   };
 
   return (

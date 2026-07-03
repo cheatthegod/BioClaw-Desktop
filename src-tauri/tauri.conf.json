@@ -14,20 +14,19 @@
       {
         "label": "main",
         "title": "BioClaw",
+        "url": "https://chat.bioclaw.tech/",
         "width": 1280,
         "height": 820,
         "minWidth": 980,
         "minHeight": 640,
-        "decorations": false,
+        "decorations": true,
         "transparent": false,
         "resizable": true,
         "fullscreen": false,
         "center": true,
-        "visible": false,
+        "visible": true,
         "shadow": true,
         "acceptFirstMouse": true,
-        "titleBarStyle": "Overlay",
-        "hiddenTitle": true,
         "dragDropEnabled": false
       }
     ],

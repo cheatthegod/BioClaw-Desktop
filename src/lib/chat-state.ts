@@ -80,9 +80,18 @@ interface ChatState {
   status: ChatStatus;
   errorText: string | null;
   pendingPermission: PendingPermission | null;
+  /**
+   * SaaS thread id (chat_jid) this desktop conversation mirrors to. null until
+   * the first turn is synced, then reused so every turn lands in the same
+   * server-side thread — that's what makes the conversation visible and
+   * continuable on chat.bioclaw.tech. Set when loading an existing thread.
+   */
+  chatJid: string | null;
   send: (text: string, params: SendParams) => Promise<void>;
   cancel: () => void;
   clear: () => void;
+  /** Hydrate the transcript from a SaaS thread so the user can continue it. */
+  loadThread: (port: number, chatJid: string) => Promise<void>;
   resolvePermission: (decision: 'allow' | 'allow_once' | 'deny') => Promise<void>;
 }
 
@@ -94,6 +103,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   status: 'idle',
   errorText: null,
   pendingPermission: null,
+  chatJid: null,
 
   send: async (text, params) => {
     const trimmed = text.trim();
@@ -246,12 +256,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
 
       // Commit the in-flight turn.
+      const finished = get().streaming;
       set((s) => ({
         messages: s.streaming ? [...s.messages, s.streaming] : s.messages,
         streaming: null,
         status: s.streaming?.isError ? 'error' : 'idle',
         errorText: s.streaming?.isError ? s.streaming.content : null,
       }));
+
+      // Best-effort cloud sync: mirror this completed turn into the shared SaaS
+      // thread store so the conversation is visible/continuable on the web.
+      // Only for clean turns; never blocks or breaks the local chat.
+      if (finished && !finished.isError && finished.content) {
+        const newJid = await persistTurn(
+          params.port,
+          get().chatJid,
+          trimmed,
+          finished.content,
+        );
+        if (newJid && newJid !== get().chatJid) set({ chatJid: newJid });
+      }
     } catch (err) {
       const isAbort = err instanceof DOMException && err.name === 'AbortError';
       if (isAbort) {
@@ -296,7 +320,41 @@ export const useChatStore = create<ChatState>((set, get) => ({
       status: 'idle',
       errorText: null,
       pendingPermission: null,
+      // A fresh chat mints a brand-new SaaS thread on its first synced turn.
+      chatJid: null,
     });
+  },
+
+  loadThread: async (port, chatJid) => {
+    abortController?.abort();
+    abortController = null;
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:${port}/saas/messages?chatJid=${encodeURIComponent(chatJid)}`,
+      );
+      if (!res.ok) throw new Error(`load thread failed: ${res.status}`);
+      const data = (await res.json()) as {
+        messages?: Array<{ content?: string; is_from_me?: boolean | number }>;
+      };
+      const messages: ChatMessageView[] = (data.messages ?? [])
+        .filter((m) => typeof m.content === 'string' && m.content.length > 0)
+        .map((m) =>
+          m.is_from_me
+            ? ({ id: newId(), role: 'assistant', content: m.content as string } as AssistantMessage)
+            : ({ id: newId(), role: 'user', content: m.content as string } as UserMessage),
+        );
+      set({
+        messages,
+        streaming: null,
+        status: 'idle',
+        errorText: null,
+        pendingPermission: null,
+        chatJid,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      set({ status: 'error', errorText: `Failed to load conversation: ${message}` });
+    }
   },
 
   resolvePermission: async (decision) => {
@@ -313,6 +371,37 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ pendingPermission: null });
   },
 }));
+
+/**
+ * Mirror one completed turn into the shared SaaS thread store via the sidecar
+ * /saas proxy → POST /api/desktop/messages (persist-only; does NOT re-run the
+ * agent server-side). Returns the thread's chat_jid (minted on the first turn),
+ * or the passed-in one on any failure. Best-effort: never throws — a sync
+ * failure must never surface in or break the local chat.
+ */
+async function persistTurn(
+  port: number,
+  chatJid: string | null,
+  userText: string,
+  assistantText: string,
+): Promise<string | null> {
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/saas/desktop/messages`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        ...(chatJid ? { chatJid } : { title: userText.slice(0, 80) }),
+        userText,
+        assistantText,
+      }),
+    });
+    if (!res.ok) return chatJid;
+    const data = (await res.json()) as { chatJid?: string };
+    return data.chatJid ?? chatJid;
+  } catch {
+    return chatJid;
+  }
+}
 
 async function postPermissionDecision(
   port: number,

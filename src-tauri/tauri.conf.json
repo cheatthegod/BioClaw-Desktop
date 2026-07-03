@@ -32,7 +32,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' tauri: ipc:; connect-src 'self' tauri: ipc: http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:* https://chat.bioclaw.tech wss://chat.bioclaw.tech; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; frame-src https://chat.bioclaw.tech https://*.bioclaw.tech",
+      "csp": "default-src 'self' tauri: ipc: http://ipc.localhost; connect-src 'self' tauri: ipc: http://ipc.localhost http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:* https://chat.bioclaw.tech wss://chat.bioclaw.tech; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; script-src 'self' 'unsafe-eval'; frame-src https://chat.bioclaw.tech https://*.bioclaw.tech",
       "assetProtocol": {
         "enable": true,
         "scope": ["**"]

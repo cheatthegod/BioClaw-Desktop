@@ -17,6 +17,8 @@ import { useState } from 'react';
 import { useSaasQuery } from '../hooks/useSaasQuery';
 import { saasPost, saasDelete } from '../lib/api/saas';
 import { useT } from '../lib/i18n';
+import { useChatStore } from '../lib/chat-state';
+import { useAppStore } from '../lib/store';
 
 type TabId =
   | 'account'
@@ -479,6 +481,22 @@ function HistoryTab({ port }: { port: number | null }) {
           <p className="text-[12px] text-muted">{t('hub.history.pickThread')}</p>
         ) : (
           <>
+            <div className="mb-2 flex justify-end">
+              <button
+                type="button"
+                disabled={port == null}
+                onClick={() => {
+                  if (port == null) return;
+                  // Hydrate the live chat from this thread, then close the hub
+                  // so the user lands in the composer able to continue it.
+                  void useChatStore.getState().loadThread(port, sel);
+                  useAppStore.getState().toggleHub();
+                }}
+                className="rounded-md border border-line/40 bg-surface px-2.5 py-1 text-[12px] font-medium text-ink hover:bg-line/20 disabled:opacity-50"
+              >
+                {t('hub.history.continue')}
+              </button>
+            </div>
             <Loading q={msgsQ} />
             <ul className="space-y-2">
               {messages.map((m, i) => (

@@ -16,15 +16,10 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif&family=JetBrains+Mono:wght@400;500&display=swap"
     />
     <!--
-      CSP — extend the Phase-2 baseline so Google Fonts loads:
-        * style-src   adds fonts.googleapis.com (the @font-face CSS)
-        * font-src    adds fonts.gstatic.com    (the actual .woff2)
-      connect-src already covers the BioClaw SaaS; img-src stays open.
+      NOTE: CSP is defined ONCE, in src-tauri/tauri.conf.json (app.security.csp).
+      A second <meta> CSP here used to conflict (browsers enforce the
+      intersection), which silently blocked fonts and the local sidecar.
     -->
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self' tauri: ipc:; connect-src 'self' tauri: ipc: https://chat.bioclaw.tech wss://chat.bioclaw.tech; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; script-src 'self' 'unsafe-eval'"
-    />
     <title>BioClaw</title>
   </head>
   <body>

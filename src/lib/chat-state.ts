@@ -268,12 +268,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // thread store so the conversation is visible/continuable on the web.
       // Only for clean turns; never blocks or breaks the local chat.
       if (finished && !finished.isError && finished.content) {
-        const newJid = await persistTurn(
-          params.port,
-          get().chatJid,
-          trimmed,
-          finished.content,
-        );
+        const newJid = await persistTurn(params.port, get().chatJid, trimmed, finished.content);
         if (newJid && newJid !== get().chatJid) set({ chatJid: newJid });
       }
     } catch (err) {

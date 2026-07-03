@@ -1,0 +1,31 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "remote-fs",
+  "description": "Phase B (local file access): grant the REMOTE web UI loaded from https://chat.bioclaw.tech the minimal dialog + read-only fs permissions it needs to let the user pick local files/folders and upload their bytes into the current chat's server workspace. Scoped via `remote.urls` to the chat.bioclaw.tech origin ONLY — Tauri APIs are NOT opened to arbitrary origins. Read-only: no fs write/create/remove permissions are granted. The fs scope is intentionally broad ($HOME/** plus drive roots) because the user picks arbitrary paths through the native dialog; Tauri v2 does not auto-add dialog-selected paths to the fs scope the way v1 did, so a broad read scope is required for user-chosen files to be readable.",
+  "windows": ["main"],
+  "remote": {
+    "urls": ["https://chat.bioclaw.tech/*"]
+  },
+  "permissions": [
+    "dialog:allow-open",
+    "fs:allow-read-file",
+    "fs:allow-read-text-file",
+    "fs:allow-read-dir",
+    "fs:allow-stat",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        { "path": "$HOME" },
+        { "path": "$HOME/**" },
+        { "path": "$DESKTOP/**" },
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "/**" },
+        { "path": "\\\\?\\**" },
+        { "path": "*:/**" },
+        { "path": "*:\\**" }
+      ]
+    }
+  ],
+  "platforms": ["linux", "macOS", "windows"]
+}

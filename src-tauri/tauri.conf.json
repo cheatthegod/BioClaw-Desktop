@@ -15,7 +15,7 @@
       {
         "label": "main",
         "title": "BioClaw",
-        "url": "https://chat.bioclaw.tech/",
+        "url": "https://beta.bioclaw.tech/",
         "width": 1280,
         "height": 820,
         "minWidth": 980,
@@ -32,10 +32,12 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' tauri: ipc: http://ipc.localhost; connect-src 'self' tauri: ipc: http://ipc.localhost http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:* https://chat.bioclaw.tech wss://chat.bioclaw.tech; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; script-src 'self' 'unsafe-eval'; frame-src https://chat.bioclaw.tech https://*.bioclaw.tech",
+      "csp": "default-src 'self' tauri: ipc: http://ipc.localhost; connect-src 'self' tauri: ipc: http://ipc.localhost http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:* https://chat.bioclaw.tech wss://chat.bioclaw.tech https://beta.bioclaw.tech wss://beta.bioclaw.tech; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; script-src 'self' 'unsafe-eval'; frame-src https://chat.bioclaw.tech https://beta.bioclaw.tech https://*.bioclaw.tech",
       "assetProtocol": {
         "enable": true,
-        "scope": ["**"]
+        "scope": [
+          "**"
+        ]
       }
     },
     "trayIcon": {
@@ -47,7 +49,10 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "externalBin": ["binaries/bioclaw-sidecar", "binaries/uv"],
+    "externalBin": [
+      "binaries/bioclaw-sidecar",
+      "binaries/uv"
+    ],
     "resources": {
       "../skills": "skills",
       "binaries/bioclaw-env.zip": "bioclaw-env.zip"
@@ -81,7 +86,10 @@
         "installerIcon": "icons/icon.ico",
         "installMode": "perMachine",
         "displayLanguageSelector": true,
-        "languages": ["English", "SimpChinese"]
+        "languages": [
+          "English",
+          "SimpChinese"
+        ]
       }
     },
     "linux": {
@@ -89,14 +97,19 @@
         "bundleMediaFramework": true
       },
       "deb": {
-        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"]
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0"
+        ]
       }
     }
   },
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": ["bioclaw"]
+        "schemes": [
+          "bioclaw"
+        ]
       }
     },
     "updater": {

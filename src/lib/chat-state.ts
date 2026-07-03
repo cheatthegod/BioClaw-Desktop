@@ -147,7 +147,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
         signal: abortController.signal,
       });
 
-      for await (const ev of stream) {
+      // Labeled so terminal events can break the whole read loop, not just the
+      // switch. We must NOT rely on the SSE stream closing to end the loop:
+      // @tauri-apps/plugin-http does not reliably surface the stream close, so
+      // waiting for `reader.read()` to report `done` hangs and the UI stays
+      // stuck in 'streaming' forever (stop button never clears).
+      streamLoop: for await (const ev of stream) {
         switch (ev.type) {
           case 'text-delta':
             set((s) =>
@@ -229,11 +234,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
             );
             break;
           case 'done':
-            // Loop exits naturally; commit happens below.
-            break;
+            // Terminal — end the read loop; commit happens below.
+            break streamLoop;
           case 'finish':
-            // Sidecar event mirror of the provider's finish event. Streaming
-            // commit happens below regardless of how we exit.
+            // The Rust sidecar's Finish is the terminal event (the runner only
+            // emits it when the agent loop is actually done — tool-use turns
+            // continue silently). Commit whatever we streamed and end the loop.
             if ('reason' in ev && ev.reason === 'error' && 'error' in ev) {
               set((s) =>
                 s.streaming
@@ -246,6 +252,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
                     }
                   : {},
               );
+            }
+            // Guard against a hypothetical non-terminal tool-use finish.
+            if (!('reason' in ev) || ev.reason !== 'tool-use') {
+              break streamLoop;
             }
             break;
           case 'usage':

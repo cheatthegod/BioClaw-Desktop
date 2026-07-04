@@ -13,10 +13,7 @@ rust-version = "1.77"
 tauri-build = { version = "2.0", features = [] }
 
 [dependencies]
-# NOTE: "devtools" is temporarily enabled in this preview so the shipped
-# (release) build can open the WebView2 console — needed to diagnose the
-# webview→sidecar "Failed to fetch". Drop it once connectivity is confirmed.
-tauri = { version = "2.4", features = ["protocol-asset", "tray-icon", "devtools"] }
+tauri = { version = "2.4", features = ["protocol-asset", "tray-icon"] }
 tauri-plugin-deep-link = "2.2"
 tauri-plugin-dialog = "2.2"
 tauri-plugin-fs = "2.2"

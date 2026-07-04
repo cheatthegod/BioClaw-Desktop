@@ -37,23 +37,23 @@ jobs:
           - name: linux-x86_64
             os: ubuntu-22.04
             rust-target: x86_64-unknown-linux-gnu
+            rust-targets: x86_64-unknown-linux-gnu
             # deb only: the default `targets: all` AppImage step hangs on
             # FUSE-less GitHub runners (blew the CI 60-min timeout). deb is a
-            # valid unsigned Linux installer; re-enable AppImage later behind a
-            # proper FUSE/APPIMAGE_EXTRACT_AND_RUN fix if Linux auto-update is
-            # wanted.
+            # valid unsigned Linux installer.
             tauri-args: '--bundles deb'
-          # Preview builds ship arm64-only — runs natively on Apple
-          # Silicon, runs under Rosetta on Intel. Universal needs lipo'd
-          # sidecar + uv binaries (we ship two separate arch ones), which
-          # is more CI plumbing than these previews need.
-          - name: macos-aarch64
+          # Universal macOS: one .dmg runs natively on BOTH Apple Silicon and
+          # Intel. Now trivial since the desktop is a thin web shell (no
+          # per-arch externalBin sidecar/uv to lipo).
+          - name: macos-universal
             os: macos-14
-            rust-target: aarch64-apple-darwin
-            tauri-args: '--target aarch64-apple-darwin'
+            rust-target: universal-apple-darwin
+            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
+            tauri-args: '--target universal-apple-darwin'
           - name: windows-x86_64
             os: windows-latest
             rust-target: x86_64-pc-windows-msvc
+            rust-targets: x86_64-pc-windows-msvc
             tauri-args: '--target x86_64-pc-windows-msvc'
     steps:
       - name: Checkout
@@ -69,7 +69,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
-          targets: ${{ matrix.platform.rust-target }}
+          targets: ${{ matrix.platform.rust-targets }}
 
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
@@ -102,52 +102,12 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      # --------------------------------------------------------------------
-      # Build the self-contained Rust sidecar (sidecar-rs) and place it at
-      # the externalBin path. This is the ONLY sidecar now (M0.3 dropped the
-      # Node bundle + the Windows node-launcher). build-sidecar-rs.sh emits
-      # the right per-platform binary, including the `.exe` for Windows, so
-      # no separate Node build or launcher step is needed.
-      # --------------------------------------------------------------------
-      - name: Build Rust sidecar (externalBin)
-        shell: bash
-        run: bash scripts/build-sidecar-rs.sh ${{ matrix.platform.rust-target }}
-
-      # --------------------------------------------------------------------
-      # Vendor uv per platform — Astral's prebuilt binary. tauri-bundler
-      # picks it up via the externalBin entry in tauri.conf.json.
-      # --------------------------------------------------------------------
-      - name: Vendor uv binary
-        env:
-          # Pin uv so vendor-uv.sh skips its "query GitHub API for latest"
-          # branch, which hits the 60 req/hour anon rate limit on shared
-          # CI IPs (macOS runner ran into this on preview6).
-          UV_VERSION: '0.11.25'
-          # All three matrix entries are single-triple now (mac dropped
-          # universal in favor of aarch64-only for previews — runs on
-          # Intel via Rosetta).
-          BIOCLAW_UV_TARGETS: ${{ matrix.platform.rust-target }}
-        shell: bash
-        run: bash scripts/vendor-uv.sh
-
-      # --------------------------------------------------------------------
-      # Vendor the bundled Python env zip — runs `uv python install
-      # --install-dir _base` + `uv sync --frozen` against the bundled
-      # `_uv-cache/`, then zips it as `binaries/bioclaw-env.zip`
-      # (alongside a triple-suffixed copy). Tauri ships the zip as a
-      # bundle resource; the sidecar extracts + runs `uv sync --offline`
-      # on first launch for the OmicOS-style no-network unpack flow.
-      # ~5-8 min per platform on a clean cache; takes ~250 MB of installer
-      # space but eliminates the SetupWizard from the user experience.
-      # --------------------------------------------------------------------
-      - name: Vendor skills catalog
-        shell: bash
-        run: bash scripts/vendor-skills.sh
-      - name: Vendor bioclaw-env zip (Python + uv-cache)
-        env:
-          BIOCLAW_ENV_TARGET: ${{ matrix.platform.rust-target }}
-        shell: bash
-        run: bash scripts/vendor-env.sh
+      # NOTE: the desktop app is now a thin shell that loads the web UI
+      # (chat.bioclaw.tech) directly, so it no longer bundles the local
+      # sidecar / uv / Python env / skills. Those vendor steps (and the
+      # externalBin/resources entries in tauri.conf.json) were removed —
+      # the installer dropped from ~250 MB to ~15 MB and the build has far
+      # fewer moving parts.
 
       # --------------------------------------------------------------------
       # Forward code-signing secrets to the bundler ONLY if they're actually

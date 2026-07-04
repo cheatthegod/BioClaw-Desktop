@@ -68,18 +68,14 @@ pub fn run() {
             app.manage(SidecarState::new());
             tray::setup_tray(app.handle())?;
             setup_deep_links(app.handle());
-            // Temporary: auto-open the WebView2 console in this preview so the
-            // sidecar-connectivity error (CSP / PNA / mixed-content) is visible
-            // without needing a debug build. Remove once confirmed fixed.
+            // We load the remote web UI, which has no custom titlebar, so force
+            // the native OS window frame (min / max / close) and make sure the
+            // window is shown — belt-and-suspenders over the config in case a
+            // restored window-state or the remote-URL window path drops the
+            // decorations. Cross-platform: applies on Windows/macOS/Linux.
             if let Some(w) = app.get_webview_window("main") {
-                // We load the remote web UI, which has no custom titlebar, so
-                // force the native OS window frame (min / max / close) and make
-                // sure the window is shown — belt-and-suspenders over the config
-                // in case a restored window-state or the remote-URL window path
-                // drops the decorations.
                 let _ = w.set_decorations(true);
                 let _ = w.show();
-                w.open_devtools();
             }
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Regular);

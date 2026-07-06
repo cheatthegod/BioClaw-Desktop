@@ -38,10 +38,12 @@ jobs:
             os: ubuntu-22.04
             rust-target: x86_64-unknown-linux-gnu
             rust-targets: x86_64-unknown-linux-gnu
-            # deb only: the default `targets: all` AppImage step hangs on
-            # FUSE-less GitHub runners (blew the CI 60-min timeout). deb is a
-            # valid unsigned Linux installer.
-            tauri-args: '--bundles deb'
+            # deb + appimage. AppImage is REQUIRED for Linux auto-update — the
+            # Tauri Linux updater can only self-replace an AppImage, never a
+            # deb. The old FUSE-less-runner AppImage hang is worked around by
+            # APPIMAGE_EXTRACT_AND_RUN=1 in the step env (extract instead of
+            # FUSE-mount). deb stays for apt-style manual installs.
+            tauri-args: '--bundles deb appimage'
           # Universal macOS: one .dmg runs natively on BOTH Apple Silicon and
           # Intel. Now trivial since the desktop is a thin web shell (no
           # per-arch externalBin sidecar/uv to lipo).
@@ -177,6 +179,11 @@ jobs:
           # Open works around it). When the user configures APPLE_*
           # secrets later, this same workflow signs + notarizes without
           # any other change.
+
+          # Build the Linux AppImage without FUSE (GitHub runners have no FUSE):
+          # appimagetool/linuxdeploy extract-and-run instead of mounting, which
+          # is what used to hang the job. No-op on macOS/Windows.
+          APPIMAGE_EXTRACT_AND_RUN: 1
 
           # ---- Updater (minisign) signing -----------------------------------
           # Signs the .sig files the updater plugin downloads alongside each

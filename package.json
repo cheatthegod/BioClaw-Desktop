@@ -1,6 +1,6 @@
 {
   "name": "bioclaw-desktop",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "private": true,
   "type": "module",
   "description": "BioClaw Desktop \u2014 AI-powered biomedical research agent. Tauri 2 + React 19 + Vite.",
